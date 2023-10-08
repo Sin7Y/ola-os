@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "ola_core",
+    "config",
+    "basic_types",
+    "types",
+    "dal",
+    "utils",
+    "contracts",
+    "web3_decl",
+    "state",
+]

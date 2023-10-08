@@ -1,0 +1,34 @@
+[package]
+name = "ola_core"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ola_config = { path = "../config" }
+ola_basic_types = { path = "../basic_types" }
+ola_types = { path = "../types" }
+ola_dal = { path = "../dal" }
+ola_web3_decl = { path = "../web3_decl" }
+ola_contracts = { path = "../contracts" }
+ola_state = { path = "../state" }
+jsonrpsee = { version = "0.19.0", default-features = false, features = ["macros", "server", "client"] }
+anyhow = "1"
+tokio = { version = "1.16", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1.26"
+web3 = { version= "0.19.0", default-features = false, features = ["http-rustls-tls", "test", "signing"] }
+tower-http = { version = "0.4.1", features = ["full"] }
+tower = { version = "0.4.13", features = ["full"] }
+hyper ={ version = "0.14.26"}
+futures = "0.3"
+metrics = "0.20"
+hex = "0.4"
+governor = "0.4.2"
+
+[features]
+# default = ["server", "client"]
+# server = ["jsonrpsee/server"]
+# client = ["jsonrpsee/client", "jsonrpsee/ws-client", "jsonrpsee/http-client"]
