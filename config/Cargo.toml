@@ -1,8 +1,10 @@
 [package]
-name = "ola_basic_types"
+name = "ola_config"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ola_basic_types ={ path = "../basic_types"}
+envy = "0.4"
 serde = { version = "1.0", features = ["derive"] }
-web3 = { version= "0.19.0", default-features = false }
+serde_json = "1.0"

@@ -1,0 +1,20 @@
+[package]
+name = "ola_dal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ola_utils = { path = "../utils" }
+ola_types = { path = "../types" }
+sqlx = { version = "0.5.13", default-features = false, features = [
+    "runtime-tokio-native-tls",
+    "macros",
+    "postgres",
+    "bigdecimal",
+    "chrono",
+    "json",
+    "offline",
+    "migrate",
+    "ipnetwork"
+] }
+tokio = { version = "1", features = ["time"] }
