@@ -1,12 +1,17 @@
-use std::{sync::Arc, time::Instant, num::NonZeroU32, fmt::Debug};
+use std::{fmt::Debug, num::NonZeroU32, sync::Arc, time::Instant};
 
-use governor::{RateLimiter, state::{NotKeyed, InMemoryState}, clock::MonotonicClock, middleware::NoOpMiddleware, Quota};
+use governor::{
+    clock::MonotonicClock,
+    middleware::NoOpMiddleware,
+    state::{InMemoryState, NotKeyed},
+    Quota, RateLimiter,
+};
 use ola_basic_types::Address;
-use ola_config::{sequencer::SequencerConfig, api::Web3JsonRpcConfig};
+use ola_config::{api::Web3JsonRpcConfig, sequencer::SequencerConfig};
 use ola_contracts::BaseSystemContracts;
+use ola_dal::connection::ConnectionPool;
 use ola_state::postgres::PostgresStorageCaches;
 use ola_types::H256;
-use ola_dal::connection::ConnectionPool;
 
 use self::proxy::TxProxy;
 
@@ -21,7 +26,9 @@ pub struct ApiContracts {
 impl ApiContracts {
     pub fn load_from_disk() -> Self {
         // FIXME: replace playground
-        Self { eth_call: BaseSystemContracts::playground() }
+        Self {
+            eth_call: BaseSystemContracts::playground(),
+        }
     }
 }
 
@@ -35,16 +42,13 @@ pub struct TxSenderConfig {
 }
 
 impl TxSenderConfig {
-    pub fn new(
-        sequencer_config: &SequencerConfig,
-        web3_json_config: &Web3JsonRpcConfig,
-    ) -> Self {
-        Self { 
-            fee_account_addr: sequencer_config.fee_account_addr, 
-            max_nonce_ahead: web3_json_config.max_nonce_ahead, 
-            vm_execution_cache_misses_limit: web3_json_config.vm_execution_cache_misses_limit, 
-            default_aa: sequencer_config.default_aa_hash, 
-            entrypoint: sequencer_config.entrypoint_hash, 
+    pub fn new(sequencer_config: &SequencerConfig, web3_json_config: &Web3JsonRpcConfig) -> Self {
+        Self {
+            fee_account_addr: sequencer_config.fee_account_addr,
+            max_nonce_ahead: web3_json_config.max_nonce_ahead,
+            vm_execution_cache_misses_limit: web3_json_config.vm_execution_cache_misses_limit,
+            default_aa: sequencer_config.default_aa_hash,
+            entrypoint: sequencer_config.entrypoint_hash,
         }
     }
 }
@@ -63,8 +67,8 @@ impl Debug for TxSender {
     }
 }
 
-type TxSenderRateLimiter = RateLimiter<NotKeyed, InMemoryState, MonotonicClock, NoOpMiddleware<Instant>>;
-
+type TxSenderRateLimiter =
+    RateLimiter<NotKeyed, InMemoryState, MonotonicClock, NoOpMiddleware<Instant>>;
 
 pub struct TxSenderInner {
     pub(super) sender_config: TxSenderConfig,
@@ -117,7 +121,7 @@ impl TxSenderBuilder {
     }
 
     pub fn with_main_connection_pool(mut self, master_connection_pool: ConnectionPool) -> Self {
-        self.master_connection_pool = Some(master_connection_pool);   
+        self.master_connection_pool = Some(master_connection_pool);
         self
     }
 

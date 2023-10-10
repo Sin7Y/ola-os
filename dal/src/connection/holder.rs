@@ -1,6 +1,6 @@
 use std::fmt;
 
-use sqlx::{pool::PoolConnection, Postgres, PgConnection, Transaction};
+use sqlx::{pool::PoolConnection, PgConnection, Postgres, Transaction};
 
 pub enum ConnectionHolder<'a> {
     Pooled(PoolConnection<Postgres>),

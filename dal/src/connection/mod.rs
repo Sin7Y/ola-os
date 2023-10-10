@@ -1,9 +1,15 @@
 use std::time::Duration;
 
 use ola_utils::env_tools::parse_env;
-use sqlx::{postgres::{PgPoolOptions, PgConnectOptions}, PgPool, pool::PoolConnection, Postgres};
+use sqlx::{
+    pool::PoolConnection,
+    postgres::{PgConnectOptions, PgPoolOptions},
+    PgPool, Postgres,
+};
 
-use crate::{get_replica_database_url, get_master_database_url, get_prover_database_url, StorageProcessor};
+use crate::{
+    get_master_database_url, get_prover_database_url, get_replica_database_url, StorageProcessor,
+};
 
 pub mod holder;
 
@@ -42,7 +48,9 @@ impl ConnectionPoolBuilder {
     }
 
     pub async fn build_inner(&self, db_url: &str) -> ConnectionPool {
-        let max_connections = self.max_size.unwrap_or_else(|| parse_env("OLA_DATABASE_POOL_SIZE"));
+        let max_connections = self
+            .max_size
+            .unwrap_or_else(|| parse_env("OLA_DATABASE_POOL_SIZE"));
         let options = PgPoolOptions::new().max_connections(max_connections);
         let mut connect_options: PgConnectOptions = db_url.parse().unwrap_or_else(|e| {
             panic!("Failed parsing {:?} database URL: {}", self.db, e);
@@ -52,7 +60,8 @@ impl ConnectionPoolBuilder {
             connect_options = connect_options.options([("statement_timeout", timeout_string)]);
         }
         let pool = options
-            .connect_with(connect_options).await
+            .connect_with(connect_options)
+            .await
             .unwrap_or_else(|err| {
                 panic!("Failed connecting to {:?}, error: {}", self.db, err);
             });
@@ -68,8 +77,8 @@ pub enum ConnectionPool {
 
 impl ConnectionPool {
     pub fn builder(db: DbVariant) -> ConnectionPoolBuilder {
-        ConnectionPoolBuilder { 
-            db, 
+        ConnectionPoolBuilder {
+            db,
             max_size: None,
             statement_timeout: None,
         }
@@ -100,7 +109,7 @@ impl ConnectionPool {
             ConnectionPool::Test(test_pool) => {
                 panic!("test pool not supported!")
             }
-        }    
+        }
     }
 
     async fn acquire_connection_retried(pool: &PgPool) -> PoolConnection<Postgres> {
@@ -111,7 +120,7 @@ impl ConnectionPool {
         while retry_count < DB_CONNECTION_RETRIES {
             let connection = pool.acquire().await;
             match connection {
-                Ok(connection) => return  connection,
+                Ok(connection) => return connection,
                 Err(_) => {
                     retry_count += 1;
                 }
@@ -119,8 +128,8 @@ impl ConnectionPool {
 
             tokio::time::sleep(BACKOFF_INTERVAL).await;
         }
-        pool.acquire().await.unwrap_or_else(|err| {
-            panic!("Failed getting a DB connection: {}", err)
-        })
+        pool.acquire()
+            .await
+            .unwrap_or_else(|err| panic!("Failed getting a DB connection: {}", err))
     }
 }

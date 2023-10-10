@@ -1,8 +1,8 @@
 use std::env;
 
 use connection::holder::ConnectionHolder;
-use sqlx::{PgConnection, Connection, pool::PoolConnection, Postgres};
 pub use sqlx::Error as SqlxError;
+use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres};
 use storage_web3_dal::StorageWeb3Dal;
 
 pub mod connection;

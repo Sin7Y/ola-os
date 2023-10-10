@@ -1,4 +1,10 @@
-use std::{sync::{Mutex, PoisonError}, ffi::{OsString, OsStr}, mem, collections::HashMap, env};
+use std::{
+    collections::HashMap,
+    env,
+    ffi::{OsStr, OsString},
+    mem,
+    sync::{Mutex, PoisonError},
+};
 
 pub(crate) struct EnvMutex(Mutex<()>);
 
@@ -9,7 +15,9 @@ impl EnvMutex {
 
     pub fn lock(&self) -> EnvMutexGuard {
         let guard = self.0.lock().unwrap_or_else(PoisonError::into_inner);
-        EnvMutexGuard { redefined_vars: HashMap::new() }
+        EnvMutexGuard {
+            redefined_vars: HashMap::new(),
+        }
     }
 }
 
@@ -42,7 +50,8 @@ impl EnvMutexGuard {
 
             if !self.redefined_vars.contains_key(variable_name) {
                 let prev_value = env::var_os(variable_name);
-                self.redefined_vars.insert(variable_name.to_os_string(), prev_value);
+                self.redefined_vars
+                    .insert(variable_name.to_os_string(), prev_value);
             }
             env::set_var(variable_name, variable_value);
         }
@@ -53,7 +62,8 @@ impl EnvMutexGuard {
             let variable_name: &OsStr = var_name.as_ref();
             if !self.redefined_vars.contains_key(variable_name) {
                 let prev_value = env::var_os(variable_name);
-                self.redefined_vars.insert(variable_name.to_os_string(), prev_value);
+                self.redefined_vars
+                    .insert(variable_name.to_os_string(), prev_value);
             }
             env::remove_var(variable_name);
         }

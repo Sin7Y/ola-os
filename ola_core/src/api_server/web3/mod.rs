@@ -1,19 +1,25 @@
 use std::{net::SocketAddr, time::Duration};
 
 use futures::future;
-use jsonrpsee::{RpcModule, server::{BatchRequestConfig, ServerBuilder}};
-use tokio::sync::watch;
-use serde::Deserialize;
-use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
+use jsonrpsee::{
+    server::{BatchRequestConfig, ServerBuilder},
+    RpcModule,
+};
 use ola_web3_decl::namespaces::ola::OlaNamespaceServer;
+use serde::Deserialize;
+use tokio::sync::watch;
+use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
 
-use self::{state::{InternalApiconfig, RpcState}, namespaces::ola::OlaNamespace};
+use self::{
+    namespaces::ola::OlaNamespace,
+    state::{InternalApiconfig, RpcState},
+};
 
 use super::{execution_sandbox::VmConcurrencyBarrier, tx_sender::TxSender};
 
 pub mod backend;
-pub mod state;
 pub mod namespaces;
+pub mod state;
 
 const SERVER_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -30,9 +36,7 @@ pub enum Namespace {
 }
 
 impl Namespace {
-    pub const ALL: &'static [Namespace] = &[
-        Namespace::Ola,
-    ];
+    pub const ALL: &'static [Namespace] = &[Namespace::Ola];
 }
 
 #[derive(Debug)]
@@ -95,11 +99,7 @@ impl ApiBuilder {
         self
     }
 
-    pub fn with_tx_sender(
-        mut self,
-        tx_sender: TxSender,
-        vm_barrier: VmConcurrencyBarrier,
-    ) -> Self {
+    pub fn with_tx_sender(mut self, tx_sender: TxSender, vm_barrier: VmConcurrencyBarrier) -> Self {
         self.tx_sender = Some(tx_sender);
         self.vm_barrier = Some(vm_barrier);
         self
@@ -113,13 +113,13 @@ impl ApiBuilder {
 
 impl ApiBuilder {
     pub async fn build(
-        mut self, 
-        stop_receiver: watch::Receiver<bool>
+        mut self,
+        stop_receiver: watch::Receiver<bool>,
     ) -> Vec<tokio::task::JoinHandle<()>> {
         match self.transport.take() {
             Some(ApiTransport::Http(addr)) => {
                 vec![self.build_http(addr, stop_receiver).await]
-            },
+            }
             Some(ApiTransport::WebSocket(addr)) => {
                 vec![self.build_ws(addr, stop_receiver).await]
             }
@@ -128,8 +128,8 @@ impl ApiBuilder {
     }
 
     async fn build_http(
-        self, 
-        addr: SocketAddr, 
+        self,
+        addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
     ) -> tokio::task::JoinHandle<()> {
         let rpc = self.build_rpc_module().await;
@@ -145,7 +145,10 @@ impl ApiBuilder {
         } else {
             BatchRequestConfig::Unlimited
         };
-        let response_body_size_limit = self.response_body_size_limit.map(|limit| limit as u32).unwrap_or(u32::MAX);
+        let response_body_size_limit = self
+            .response_body_size_limit
+            .map(|limit| limit as u32)
+            .unwrap_or(u32::MAX);
         tokio::task::spawn_blocking(move || {
             runtime.block_on(Self::run_rpc_server(
                 true,
@@ -163,7 +166,7 @@ impl ApiBuilder {
     async fn build_ws(
         self,
         addr: SocketAddr,
-        stop_receiver: watch::Receiver<bool>
+        stop_receiver: watch::Receiver<bool>,
     ) -> tokio::task::JoinHandle<()> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -178,19 +181,20 @@ impl ApiBuilder {
         } else {
             BatchRequestConfig::Unlimited
         };
-        let response_body_size_limit = self.response_body_size_limit
+        let response_body_size_limit = self
+            .response_body_size_limit
             .map(|limit| limit as u32)
             .unwrap_or(u32::MAX);
 
         tokio::task::spawn_blocking(move || {
             runtime.block_on(Self::run_rpc_server(
-                false, 
-                rpc, 
-                addr, 
-                stop_receiver, 
-                vm_barrier, 
-                batch_request_config, 
-                response_body_size_limit
+                false,
+                rpc,
+                addr,
+                stop_receiver,
+                vm_barrier,
+                batch_request_config,
+                response_body_size_limit,
             ));
             runtime.shutdown_timeout(SERVER_SHUTDOWN_TIMEOUT);
         })
@@ -220,7 +224,7 @@ impl ApiBuilder {
         let middleware = tower::ServiceBuilder::new()
             .layer(in_flight_requests)
             .option_layer(cors);
-        
+
         let server_builder = if is_http {
             ServerBuilder::default().http_only().max_connections(5000)
         } else {
@@ -231,7 +235,8 @@ impl ApiBuilder {
             .set_batch_request_config(batch_request_config)
             .set_middleware(middleware)
             .max_response_body_size(response_body_size_limit)
-            .build(addr).await
+            .build(addr)
+            .await
             .unwrap_or_else(|err| {
                 panic!("Failed building {} rpc server: {}", transport, err);
             });
@@ -254,7 +259,8 @@ impl ApiBuilder {
         let namespaces = self.namespaces.as_ref().unwrap();
         let mut rpc = RpcModule::new(());
         if namespaces.contains(&Namespace::Ola) {
-            rpc.merge(OlaNamespace::new(rpc_app.clone()).into_rpc()).expect("Can't merge ola namespace");
+            rpc.merge(OlaNamespace::new(rpc_app.clone()).into_rpc())
+                .expect("Can't merge ola namespace");
         }
         rpc
     }
@@ -266,8 +272,8 @@ impl ApiBuilder {
     }
 
     async fn wait_for_vm(vm_barrier: VmConcurrencyBarrier, transport: &str) {
-        let wait_for_vm = tokio::time::timeout(SERVER_SHUTDOWN_TIMEOUT, vm_barrier.wait_until_stopped());
+        let wait_for_vm =
+            tokio::time::timeout(SERVER_SHUTDOWN_TIMEOUT, vm_barrier.wait_until_stopped());
         wait_for_vm.await;
     }
 }
-

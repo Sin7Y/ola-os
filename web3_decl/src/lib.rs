@@ -1,2 +1,2 @@
-pub mod namespaces;
 pub mod error;
+pub mod namespaces;

@@ -15,7 +15,7 @@ impl VmConcurrencyBarrier {
 
     pub async fn wait_until_stopped(self) {
         const POLL_INTERVAL: Duration = Duration::from_millis(50);
-        
+
         assert!(
             self.limiter.is_closed(),
             "Cannot wait on non-closed VM concurrency limiter"

@@ -1,6 +1,6 @@
 use ola_basic_types::{L1ChainId, L2ChainId};
+use ola_config::{api::Web3JsonRpcConfig, sequencer::NetworkConfig};
 use ola_types::api;
-use ola_config::{sequencer::NetworkConfig, api::Web3JsonRpcConfig};
 use ola_types::l2::L2Tx;
 use ola_web3_decl::error::Web3Error;
 
@@ -12,11 +12,8 @@ pub struct InternalApiconfig {
 }
 
 impl InternalApiconfig {
-    pub fn new(
-        eth_config: &NetworkConfig,
-        web3_config: &Web3JsonRpcConfig,
-    ) -> Self {
-        Self { 
+    pub fn new(eth_config: &NetworkConfig, web3_config: &Web3JsonRpcConfig) -> Self {
+        Self {
             l1_chain_id: eth_config.network.chain_id(),
             l2_chain_id: L2ChainId(eth_config.ola_network_id),
             max_tx_size: web3_config.max_tx_size,
@@ -31,7 +28,7 @@ pub struct RpcState {
 
 impl Clone for RpcState {
     fn clone(&self) -> Self {
-        Self { 
+        Self {
             api_config: self.api_config.clone(),
         }
     }
