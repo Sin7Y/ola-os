@@ -1,7 +1,12 @@
-use ola_basic_types::{Nonce, Address, H256};
+use ola_basic_types::{Address, Nonce, H256};
 
-use crate::{tx::execute::Execute, InputData, request::{PaymasterParams, TransactionRequest, SerializationTransactionError}, utils::unix_timestamp_ms};
-use serde::{Serialize, Deserialize};
+use crate::{
+    request::{PaymasterParams, SerializationTransactionError, TransactionRequest},
+    tx::execute::Execute,
+    utils::unix_timestamp_ms,
+    InputData,
+};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L2Tx {
@@ -19,10 +24,10 @@ impl L2Tx {
         factory_deps: Option<Vec<Vec<u8>>>,
         paymaster_params: PaymasterParams,
     ) -> Self {
-        Self { 
-            execute: Execute { 
-                contract_address, 
-                calldata, 
+        Self {
+            execute: Execute {
+                contract_address,
+                calldata,
                 factory_deps,
             },
             common_data: L2TxCommonData {
@@ -56,9 +61,9 @@ impl L2TxCommonData {
         paymaster_params: PaymasterParams,
     ) -> Self {
         let input = Some(InputData { hash, data: input });
-        Self { 
-            nonce, 
-            initiator_address, 
+        Self {
+            nonce,
+            initiator_address,
             signature,
             input,
             paymaster_params,

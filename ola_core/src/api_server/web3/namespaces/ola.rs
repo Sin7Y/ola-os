@@ -13,8 +13,8 @@ pub struct OlaNamespace {
 
 impl Clone for OlaNamespace {
     fn clone(&self) -> Self {
-        Self { 
-            state: self.state.clone(), 
+        Self {
+            state: self.state.clone(),
         }
     }
 }
@@ -27,6 +27,8 @@ impl OlaNamespace {
     pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
         let start = Instant::now();
         let state = self.state.parse_transaction_bytes(&tx_bytes.0);
-        Err(Web3Error::SerializationError(ola_types::request::SerializationTransactionError::InvalidPaymasterParams))
+        Err(Web3Error::SerializationError(
+            ola_types::request::SerializationTransactionError::InvalidPaymasterParams,
+        ))
     }
 }

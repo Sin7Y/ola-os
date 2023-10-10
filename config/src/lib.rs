@@ -1,9 +1,9 @@
 use serde::de::DeserializeOwned;
 
 pub mod api;
+pub mod database;
 pub mod sequencer;
 pub mod utils;
-pub mod database;
 
 const BYTES_IN_MB: usize = 1_024 * 1_024;
 

@@ -10,7 +10,7 @@ pub struct ApiConfig {
 impl ApiConfig {
     pub fn from_env() -> Self {
         Self {
-            web3_json_rpc: Web3JsonRpcConfig::from_env()
+            web3_json_rpc: Web3JsonRpcConfig::from_env(),
         }
     }
 }
@@ -89,7 +89,7 @@ mod tests {
     static MUTEX: EnvMutex = EnvMutex::new();
 
     fn default_config() -> ApiConfig {
-        ApiConfig { 
+        ApiConfig {
             web3_json_rpc: Web3JsonRpcConfig {
                 http_port: 1001,
                 http_url: "http://127.0.0.1:1001".to_string(),
@@ -109,7 +109,7 @@ mod tests {
                 factory_deps_cache_size_mb: Some(128),
                 initial_writes_cache_size_mb: Some(32),
                 latest_values_cache_size_mb: Some(128),
-            }
+            },
         }
     }
 

@@ -1,4 +1,4 @@
-use std::{path::Path, fs};
+use std::{fs, path::Path};
 
 use ola_types::{H256, U256};
 use ola_utils::{bytecode::hash_bytecode, convert::bytes_to_be_words};
@@ -27,7 +27,7 @@ impl BaseSystemContracts {
         let hash = hash_bytecode(&entrypoint_bytecode);
         let entrypoint = SystemContractCode {
             code: bytes_to_be_words(entrypoint_bytecode),
-            hash
+            hash,
         };
 
         let bytecode = read_sys_contract_bytecode("", "DefaultAccount");
@@ -55,11 +55,14 @@ impl BaseSystemContracts {
 }
 
 pub fn read_zbin_bytecode(zbin_path: impl AsRef<Path>) -> Vec<u8> {
-    let ola_home = std::env::var("OLA_HOME").unwrap_or_else(|_| {
-        ".".into()
-    });
+    let ola_home = std::env::var("OLA_HOME").unwrap_or_else(|_| ".".into());
     let bytecode_path = Path::new(&ola_home).join(zbin_path);
-    fs::read(&bytecode_path).unwrap_or_else(|err| panic!("Failed reading .zbin bytecode at {:?}: {}", bytecode_path, err))
+    fs::read(&bytecode_path).unwrap_or_else(|err| {
+        panic!(
+            "Failed reading .zbin bytecode at {:?}: {}",
+            bytecode_path, err
+        )
+    })
 }
 
 pub fn read_bootloader_code(bootloader_type: &str) -> Vec<u8> {

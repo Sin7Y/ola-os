@@ -1,8 +1,14 @@
-use std::{mem, sync::{Arc, RwLock}};
+use std::{
+    mem,
+    sync::{Arc, RwLock},
+};
 
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use ola_types::{H256, storage::{StorageKey, StorageValue}, L1BatchNumber, MiniblockNumber};
-use tokio::{sync::mpsc, runtime::Handle};
+use ola_types::{
+    storage::{StorageKey, StorageValue},
+    L1BatchNumber, MiniblockNumber, H256,
+};
+use tokio::{runtime::Handle, sync::mpsc};
 
 use crate::cache::{Cache, CacheValue};
 
@@ -33,7 +39,7 @@ impl CacheValue<H256> for StorageValue {
 #[derive(Debug)]
 struct ValuesCacheInner {
     valid_for: MiniblockNumber,
-    values: Cache<H256, StorageValue>
+    values: Cache<H256, StorageValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,9 +51,7 @@ impl ValuesCache {
             valid_for: MiniblockNumber(0),
             values: Cache::new("values_cache", capacity),
         };
-        Self (
-            Arc::new(RwLock::new(inner))
-        )
+        Self(Arc::new(RwLock::new(inner)))
     }
 
     fn valid_for(&self) -> MiniblockNumber {
@@ -69,17 +73,18 @@ impl ValuesCache {
             lock.valid_for = to_miniblock;
             lock.values.clear();
         } else {
-            // FIXME:
             let miniblocks = (from_miniblock + 1)..=to_miniblock;
-            // let modified_keys = rt_handle.block_on(
-                // connection.storage_web3_dal().modified_keys_in_miniblocks(miniblocks.clone()),
-            // );
+            let modified_keys = rt_handle.block_on(
+                connection
+                    .storage_web3_dal()
+                    .modified_keys_in_miniblocks(miniblocks.clone()),
+            );
             let mut lock = self.0.write().expect("value cache is poisoned");
             assert_eq!(lock.valid_for, from_miniblock);
             lock.valid_for = to_miniblock;
-            // for modified_key in &modified_keys {
-            //     lock.values.remove(modified_key);
-            // }
+            for modified_key in &modified_keys {
+                lock.values.remove(modified_key);
+            }
             drop(lock);
         }
     }
@@ -105,8 +110,14 @@ impl PostgresStorageCaches {
     pub fn new(factory_deps_capacity: u64, initial_writes_capacity: u64) -> Self {
         Self {
             factory_deps: FactoryDepsCache::new("factory_deps_cache", factory_deps_capacity),
-            initial_writes: InitialWritesCache::new("initial_writes_cache", initial_writes_capacity / 2),
-            negative_initial_writes: InitialWritesCache::new(Self::NEG_INITIAL_WRITES_NAME, initial_writes_capacity / 2),
+            initial_writes: InitialWritesCache::new(
+                "initial_writes_cache",
+                initial_writes_capacity / 2,
+            ),
+            negative_initial_writes: InitialWritesCache::new(
+                Self::NEG_INITIAL_WRITES_NAME,
+                initial_writes_capacity / 2,
+            ),
             values: None,
         }
     }
@@ -131,7 +142,8 @@ impl PostgresStorageCaches {
                 if to_miniblock <= current_miniblock {
                     continue;
                 }
-                let mut connection = rt_handle.block_on(conection_pool.access_storage_tagged("value_cache_updater"));
+                let mut connection =
+                    rt_handle.block_on(conection_pool.access_storage_tagged("value_cache_updater"));
                 values_cache.update(current_miniblock, to_miniblock, &rt_handle, &mut connection);
                 current_miniblock = to_miniblock;
             }

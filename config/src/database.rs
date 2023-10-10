@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::envy_load;
 
@@ -35,7 +35,7 @@ impl Default for MerkleTreeConfig {
             mode: MerkleTreeNode::default(),
             multi_get_chunk_size: Self::default_multi_get_chunk_size(),
             block_cache_size_mb: Self::default_block_cache_size_mb(),
-            max_l1_batches_per_iter: Self::default_max_l1_batches_per_iter()
+            max_l1_batches_per_iter: Self::default_max_l1_batches_per_iter(),
         }
     }
 }

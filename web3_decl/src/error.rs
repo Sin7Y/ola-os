@@ -1,5 +1,5 @@
-use thiserror::Error;
 use ola_types::api::SerializationTransactionError;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Web3Error {

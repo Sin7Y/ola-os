@@ -12,8 +12,8 @@ pub struct Cache<K: Eq + Hash, V> {
     cache: Option<Mokabase<K, V>>,
 }
 
-impl<K, V> Cache<K, V> 
-where 
+impl<K, V> Cache<K, V>
+where
     K: Eq + Hash + Send + Sync + 'static,
     V: CacheValue<K> + 'static,
 {
@@ -23,9 +23,9 @@ where
         } else {
             Some(
                 Mokabase::<K, V>::builder()
-                    .weigher(|_,value| value.cache_weight())
+                    .weigher(|_, value| value.cache_weight())
                     .max_capacity(capacity)
-                    .build()
+                    .build(),
             )
         };
         Self { name, cache }

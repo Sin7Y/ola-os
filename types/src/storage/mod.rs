@@ -1,6 +1,6 @@
 use blake2::{Blake2s256, Digest};
-use ola_basic_types::{AccountTreeId, H256, Address, H160, U256};
-use serde::{Serialize, Deserialize};
+use ola_basic_types::{AccountTreeId, Address, H160, H256, U256};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct StorageKey {
@@ -10,10 +10,7 @@ pub struct StorageKey {
 
 impl StorageKey {
     pub fn new(account: AccountTreeId, key: H256) -> Self {
-        Self {
-            account,
-            key
-        }
+        Self { account, key }
     }
 
     pub fn account(&self) -> &AccountTreeId {

@@ -1,8 +1,11 @@
-use jsonrpsee::{core::{async_trait, RpcResult}, types::ErrorObjectOwned};
+use jsonrpsee::{
+    core::{async_trait, RpcResult},
+    types::ErrorObjectOwned,
+};
 use ola_basic_types::{Bytes, H256};
 use ola_web3_decl::namespaces::ola::OlaNamespaceServer;
 
-use crate::api_server::web3::{namespaces::ola::OlaNamespace, backend::into_rpc_error};
+use crate::api_server::web3::{backend::into_rpc_error, namespaces::ola::OlaNamespace};
 
 #[async_trait]
 impl OlaNamespaceServer for OlaNamespace {

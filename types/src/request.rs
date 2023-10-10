@@ -1,8 +1,8 @@
 use crate::l2::L2Tx;
-use ola_basic_types::{Nonce, Address};
-use serde::{Serialize, Deserialize};
+use ola_basic_types::{Address, Nonce};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use web3::types::{U256, Bytes};
+use web3::types::{Bytes, U256};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum SerializationTransactionError {
@@ -79,14 +79,20 @@ pub struct Eip712Meta {
 }
 
 impl L2Tx {
-    pub fn from_request(request: TransactionRequest, max_tx_size: usize) -> Result<Self, SerializationTransactionError> {
+    pub fn from_request(
+        request: TransactionRequest,
+        max_tx_size: usize,
+    ) -> Result<Self, SerializationTransactionError> {
         let nonce = request.get_nonce_checked()?;
-        let (factory_deps, paymaster_params) = request.eip712_meta
+        let (factory_deps, paymaster_params) = request
+            .eip712_meta
             .map(|eip712_meta| (eip712_meta.factory_deps, eip712_meta.paymaster_params))
             .unwrap_or_default();
 
         let tx = L2Tx::new(
-            request.to.ok_or(SerializationTransactionError::ToAddressIsNull)?,
+            request
+                .to
+                .ok_or(SerializationTransactionError::ToAddressIsNull)?,
             request.input.0.clone(),
             nonce,
             request.from.unwrap_or_default(),

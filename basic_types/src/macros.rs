@@ -1,5 +1,3 @@
-
-
 macro_rules! basic_type {
     ($(#[$attr:meta])* $name:ident, $type:ty) => {
         $(#[$attr])*

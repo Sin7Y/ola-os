@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
+use std::fmt;
+use std::num::ParseIntError;
 use std::ops::{Add, Deref, DerefMut, Sub};
 use std::str::FromStr;
-use std::num::ParseIntError;
-use std::fmt;
 
-pub use web3::types::{ Address, Bytes, H256, U256, H160 };
+pub use web3::types::{Address, Bytes, H160, H256, U256};
 
 #[macro_use]
 mod macros;
@@ -34,9 +34,7 @@ impl AccountTreeId {
 
     pub fn from_fixed_bytes(value: [u8; 20]) -> Self {
         let address = Address::from_slice(&value);
-        Self {
-            address
-        }
+        Self { address }
     }
 }
 
@@ -66,32 +64,14 @@ impl TryFrom<U256> for AccountTreeId {
     }
 }
 
-basic_type!(
-    MiniblockNumber,
-    u32
-);
+basic_type!(MiniblockNumber, u32);
 
-basic_type!(
-    L1BatchNumber,
-    u32
-);
+basic_type!(L1BatchNumber, u32);
 
-basic_type!(
-    L1BlockNumber,
-    u32
-);
+basic_type!(L1BlockNumber, u32);
 
-basic_type!(
-    Nonce,
-    u32
-);
+basic_type!(Nonce, u32);
 
-basic_type!(
-    L1ChainId,
-    u64
-);
+basic_type!(L1ChainId, u64);
 
-basic_type!(
-    L2ChainId,
-    u16
-);
+basic_type!(L2ChainId, u16);

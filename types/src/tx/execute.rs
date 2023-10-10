@@ -1,6 +1,6 @@
 use ola_basic_types::Address;
+use serde::{Deserialize, Serialize};
 use web3::types::H160;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
