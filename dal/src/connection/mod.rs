@@ -50,7 +50,7 @@ impl ConnectionPoolBuilder {
     pub async fn build_inner(&self, db_url: &str) -> ConnectionPool {
         let max_connections = self
             .max_size
-            .unwrap_or_else(|| parse_env("OLA_DATABASE_POOL_SIZE"));
+            .unwrap_or_else(|| parse_env("OLAOS_DATABASE_POOL_SIZE"));
         let options = PgPoolOptions::new().max_connections(max_connections);
         let mut connect_options: PgConnectOptions = db_url.parse().unwrap_or_else(|e| {
             panic!("Failed parsing {:?} database URL: {}", self.db, e);

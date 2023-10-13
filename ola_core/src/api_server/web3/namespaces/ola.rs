@@ -25,6 +25,7 @@ impl OlaNamespace {
     }
 
     pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
+        olaos_logs::info!("received a transaction: {:?}", tx_bytes);
         let start = Instant::now();
         let state = self.state.parse_transaction_bytes(&tx_bytes.0);
         Err(Web3Error::SerializationError(

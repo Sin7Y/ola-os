@@ -6,18 +6,22 @@ use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres};
 use storage_web3_dal::StorageWeb3Dal;
 
 pub mod connection;
+pub mod healthcheck;
 pub mod storage_web3_dal;
 
 pub fn get_master_database_url() -> String {
-    env::var("DATABASE_URL").expect("DATABASE_URL must be set")
+    // FIXME:
+    // env::var("DATABASE_URL").expect("DATABASE_URL must be set")
+    "postgres://postgres:password@localhost:5432/olaos".into()
 }
 
 pub fn get_replica_database_url() -> String {
-    env::var("OLA_DATABASE_REPLICA_URL").unwrap_or_else(|_| get_master_database_url())
+    // FIXME:
+    env::var("OLAOS_DATABASE_REPLICA_URL").unwrap_or_else(|_| get_master_database_url())
 }
 
 pub fn get_prover_database_url() -> String {
-    env::var("OLA_DATABASE_PROVER_URL").unwrap_or_else(|_| get_master_database_url())
+    env::var("OLAOS_DATABASE_PROVER_URL").unwrap_or_else(|_| get_master_database_url())
 }
 
 #[derive(Debug)]

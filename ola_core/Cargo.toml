@@ -13,12 +13,14 @@ ola_dal = { path = "../dal" }
 ola_web3_decl = { path = "../web3_decl" }
 ola_contracts = { path = "../contracts" }
 ola_state = { path = "../state" }
+ola_utils = { path = "../utils" }
+olaos_health_check = { path = "../health_check" }
+olaos_logs = { path = "../logs" }
 jsonrpsee = { version = "0.19.0", default-features = false, features = ["macros", "server", "client"] }
 anyhow = "1"
 tokio = { version = "1.16", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tracing = "0.1.26"
 web3 = { version= "0.19.0", default-features = false, features = ["http-rustls-tls", "test", "signing"] }
 tower-http = { version = "0.4.1", features = ["full"] }
 tower = { version = "0.4.13", features = ["full"] }
@@ -27,6 +29,8 @@ futures = "0.3"
 metrics = "0.20"
 hex = "0.4"
 governor = "0.4.2"
+axum = { version = "0.6.19", default-features = false, features = ["http1", "json", "tokio"] }
+ctrlc = { version = "3.1", features = ["termination"] }
 
 [features]
 # default = ["server", "client"]

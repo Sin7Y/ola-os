@@ -55,7 +55,7 @@ impl BaseSystemContracts {
 }
 
 pub fn read_zbin_bytecode(zbin_path: impl AsRef<Path>) -> Vec<u8> {
-    let ola_home = std::env::var("OLA_HOME").unwrap_or_else(|_| ".".into());
+    let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
     let bytecode_path = Path::new(&ola_home).join(zbin_path);
     fs::read(&bytecode_path).unwrap_or_else(|err| {
         panic!(
@@ -66,7 +66,8 @@ pub fn read_zbin_bytecode(zbin_path: impl AsRef<Path>) -> Vec<u8> {
 }
 
 pub fn read_bootloader_code(bootloader_type: &str) -> Vec<u8> {
-    read_zbin_bytecode(format!(""))
+    // FIXME:
+    read_zbin_bytecode(format!("etc/system-contracts/contracts/test.zbin"))
 }
 
 pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {
@@ -75,5 +76,5 @@ pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {
 
 pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> Vec<u8> {
     // FIXME: repace zbin_path
-    read_zbin_bytecode("zbin_path")
+    read_zbin_bytecode("etc/system-contracts/contracts/test.zbin")
 }
