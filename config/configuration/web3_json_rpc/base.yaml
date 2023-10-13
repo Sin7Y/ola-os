@@ -1,0 +1,8 @@
+http_port: 13000
+http_url: http://127.0.0.1:13000
+ws_port: 13001
+ws_url: http://127.0.0.1:13001
+max_tx_size: 1000000
+filters_limit: 10000
+threads_per_server: 128
+max_nonce_ahead: 50

@@ -1,6 +1,8 @@
+use std::net::SocketAddr;
+
 use serde::Deserialize;
 
-use crate::{envy_load, BYTES_IN_MB};
+use crate::{envy_load, load_config, BYTES_IN_MB};
 
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ApiConfig {
@@ -11,6 +13,12 @@ impl ApiConfig {
     pub fn from_env() -> Self {
         Self {
             web3_json_rpc: Web3JsonRpcConfig::from_env(),
+        }
+    }
+
+    pub fn mock() -> Self {
+        Self {
+            web3_json_rpc: Web3JsonRpcConfig::mock(),
         }
     }
 }
@@ -39,7 +47,30 @@ pub struct Web3JsonRpcConfig {
 
 impl Web3JsonRpcConfig {
     pub fn from_env() -> Self {
-        envy_load("ola_web3_json_rpc", "OLA_API_WEB3_JSON_RPC_")
+        envy_load("ola_web3_json_rpc", "OLAOS_API_WEB3_JSON_RPC_")
+    }
+
+    pub fn mock() -> Self {
+        Self {
+            http_port: 1001,
+            http_url: "http://127.0.0.1:1001".to_string(),
+            ws_port: 1002,
+            ws_url: "ws://127.0.0.1:1002".to_string(),
+            max_tx_size: 1_000_000,
+            vm_execution_cache_misses_limit: None,
+            vm_concurrency_limit: Some(2048),
+            filters_limit: Some(10_000),
+            threads_per_server: 128,
+            http_threads: Some(128),
+            ws_threads: Some(256),
+            max_batch_request_size: Some(200),
+            max_response_body_size_mb: Some(10),
+            max_nonce_ahead: 5,
+            transactions_per_sec_limit: Some(1000),
+            factory_deps_cache_size_mb: Some(128),
+            initial_writes_cache_size_mb: Some(32),
+            latest_values_cache_size_mb: Some(128),
+        }
     }
 
     pub fn filters_limit(&self) -> usize {
@@ -77,6 +108,36 @@ impl Web3JsonRpcConfig {
     pub fn latest_values_cache_size(&self) -> usize {
         self.latest_values_cache_size_mb.unwrap_or(128) * BYTES_IN_MB
     }
+}
+
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub struct HealthCheckConfig {
+    /// Port to which the REST server is listening.
+    pub port: u16,
+}
+
+impl HealthCheckConfig {
+    pub fn from_env() -> Self {
+        envy_load("healthcheck", "API_HEALTHCHECK_")
+    }
+
+    pub fn bind_addr(&self) -> SocketAddr {
+        SocketAddr::new("0.0.0.0".parse().unwrap(), self.port)
+    }
+}
+
+pub fn load_api_config() -> Result<ApiConfig, config::ConfigError> {
+    Ok(ApiConfig {
+        web3_json_rpc: load_web3_json_rpc_config()?,
+    })
+}
+
+pub fn load_web3_json_rpc_config() -> Result<Web3JsonRpcConfig, config::ConfigError> {
+    load_config("../config/configuration/web3_json_rpc")
+}
+
+pub fn load_healthcheck_config() -> Result<HealthCheckConfig, config::ConfigError> {
+    load_config("../config/configuration/health_check")
 }
 
 #[cfg(test)]
@@ -117,23 +178,23 @@ mod tests {
     fn test_from_env() {
         let mut lock = MUTEX.lock();
         let config = r#"
-            OLA_API_WEB3_JSON_RPC_HTTP_PORT="1001"
-            OLA_API_WEB3_JSON_RPC_HTTP_URL="http://127.0.0.1:1001"
-            OLA_API_WEB3_JSON_RPC_WS_PORT="1002"
-            OLA_API_WEB3_JSON_RPC_WS_URL="ws://127.0.0.1:1002"
-            OLA_API_WEB3_JSON_RPC_MAX_TX_SIZE=1000000
-            OLA_API_WEB3_JSON_RPC_FILTERS_LIMIT=10000
-            OLA_API_WEB3_JSON_RPC_THREADS_PER_SERVER=128
-            OLA_API_WEB3_JSON_RPC_HTTP_THREADS=128
-            OLA_API_WEB3_JSON_RPC_WS_THREADS=256
-            OLA_API_WEB3_JSON_RPC_MAX_BATCH_REQUEST_SIZE=200
-            OLA_API_WEB3_JSON_RPC_MAX_RESPONSE_BODY_SIZE_MB=10
-            OLA_API_WEB3_JSON_RPC_MAX_NONCE_AHEAD=5
-            OLA_API_WEB3_JSON_RPC_TRANSACTIONS_PER_SEC_LIMIT=1000
-            OLA_API_WEB3_JSON_RPC_VM_CONCURRENCY_LIMIT=2048
-            OLA_API_WEB3_JSON_RPC_FACTORY_DEPS_CACHE_SIZE_MB=128
-            OLA_API_WEB3_JSON_RPC_INITIAL_WRITES_CACHE_SIZE_MB=32
-            OLA_API_WEB3_JSON_RPC_LATEST_VALUES_CACHE_SIZE_MB=128
+            OLAOS_API_WEB3_JSON_RPC_HTTP_PORT="1001"
+            OLAOS_API_WEB3_JSON_RPC_HTTP_URL="http://127.0.0.1:1001"
+            OLAOS_API_WEB3_JSON_RPC_WS_PORT="1002"
+            OLAOS_API_WEB3_JSON_RPC_WS_URL="ws://127.0.0.1:1002"
+            OLAOS_API_WEB3_JSON_RPC_MAX_TX_SIZE=1000000
+            OLAOS_API_WEB3_JSON_RPC_FILTERS_LIMIT=10000
+            OLAOS_API_WEB3_JSON_RPC_THREADS_PER_SERVER=128
+            OLAOS_API_WEB3_JSON_RPC_HTTP_THREADS=128
+            OLAOS_API_WEB3_JSON_RPC_WS_THREADS=256
+            OLAOS_API_WEB3_JSON_RPC_MAX_BATCH_REQUEST_SIZE=200
+            OLAOS_API_WEB3_JSON_RPC_MAX_RESPONSE_BODY_SIZE_MB=10
+            OLAOS_API_WEB3_JSON_RPC_MAX_NONCE_AHEAD=5
+            OLAOS_API_WEB3_JSON_RPC_TRANSACTIONS_PER_SEC_LIMIT=1000
+            OLAOS_API_WEB3_JSON_RPC_VM_CONCURRENCY_LIMIT=2048
+            OLAOS_API_WEB3_JSON_RPC_FACTORY_DEPS_CACHE_SIZE_MB=128
+            OLAOS_API_WEB3_JSON_RPC_INITIAL_WRITES_CACHE_SIZE_MB=32
+            OLAOS_API_WEB3_JSON_RPC_LATEST_VALUES_CACHE_SIZE_MB=128
         "#;
         lock.set_env(config);
 

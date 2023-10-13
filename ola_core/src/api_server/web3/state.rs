@@ -1,8 +1,11 @@
 use ola_basic_types::{L1ChainId, L2ChainId};
 use ola_config::{api::Web3JsonRpcConfig, sequencer::NetworkConfig};
+use ola_dal::connection::ConnectionPool;
 use ola_types::api;
 use ola_types::l2::L2Tx;
 use ola_web3_decl::error::Web3Error;
+
+use crate::api_server::tx_sender::TxSender;
 
 #[derive(Debug, Clone)]
 pub struct InternalApiconfig {
@@ -24,12 +27,16 @@ impl InternalApiconfig {
 #[derive(Debug)]
 pub struct RpcState {
     pub api_config: InternalApiconfig,
+    pub tx_sender: TxSender,
+    pub connection_pool: ConnectionPool,
 }
 
 impl Clone for RpcState {
     fn clone(&self) -> Self {
         Self {
             api_config: self.api_config.clone(),
+            tx_sender: self.tx_sender.clone(),
+            connection_pool: self.connection_pool.clone(),
         }
     }
 }

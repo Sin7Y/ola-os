@@ -5,7 +5,9 @@ use jsonrpsee::{
     server::{BatchRequestConfig, ServerBuilder},
     RpcModule,
 };
+use ola_dal::connection::ConnectionPool;
 use ola_web3_decl::namespaces::ola::OlaNamespaceServer;
+use olaos_health_check::{HealthStatus, HealthUpdater, ReactiveHealthCheck};
 use serde::Deserialize;
 use tokio::sync::watch;
 use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
@@ -51,10 +53,11 @@ pub struct ApiBuilder {
     batch_request_size_limit: Option<usize>,
     response_body_size_limit: Option<usize>,
     filters_limit: Option<usize>,
+    pool: ConnectionPool,
 }
 
 impl ApiBuilder {
-    pub fn new(config: InternalApiconfig) -> Self {
+    pub fn new(config: InternalApiconfig, pool: ConnectionPool) -> Self {
         Self {
             transport: None,
             subscriptions_limit: None,
@@ -66,6 +69,7 @@ impl ApiBuilder {
             batch_request_size_limit: None,
             response_body_size_limit: None,
             filters_limit: None,
+            pool,
         }
     }
 
@@ -115,13 +119,21 @@ impl ApiBuilder {
     pub async fn build(
         mut self,
         stop_receiver: watch::Receiver<bool>,
-    ) -> Vec<tokio::task::JoinHandle<()>> {
+    ) -> (Vec<tokio::task::JoinHandle<()>>, ReactiveHealthCheck) {
         match self.transport.take() {
             Some(ApiTransport::Http(addr)) => {
-                vec![self.build_http(addr, stop_receiver).await]
+                let (api_health_check, health_updater) = ReactiveHealthCheck::new("http_api");
+                (
+                    vec![self.build_http(addr, stop_receiver, health_updater).await],
+                    api_health_check,
+                )
             }
             Some(ApiTransport::WebSocket(addr)) => {
-                vec![self.build_ws(addr, stop_receiver).await]
+                let (api_health_check, health_updater) = ReactiveHealthCheck::new("ws_api");
+                (
+                    vec![self.build_ws(addr, stop_receiver, health_updater).await],
+                    api_health_check,
+                )
             }
             None => panic!("ApiTransport is not specified"),
         }
@@ -131,6 +143,7 @@ impl ApiBuilder {
         self,
         addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
+        health_updater: HealthUpdater,
     ) -> tokio::task::JoinHandle<()> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -155,6 +168,7 @@ impl ApiBuilder {
                 rpc,
                 addr,
                 stop_receiver,
+                health_updater,
                 vm_barrier,
                 batch_request_config,
                 response_body_size_limit,
@@ -167,6 +181,7 @@ impl ApiBuilder {
         self,
         addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
+        health_updater: HealthUpdater,
     ) -> tokio::task::JoinHandle<()> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -192,6 +207,7 @@ impl ApiBuilder {
                 rpc,
                 addr,
                 stop_receiver,
+                health_updater,
                 vm_barrier,
                 batch_request_config,
                 response_body_size_limit,
@@ -205,6 +221,7 @@ impl ApiBuilder {
         rpc: RpcModule<()>,
         addr: SocketAddr,
         mut stop_receiver: watch::Receiver<bool>,
+        health_updater: HealthUpdater,
         vm_barrier: VmConcurrencyBarrier,
         batch_request_config: BatchRequestConfig,
         response_body_size_limit: u32,
@@ -249,7 +266,11 @@ impl ApiBuilder {
                 close_handle.stop().ok();
             }
         });
+        health_updater.update(HealthStatus::Ready.into());
+
         server_handle.stopped().await;
+        drop(health_updater);
+        olaos_logs::info!("{transport} JSON-RPC server stopped");
         Self::wait_for_vm(vm_barrier, transport).await;
     }
 
@@ -268,6 +289,8 @@ impl ApiBuilder {
     fn build_rpc_state(&self) -> RpcState {
         RpcState {
             api_config: self.config.clone(),
+            connection_pool: self.pool.clone(),
+            tx_sender: self.tx_sender.clone().expect("failed to clone tx_sender"),
         }
     }
 

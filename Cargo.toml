@@ -9,4 +9,6 @@ members = [
     "contracts",
     "web3_decl",
     "state",
+    "health_check",
+    "logs",
 ]

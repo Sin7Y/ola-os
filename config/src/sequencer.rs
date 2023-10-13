@@ -11,7 +11,7 @@ pub struct SequencerConfig {
 
 impl SequencerConfig {
     pub fn from_env() -> Self {
-        envy_load("ola_sequencer", "OLA_SEQUENCER_")
+        envy_load("ola_sequencer", "OLAOS_SEQUENCER_")
     }
 }
 
@@ -24,6 +24,6 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     pub fn from_env() -> Self {
-        envy_load("ola_network", "OLA_CHAIN_ETH_")
+        envy_load("ola_network", "OLAOS_CHAIN_ETH_")
     }
 }

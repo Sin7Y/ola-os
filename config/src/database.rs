@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::envy_load;
+use crate::{envy_load, load_config};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MerkleTreeNode {
@@ -41,6 +41,14 @@ impl Default for MerkleTreeConfig {
 }
 
 impl MerkleTreeConfig {
+    fn mock() -> Self {
+        Self {
+            path: "./db/main/tree".into(),
+            backup_path: "./db/main/backups".into(),
+            ..MerkleTreeConfig::default()
+        }
+    }
+
     fn default_path() -> String {
         "./db/lightweight-new".to_owned()
     }
@@ -90,8 +98,18 @@ impl DBConfig {
 
     pub fn from_env() -> Self {
         Self {
-            merkle_tree: envy_load("ola_database_merkle_tree", "OLA_MERKLE_TREE_"),
-            ..envy_load("ola_database", "OLA_DATABASE_")
+            merkle_tree: envy_load("ola_database_merkle_tree", "OLAOS_MERKLE_TREE_"),
+            ..envy_load("ola_database", "OLAOS_DATABASE_")
+        }
+    }
+
+    pub fn mock() -> Self {
+        Self {
+            statement_timeout_sec: Some(30),
+            sequencer_db_path: "./db/main/sequencer".into(),
+            merkle_tree: MerkleTreeConfig::mock(),
+            backup_count: 5,
+            backup_interval_ms: 60000,
         }
     }
 
@@ -102,4 +120,8 @@ impl DBConfig {
     pub fn backup_interval(&self) -> Duration {
         Duration::from_millis(self.backup_interval_ms)
     }
+}
+
+pub fn load_db_config() -> Result<DBConfig, config::ConfigError> {
+    load_config("../config/configuration/database")
 }
