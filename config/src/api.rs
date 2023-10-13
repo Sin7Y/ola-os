@@ -133,11 +133,11 @@ pub fn load_api_config() -> Result<ApiConfig, config::ConfigError> {
 }
 
 pub fn load_web3_json_rpc_config() -> Result<Web3JsonRpcConfig, config::ConfigError> {
-    load_config("../config/configuration/web3_json_rpc")
+    load_config("config/configuration/web3_json_rpc")
 }
 
 pub fn load_healthcheck_config() -> Result<HealthCheckConfig, config::ConfigError> {
-    load_config("../config/configuration/health_check")
+    load_config("config/configuration/health_check")
 }
 
 #[cfg(test)]

@@ -29,10 +29,10 @@ pub fn load_config<P: AsRef<Path>, T: DeserializeOwned>(path: P) -> Result<T, co
     settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
     // Detect the running environment.
     // Default to `local` if unspecified.
-    let environment: Environment = std::env::var("APP_ENVIRONMENT")
+    let environment: Environment = std::env::var("OLAOS_APP_ENVIRONMENT")
         .unwrap_or_else(|_| "local".into())
         .try_into()
-        .expect("Failed to parse APP_ENVIRONMENT.");
+        .expect("Failed to parse OLAOS_APP_ENVIRONMENT.");
     // Layer on the environment-specific values.
     settings.merge(
         config::File::from(configuration_directory.join(environment.as_str())).required(true),
