@@ -12,7 +12,15 @@ pub mod storage_web3_dal;
 pub fn get_master_database_url() -> String {
     // FIXME:
     // env::var("DATABASE_URL").expect("DATABASE_URL must be set")
-    "postgres://postgres:password@localhost:5432/olaos".into()
+    if env::var("OLAOS_IN_DOCKER")
+        .expect("OLAOS_IN_DOCKER must be set")
+        .parse()
+        .unwrap_or(false)
+    {
+        "postgres://postgres:password@host.docker.internal:5432/olaos".into()
+    } else {
+        "postgres://postgres:password@localhost:5432/olaos".into()
+    }
 }
 
 pub fn get_replica_database_url() -> String {

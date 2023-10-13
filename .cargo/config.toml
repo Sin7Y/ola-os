@@ -1,4 +1,5 @@
 [env]
+OLAOS_IN_DOCKER = "false"
 OLAOS_DATABASE_POOL_SIZE = "50"
 OLAOS_SEQUENCER_FEE_ACCOUNT_ADDR = "0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7"
 OLAOS_SEQUENCER_ENTRYPOINT_HASH = "0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe"
