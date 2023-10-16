@@ -95,6 +95,7 @@ impl TxSender {
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
 
+        // TODO: @Pierre begin
         let (_, tx_metrics) = execute_tx_with_pending_state(
             vm_permit.clone(),
             shared_args.clone(),
@@ -131,6 +132,8 @@ impl TxSender {
 
         self.ensure_tx_executable(tx.clone().into(), &tx_metrics, true)?;
 
+        // TODO: @Pierre end
+
         if let Some(proxy) = &self.0.proxy {
             // We're running an external node: we have to proxy the transaction to the main node.
             // But before we do that, save the tx to cache in case someone will request it
@@ -163,29 +166,16 @@ impl TxSender {
             .insert_transaction_l2(tx, tx_metrics)
             .await;
 
-        let status: String;
         let submission_result = match submission_res_handle {
-            L2TxSubmissionResult::AlreadyExecuted => {
-                status = "already_executed".to_string();
-                Err(SubmitTxError::NonceIsTooLow(
-                    expected_nonce.0,
-                    expected_nonce.0 + self.0.sender_config.max_nonce_ahead,
-                    nonce,
-                ))
-            }
-            L2TxSubmissionResult::Duplicate => {
-                status = "duplicated".to_string();
-                Err(SubmitTxError::IncorrectTx(
-                    ola_types::l2::error::TxCheckError::TxDuplication(hash),
-                ))
-            }
-            _ => {
-                status = format!(
-                    "mempool_{}",
-                    submission_res_handle.to_string().to_lowercase()
-                );
-                Ok(submission_res_handle)
-            }
+            L2TxSubmissionResult::AlreadyExecuted => Err(SubmitTxError::NonceIsTooLow(
+                expected_nonce.0,
+                expected_nonce.0 + self.0.sender_config.max_nonce_ahead,
+                nonce,
+            )),
+            L2TxSubmissionResult::Duplicate => Err(SubmitTxError::IncorrectTx(
+                ola_types::l2::error::TxCheckError::TxDuplication(hash),
+            )),
+            _ => Ok(submission_res_handle),
         };
 
         submission_result
