@@ -1,5 +1,7 @@
 use blake2::{Blake2s256, Digest};
 use ola_basic_types::{AccountTreeId, Address, H160, H256, U256};
+use ola_config::constants::NONCE_HOLDER_ADDRESS;
+use ola_utils::convert::address_to_h256;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -42,3 +44,18 @@ impl StorageKey {
 }
 
 pub type StorageValue = H256;
+
+fn get_address_mapping_key(address: &Address, position: H256) -> H256 {
+    let padded_address = address_to_h256(address);
+    // FIXME:
+    H256::default()
+}
+
+pub fn get_nonce_key(account: &Address) -> StorageKey {
+    let nonce_manager = AccountTreeId::new(NONCE_HOLDER_ADDRESS);
+
+    // The `minNonce` (used as nonce for EOAs) is stored in a mapping inside the NONCE_HOLDER system contract
+    let key = get_address_mapping_key(account, H256::zero());
+
+    StorageKey::new(nonce_manager, key)
+}

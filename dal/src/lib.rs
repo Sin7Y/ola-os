@@ -1,13 +1,20 @@
 use std::env;
 
+use blocks_web3_dal::BlocksWeb3Dal;
 use connection::holder::ConnectionHolder;
 pub use sqlx::Error as SqlxError;
 use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres};
 use storage_web3_dal::StorageWeb3Dal;
+use token_dal::TokensDal;
+use transactions_dal::TransactionsDal;
 
+pub mod blocks_web3_dal;
 pub mod connection;
 pub mod healthcheck;
+pub mod models;
 pub mod storage_web3_dal;
+pub mod token_dal;
+pub mod transactions_dal;
 
 pub fn get_master_database_url() -> String {
     // FIXME:
@@ -59,8 +66,20 @@ impl<'a> StorageProcessor<'a> {
         }
     }
 
+    pub fn tokens_dal(&mut self) -> TokensDal<'_, 'a> {
+        TokensDal { storage: self }
+    }
+
+    pub fn blocks_web3_dal(&mut self) -> BlocksWeb3Dal<'_, 'a> {
+        BlocksWeb3Dal { storage: self }
+    }
+
     pub fn storage_web3_dal(&mut self) -> StorageWeb3Dal<'_, 'a> {
         StorageWeb3Dal { storage: self }
+    }
+
+    pub fn transactions_dal(&mut self) -> TransactionsDal<'_, 'a> {
+        TransactionsDal { storage: self }
     }
 
     fn conn(&mut self) -> &mut PgConnection {

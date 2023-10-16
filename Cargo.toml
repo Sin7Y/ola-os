@@ -11,4 +11,5 @@ members = [
     "state",
     "health_check",
     "logs",
+    "vm",
 ]

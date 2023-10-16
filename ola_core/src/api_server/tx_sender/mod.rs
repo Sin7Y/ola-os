@@ -1,4 +1,4 @@
-use std::{fmt::Debug, num::NonZeroU32, sync::Arc, time::Instant};
+use std::{collections::HashMap, fmt::Debug, num::NonZeroU32, sync::Arc, time::Instant};
 
 use governor::{
     clock::MonotonicClock,
@@ -6,17 +6,27 @@ use governor::{
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter,
 };
-use ola_basic_types::Address;
-use ola_config::{api::Web3JsonRpcConfig, sequencer::SequencerConfig};
+use ola_config::{
+    api::Web3JsonRpcConfig, constants::MAX_NEW_FACTORY_DEPS, sequencer::SequencerConfig,
+};
 use ola_contracts::BaseSystemContracts;
-use ola_dal::connection::ConnectionPool;
+use ola_dal::{connection::ConnectionPool, transactions_dal::L2TxSubmissionResult};
 use ola_state::postgres::PostgresStorageCaches;
-use ola_types::H256;
+use ola_types::{
+    fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Nonce, Transaction, H256,
+};
 
-use self::proxy::TxProxy;
+use self::{error::SubmitTxError, proxy::TxProxy};
 
-use super::execution_sandbox::{VmConcurrencyBarrier, VmConcurrencyLimiter};
+use super::{
+    execution_sandbox::{
+        execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs,
+        VmConcurrencyBarrier, VmConcurrencyLimiter,
+    },
+    sequencer::{seal_criteria::conditional_sealer::ConditionalSealer, SealData},
+};
 
+pub mod error;
 pub mod proxy;
 
 pub struct ApiContracts {
@@ -64,6 +74,222 @@ impl Clone for TxSender {
 impl Debug for TxSender {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TxSender").finish()
+    }
+}
+
+impl TxSender {
+    #[tracing::instrument(skip(self, tx))]
+    pub async fn submit_tx(&self, tx: L2Tx) -> Result<L2TxSubmissionResult, SubmitTxError> {
+        if let Some(rate_limiter) = &self.0.rate_limiter {
+            if rate_limiter.check().is_err() {
+                return Err(SubmitTxError::RateLimitExceeded);
+            }
+        }
+
+        let mut stage_started_at = Instant::now();
+        self.validate_tx(&tx).await?;
+
+        stage_started_at = Instant::now();
+
+        let shared_args = self.shared_args();
+        let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
+        let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
+
+        let (_, tx_metrics) = execute_tx_with_pending_state(
+            vm_permit.clone(),
+            shared_args.clone(),
+            TxExecutionArgs::for_validation(&tx),
+            self.0.replica_connection_pool.clone(),
+            tx.clone().into(),
+            &mut HashMap::new(),
+        )
+        .await;
+
+        olaos_logs::info!(
+            "Submit tx {:?} with execution metrics {:?}",
+            tx.hash(),
+            tx_metrics
+        );
+
+        stage_started_at = Instant::now();
+
+        let validation_result = shared_args
+            .validate_tx_with_pending_state(
+                vm_permit,
+                self.0.replica_connection_pool.clone(),
+                tx.clone(),
+            )
+            .await;
+
+        stage_started_at = Instant::now();
+
+        if let Err(err) = validation_result {
+            // FIXME:
+            return Err(SubmitTxError::ValidationFailed(err));
+            // return Err(err.into());
+        }
+
+        self.ensure_tx_executable(tx.clone().into(), &tx_metrics, true)?;
+
+        if let Some(proxy) = &self.0.proxy {
+            // We're running an external node: we have to proxy the transaction to the main node.
+            // But before we do that, save the tx to cache in case someone will request it
+            // Before it reaches the main node.
+            proxy.save_tx(tx.hash(), tx.clone()).await;
+            proxy.submit_tx(&tx).await?;
+            // Now, after we are sure that the tx is on the main node, remove it from cache
+            // since we don't want to store txs that might have been replaced or otherwise removed
+            // from the mempool.
+            proxy.forget_tx(tx.hash()).await;
+            return Ok(L2TxSubmissionResult::Proxied);
+        } else {
+            assert!(
+                self.0.master_connection_pool.is_some(),
+                "TxSender is instantiated without both master connection pool and tx proxy"
+            );
+        }
+
+        let nonce = tx.common_data.nonce.0;
+        let hash = tx.hash();
+        let expected_nonce = self.get_expected_nonce(&tx).await;
+        let submission_res_handle = self
+            .0
+            .master_connection_pool
+            .as_ref()
+            .unwrap() // Checked above
+            .access_storage_tagged("api")
+            .await
+            .transactions_dal()
+            .insert_transaction_l2(tx, tx_metrics)
+            .await;
+
+        let status: String;
+        let submission_result = match submission_res_handle {
+            L2TxSubmissionResult::AlreadyExecuted => {
+                status = "already_executed".to_string();
+                Err(SubmitTxError::NonceIsTooLow(
+                    expected_nonce.0,
+                    expected_nonce.0 + self.0.sender_config.max_nonce_ahead,
+                    nonce,
+                ))
+            }
+            L2TxSubmissionResult::Duplicate => {
+                status = "duplicated".to_string();
+                Err(SubmitTxError::IncorrectTx(
+                    ola_types::l2::error::TxCheckError::TxDuplication(hash),
+                ))
+            }
+            _ => {
+                status = format!(
+                    "mempool_{}",
+                    submission_res_handle.to_string().to_lowercase()
+                );
+                Ok(submission_res_handle)
+            }
+        };
+
+        submission_result
+    }
+
+    // TODO: add more check
+    async fn validate_tx(&self, tx: &L2Tx) -> Result<(), SubmitTxError> {
+        if tx.execute.factory_deps_length() > MAX_NEW_FACTORY_DEPS {
+            return Err(SubmitTxError::TooManyFactoryDependencies(
+                tx.execute.factory_deps_length(),
+                MAX_NEW_FACTORY_DEPS,
+            ));
+        }
+        self.validate_account_nonce(tx).await?;
+        Ok(())
+    }
+
+    async fn validate_account_nonce(&self, tx: &L2Tx) -> Result<(), SubmitTxError> {
+        let expected_nonce = self.get_expected_nonce(tx).await;
+
+        if tx.common_data.nonce.0 < expected_nonce.0 {
+            Err(SubmitTxError::NonceIsTooLow(
+                expected_nonce.0,
+                expected_nonce.0 + self.0.sender_config.max_nonce_ahead,
+                tx.nonce().0,
+            ))
+        } else {
+            let max_nonce = expected_nonce.0 + self.0.sender_config.max_nonce_ahead;
+            if !(expected_nonce.0..=max_nonce).contains(&tx.common_data.nonce.0) {
+                Err(SubmitTxError::NonceIsTooHigh(
+                    expected_nonce.0,
+                    max_nonce,
+                    tx.nonce().0,
+                ))
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    async fn get_expected_nonce(&self, tx: &L2Tx) -> Nonce {
+        let mut connection = self
+            .0
+            .replica_connection_pool
+            .access_storage_tagged("api")
+            .await;
+
+        let latest_block_number = connection
+            .blocks_web3_dal()
+            .get_sealed_miniblock_number()
+            .await
+            .unwrap();
+        let nonce = connection
+            .storage_web3_dal()
+            .get_address_historical_nonce(tx.initiator_account(), latest_block_number)
+            .await
+            .unwrap();
+        Nonce(nonce.as_u32())
+    }
+
+    fn shared_args(&self) -> TxSharedArgs {
+        TxSharedArgs {
+            operator_account: AccountTreeId::new(self.0.sender_config.fee_account_addr),
+            base_system_contracts: self.0.api_contracts.eth_call.clone(),
+            caches: self.storage_caches(),
+        }
+    }
+
+    pub(crate) fn storage_caches(&self) -> PostgresStorageCaches {
+        self.0.storage_caches.clone()
+    }
+
+    fn ensure_tx_executable(
+        &self,
+        transaction: Transaction,
+        tx_metrics: &TransactionExecutionMetrics,
+        log_message: bool,
+    ) -> Result<(), SubmitTxError> {
+        let Some(sk_config) = &self.0.sequencer_config else {
+            // No config provided, so we can't check if transaction satisfies the seal criteria.
+            // We assume that it's executable, and if it's not, it will be caught by the main server
+            // (where this check is always performed).
+            return Ok(());
+        };
+
+        // Hash is not computable for the provided `transaction` during gas estimation (it doesn't have
+        // its input data set). Since we don't log a hash in this case anyway, we just use a dummy value.
+        let tx_hash = if log_message {
+            transaction.hash()
+        } else {
+            H256::zero()
+        };
+
+        let seal_data = SealData::for_transaction(transaction, tx_metrics);
+        if let Some(reason) = ConditionalSealer::find_unexecutable_reason(sk_config, &seal_data) {
+            let message = format!(
+                "Tx is Unexecutable because of {reason}; inputs for decision: {seal_data:?}"
+            );
+            if log_message {
+                olaos_logs::info!("{tx_hash:#?} {message}");
+            }
+            return Err(SubmitTxError::Unexecutable(message));
+        }
+        Ok(())
     }
 }
 

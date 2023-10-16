@@ -1,4 +1,4 @@
-use ola_types::U256;
+use ola_basic_types::{Address, H256, U256};
 
 fn ensure_chunkable(bytes: &[u8]) {
     assert!(bytes.len() % 32 == 0, "Bytes must be divisible by 32")
@@ -19,4 +19,14 @@ pub fn bytes_to_chunks(bytes: &[u8]) -> Vec<[u8; 32]> {
 pub fn bytes_to_be_words(bytes: Vec<u8>) -> Vec<U256> {
     ensure_chunkable(&bytes);
     bytes.chunks(32).map(U256::from_big_endian).collect()
+}
+
+pub fn address_to_h256(address: &Address) -> H256 {
+    let mut buffer = [0u8; 32];
+    buffer[12..].copy_from_slice(address.as_bytes());
+    H256(buffer)
+}
+
+pub fn h256_to_u256(num: H256) -> U256 {
+    U256::from_big_endian(num.as_bytes())
 }
