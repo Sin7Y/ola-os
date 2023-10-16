@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ola_types = { path = "../types" }
+ola_basic_types = { path = "../basic_types" }
 olaos_logs = { path = "../logs" }
 tokio = { version = "1", features = ["time"] }
 futures = "0.3"
+thiserror = "1.0"

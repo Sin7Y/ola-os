@@ -1,8 +1,8 @@
-use ola_basic_types::{L1ChainId, L2ChainId};
 use ola_config::{api::Web3JsonRpcConfig, sequencer::NetworkConfig};
 use ola_dal::connection::ConnectionPool;
 use ola_types::api;
 use ola_types::l2::L2Tx;
+use ola_types::{L1ChainId, L2ChainId, H256};
 use ola_web3_decl::error::Web3Error;
 
 use crate::api_server::tx_sender::TxSender;
@@ -42,9 +42,12 @@ impl Clone for RpcState {
 }
 
 impl RpcState {
-    pub fn parse_transaction_bytes(&self, bytes: &[u8]) -> Result<L2Tx, Web3Error> {
+    pub fn parse_transaction_bytes(&self, bytes: &[u8]) -> Result<(L2Tx, H256), Web3Error> {
         let chain_id = self.api_config.l2_chain_id;
-        let tx_request = api::TransactionRequest::from_bytes(bytes, chain_id.0)?;
-        Ok(L2Tx::from_request(tx_request, self.api_config.max_tx_size)?)
+        let (tx_request, hash) = api::TransactionRequest::from_bytes(bytes, chain_id.0)?;
+        Ok((
+            L2Tx::from_request(tx_request, self.api_config.max_tx_size)?,
+            hash,
+        ))
     }
 }

@@ -1,5 +1,6 @@
 use crate::l2::L2Tx;
-use ola_basic_types::{Address, Nonce};
+use ola_basic_types::{Address, Nonce, H256};
+use ola_utils::bytecode::{validate_bytecode, InvalidBytecodeError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use web3::types::{Bytes, U256};
@@ -12,6 +13,8 @@ pub enum SerializationTransactionError {
     InvalidPaymasterParams,
     #[error("nonce is too big")]
     TooBigNonce,
+    #[error("factory dependency #{0} is invalid: {1}")]
+    InvalidFactoryDependencies(usize, InvalidBytecodeError),
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -54,9 +57,30 @@ pub struct TransactionRequest {
 }
 
 impl TransactionRequest {
-    pub fn from_bytes(bytes: &[u8], chain_id: u16) -> Result<Self, SerializationTransactionError> {
-        let tx = Self::default();
-        Ok(tx)
+    pub fn from_bytes(
+        bytes: &[u8],
+        chain_id: u16,
+    ) -> Result<(Self, H256), SerializationTransactionError> {
+        // TODO:
+        let mut tx = Self::default();
+        let factory_deps_ref = tx
+            .eip712_meta
+            .as_ref()
+            .and_then(|m| m.factory_deps.as_ref());
+        if let Some(deps) = factory_deps_ref {
+            validate_factory_deps(deps)?;
+        }
+        tx.raw = Some(Bytes(bytes.to_vec()));
+        let default_signed_message = tx.get_default_signed_message(chain_id);
+        tx.from = match tx.from {
+            Some(_) => tx.from,
+            // FIXME: can from unset?
+            None => panic!("from must be set"),
+        };
+        // TODO: hash = default_signed_message + keccak(signature)
+        let hash = H256::default();
+
+        Ok((tx, hash))
     }
 
     pub fn get_nonce_checked(&self) -> Result<Nonce, SerializationTransactionError> {
@@ -65,6 +89,11 @@ impl TransactionRequest {
         } else {
             Err(SerializationTransactionError::TooBigNonce)
         }
+    }
+
+    fn get_default_signed_message(&self, chain_id: u16) -> H256 {
+        // TODO:
+        H256::default()
     }
 }
 
@@ -101,4 +130,15 @@ impl L2Tx {
         );
         Ok(tx)
     }
+}
+
+pub fn validate_factory_deps(
+    factory_deps: &[Vec<u8>],
+) -> Result<(), SerializationTransactionError> {
+    for (i, dep) in factory_deps.iter().enumerate() {
+        validate_bytecode(dep)
+            .map_err(|err| SerializationTransactionError::InvalidFactoryDependencies(i, err))?;
+    }
+
+    Ok(())
 }

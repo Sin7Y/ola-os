@@ -7,6 +7,7 @@ pub struct SequencerConfig {
     pub fee_account_addr: Address,
     pub entrypoint_hash: H256,
     pub default_aa_hash: H256,
+    pub transaction_slots: usize,
 }
 
 impl SequencerConfig {

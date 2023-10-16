@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 ola_utils = { path = "../utils" }
 ola_types = { path = "../types" }
+olaos_logs = { path = "../logs" }
 olaos_health_check = { path = "../health_check" }
 sqlx = { version = "0.5.13", default-features = false, features = [
     "runtime-tokio-native-tls",
@@ -21,3 +22,4 @@ sqlx = { version = "0.5.13", default-features = false, features = [
 tokio = { version = "1", features = ["time"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tracing = "0.1.26"

@@ -4,6 +4,7 @@ use environment::Environment;
 use serde::de::DeserializeOwned;
 
 pub mod api;
+pub mod constants;
 pub mod database;
 pub mod environment;
 pub mod sequencer;
