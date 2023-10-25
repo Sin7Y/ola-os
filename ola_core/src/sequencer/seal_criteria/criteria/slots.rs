@@ -1,6 +1,6 @@
 use ola_config::sequencer::SequencerConfig;
 
-use crate::api_server::sequencer::{
+use crate::sequencer::{
     seal_criteria::{SealCriterion, SealResolution},
     SealData,
 };

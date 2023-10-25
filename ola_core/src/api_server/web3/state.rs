@@ -1,3 +1,4 @@
+use ola_config::contracts::ContractsConfig;
 use ola_config::{api::Web3JsonRpcConfig, sequencer::NetworkConfig};
 use ola_dal::connection::ConnectionPool;
 use ola_types::api;
@@ -15,7 +16,11 @@ pub struct InternalApiconfig {
 }
 
 impl InternalApiconfig {
-    pub fn new(eth_config: &NetworkConfig, web3_config: &Web3JsonRpcConfig) -> Self {
+    pub fn new(
+        eth_config: &NetworkConfig,
+        web3_config: &Web3JsonRpcConfig,
+        _contracts_config: &ContractsConfig,
+    ) -> Self {
         Self {
             l1_chain_id: eth_config.network.chain_id(),
             l2_chain_id: L2ChainId(eth_config.ola_network_id),

@@ -7,18 +7,14 @@ use crate::{envy_load, load_config, BYTES_IN_MB};
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ApiConfig {
     pub web3_json_rpc: Web3JsonRpcConfig,
+    pub healthcheck: HealthCheckConfig,
 }
 
 impl ApiConfig {
     pub fn from_env() -> Self {
         Self {
             web3_json_rpc: Web3JsonRpcConfig::from_env(),
-        }
-    }
-
-    pub fn mock() -> Self {
-        Self {
-            web3_json_rpc: Web3JsonRpcConfig::mock(),
+            healthcheck: HealthCheckConfig::from_env(),
         }
     }
 }
@@ -29,17 +25,18 @@ pub struct Web3JsonRpcConfig {
     pub http_url: String,
     pub ws_port: u16,
     pub ws_url: String,
+    pub filters_limit: Option<u32>,
+    pub subscriptions_limit: Option<u32>,
+    pub threads_per_server: u32,
+    pub max_nonce_ahead: u32,
+    pub transactions_per_sec_limit: Option<u32>,
     pub max_tx_size: usize,
     pub vm_execution_cache_misses_limit: Option<usize>,
     pub vm_concurrency_limit: Option<usize>,
-    pub filters_limit: Option<u32>,
-    pub threads_per_server: u32,
     pub http_threads: Option<u32>,
     pub ws_threads: Option<u32>,
     pub max_batch_request_size: Option<usize>,
     pub max_response_body_size_mb: Option<usize>,
-    pub max_nonce_ahead: u32,
-    pub transactions_per_sec_limit: Option<u32>,
     pub factory_deps_cache_size_mb: Option<usize>,
     pub initial_writes_cache_size_mb: Option<usize>,
     pub latest_values_cache_size_mb: Option<usize>,
@@ -48,29 +45,6 @@ pub struct Web3JsonRpcConfig {
 impl Web3JsonRpcConfig {
     pub fn from_env() -> Self {
         envy_load("ola_web3_json_rpc", "OLAOS_API_WEB3_JSON_RPC_")
-    }
-
-    pub fn mock() -> Self {
-        Self {
-            http_port: 1001,
-            http_url: "http://127.0.0.1:1001".to_string(),
-            ws_port: 1002,
-            ws_url: "ws://127.0.0.1:1002".to_string(),
-            max_tx_size: 1_000_000,
-            vm_execution_cache_misses_limit: None,
-            vm_concurrency_limit: Some(2048),
-            filters_limit: Some(10_000),
-            threads_per_server: 128,
-            http_threads: Some(128),
-            ws_threads: Some(256),
-            max_batch_request_size: Some(200),
-            max_response_body_size_mb: Some(10),
-            max_nonce_ahead: 5,
-            transactions_per_sec_limit: Some(1000),
-            factory_deps_cache_size_mb: Some(128),
-            initial_writes_cache_size_mb: Some(32),
-            latest_values_cache_size_mb: Some(128),
-        }
     }
 
     pub fn filters_limit(&self) -> usize {
@@ -129,6 +103,7 @@ impl HealthCheckConfig {
 pub fn load_api_config() -> Result<ApiConfig, config::ConfigError> {
     Ok(ApiConfig {
         web3_json_rpc: load_web3_json_rpc_config()?,
+        healthcheck: load_healthcheck_config()?,
     })
 }
 
@@ -145,7 +120,7 @@ mod tests {
 
     use crate::utils::EnvMutex;
 
-    use super::{ApiConfig, Web3JsonRpcConfig};
+    use super::{ApiConfig, HealthCheckConfig, Web3JsonRpcConfig};
 
     static MUTEX: EnvMutex = EnvMutex::new();
 
@@ -157,6 +132,7 @@ mod tests {
                 ws_port: 1002,
                 ws_url: "ws://127.0.0.1:1002".to_string(),
                 max_tx_size: 1_000_000,
+                subscriptions_limit: Some(10000),
                 vm_execution_cache_misses_limit: None,
                 vm_concurrency_limit: Some(2048),
                 filters_limit: Some(10_000),
@@ -171,6 +147,7 @@ mod tests {
                 initial_writes_cache_size_mb: Some(32),
                 latest_values_cache_size_mb: Some(128),
             },
+            healthcheck: HealthCheckConfig { port: 8081 },
         }
     }
 

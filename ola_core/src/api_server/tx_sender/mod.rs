@@ -16,14 +16,13 @@ use ola_types::{
     fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Nonce, Transaction, H256,
 };
 
+use crate::sequencer::{seal_criteria::conditional_sealer::ConditionalSealer, SealData};
+
 use self::{error::SubmitTxError, proxy::TxProxy};
 
-use super::{
-    execution_sandbox::{
-        execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs,
-        VmConcurrencyBarrier, VmConcurrencyLimiter,
-    },
-    sequencer::{seal_criteria::conditional_sealer::ConditionalSealer, SealData},
+use super::execution_sandbox::{
+    execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs,
+    VmConcurrencyBarrier, VmConcurrencyLimiter,
 };
 
 pub mod error;

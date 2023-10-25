@@ -1,0 +1,8 @@
+[package]
+name = "olaos_mempool"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ola_types = { path = "../types" }
+olaos_logs = { path = "../logs" }

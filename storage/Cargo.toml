@@ -1,0 +1,10 @@
+[package]
+name = "olaos_storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+olaos_logs = { path = "../logs" }
+rocksdb = { version = "0.21.0", default-features = false, features = ["snappy"] }
+metrics = "0.20"
+num_cpus = "1.13"

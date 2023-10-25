@@ -1,8 +1,11 @@
 use blake2::{Blake2s256, Digest};
 use ola_basic_types::{AccountTreeId, Address, H160, H256, U256};
-use ola_config::constants::NONCE_HOLDER_ADDRESS;
+use ola_config::constants::{contracts::KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS};
 use ola_utils::convert::address_to_h256;
 use serde::{Deserialize, Serialize};
+
+pub mod log;
+pub mod writes;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct StorageKey {
@@ -58,4 +61,9 @@ pub fn get_nonce_key(account: &Address) -> StorageKey {
     let key = get_address_mapping_key(account, H256::zero());
 
     StorageKey::new(nonce_manager, key)
+}
+
+pub fn get_known_code_key(hash: &H256) -> StorageKey {
+    let known_codes_storage = AccountTreeId::new(KNOWN_CODES_STORAGE_ADDRESS);
+    StorageKey::new(known_codes_storage, *hash)
 }

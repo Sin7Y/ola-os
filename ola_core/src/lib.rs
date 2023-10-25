@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use api_server::{
     execution_sandbox::{VmConcurrencyBarrier, VmConcurrencyLimiter},
@@ -12,18 +12,29 @@ use ola_config::{
         load_api_config, load_healthcheck_config, load_web3_json_rpc_config, ApiConfig,
         Web3JsonRpcConfig,
     },
+    chain::{load_mempool_config, MempoolConfig},
+    contracts::{load_contract_config, ContractsConfig},
     database::{load_db_config, DBConfig},
-    sequencer::{NetworkConfig, SequencerConfig},
+    sequencer::{load_sequencer_config, NetworkConfig, SequencerConfig},
 };
+use ola_contracts::BaseSystemContracts;
 use ola_dal::{
     connection::{ConnectionPool, DbVariant},
     healthcheck::ConnectionPoolHealthCheck,
+    StorageProcessor,
 };
 use ola_state::postgres::PostgresStorageCaches;
+use ola_types::{system_contracts::get_system_smart_contracts, L2ChainId};
 use olaos_health_check::{CheckHealth, ReactiveHealthCheck};
+use sequencer::{
+    create_sequencer, io::MiniblockSealer, mempool_actor::MempoolFetcher, types::MempoolGuard,
+};
 use tokio::{sync::watch, task::JoinHandle};
 
 pub mod api_server;
+pub mod genesis;
+pub mod metadata_calculator;
+pub mod sequencer;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Component {
@@ -34,16 +45,21 @@ pub enum Component {
 pub async fn initialize_components(
     components: Vec<Component>,
 ) -> anyhow::Result<(Vec<JoinHandle<()>>, watch::Sender<bool>, HealthCheckHandle)> {
+    olaos_logs::info!("Starting the components: {components:?}");
+
     // FIXME:
     // let db_config = DBConfig::from_env();
     let db_config = load_db_config().expect("failed to load database config");
-
     let connection_pool = ConnectionPool::builder(DbVariant::Master).build().await;
     let replica_connection_pool = ConnectionPool::builder(DbVariant::Replica)
         .set_statement_timeout(db_config.statement_timeout())
         .build()
         .await;
+
     let mut healthchecks: Vec<Box<dyn CheckHealth>> = Vec::new();
+    // FIXME: load from env?
+    let contracts_config = load_contract_config().expect("failed to load contract config");
+
     let (stop_sender, stop_receiver) = watch::channel(false);
 
     let mut task_futures: Vec<JoinHandle<()>> = vec![];
@@ -54,9 +70,13 @@ pub async fn initialize_components(
         let api_config = load_api_config().expect("failed to load api config");
         let sequencer_config = SequencerConfig::from_env();
         let network_config = NetworkConfig::from_env();
-        let internal_api_config =
-            InternalApiconfig::new(&network_config, &api_config.web3_json_rpc);
         let tx_sender_config = TxSenderConfig::new(&sequencer_config, &api_config.web3_json_rpc);
+        let internal_api_config = InternalApiconfig::new(
+            &network_config,
+            &api_config.web3_json_rpc,
+            &contracts_config,
+        );
+
         let mut storage_caches = None;
 
         if components.contains(&Component::HttpApi) {
@@ -65,6 +85,8 @@ pub async fn initialize_components(
                 &mut task_futures,
             ));
 
+            let started_at = Instant::now();
+            olaos_logs::info!("initializing HTTP API");
             let (futures, health_check) = run_http_api(
                 &api_config,
                 &sequencer_config,
@@ -78,11 +100,33 @@ pub async fn initialize_components(
             .await;
             task_futures.extend(futures);
             healthchecks.push(Box::new(health_check));
+            olaos_logs::info!("initialized HTTP API in {:?}", started_at.elapsed());
         }
     }
+
+    if components.contains(&Component::Sequencer) {
+        let started_at = Instant::now();
+        olaos_logs::info!("initializing Sequencer");
+        // FIXME: load from env?
+        let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
+        let mempool_config = load_mempool_config().expect("failed to load mempool config");
+        add_sequencer_to_task_futures(
+            &mut task_futures,
+            &contracts_config,
+            sequencer_config,
+            &db_config,
+            &mempool_config,
+            stop_receiver.clone(),
+        )
+        .await;
+        olaos_logs::info!("initialized Sequencer in {:?}", started_at.elapsed());
+    }
+
     healthchecks.push(Box::new(ConnectionPoolHealthCheck::new(
         replica_connection_pool,
     )));
+
+    // FIXME: load from env?
     let healtcheck_api_config =
         load_healthcheck_config().expect("failed to load health_check config");
     let health_check_handle =
@@ -190,4 +234,72 @@ pub fn setup_sigint_handler() -> oneshot::Receiver<()> {
     .expect("Error setting Ctrl+C handler");
 
     sigint_receiver
+}
+
+async fn add_sequencer_to_task_futures(
+    task_futures: &mut Vec<JoinHandle<()>>,
+    contracts_config: &ContractsConfig,
+    sequencer_config: SequencerConfig,
+    db_config: &DBConfig,
+    mempool_config: &MempoolConfig,
+    stop_receiver: watch::Receiver<bool>,
+) {
+    let pool_builder = ConnectionPool::singleton(DbVariant::Master);
+    let sequencer_pool = pool_builder.build().await;
+    let next_priority_id = sequencer_pool
+        .access_storage()
+        .await
+        .transactions_dal()
+        .next_priority_id()
+        .await;
+    let mempool = MempoolGuard::new(next_priority_id, mempool_config.capacity);
+
+    let miniblock_sealer_pool = pool_builder.build().await;
+    let (miniblock_sealer, miniblock_sealer_handle) = MiniblockSealer::new(
+        miniblock_sealer_pool,
+        sequencer_config.miniblock_seal_queue_capacity,
+    );
+    task_futures.push(tokio::spawn(miniblock_sealer.run()));
+
+    let sequencer = create_sequencer(
+        contracts_config,
+        sequencer_config,
+        db_config,
+        mempool_config,
+        sequencer_pool,
+        mempool.clone(),
+        miniblock_sealer_handle,
+        stop_receiver.clone(),
+    )
+    .await;
+    task_futures.push(tokio::spawn(sequencer.run()));
+
+    let mempool_fetcher_pool = pool_builder.build().await;
+    let mempool_fetcher = MempoolFetcher::new(mempool, mempool_config);
+    let mempool_fetcher_handle = tokio::spawn(mempool_fetcher.run(
+        mempool_fetcher_pool,
+        mempool_config.remove_stuck_txs,
+        mempool_config.stuck_tx_timeout(),
+        stop_receiver,
+    ));
+    task_futures.push(mempool_fetcher_handle);
+}
+
+pub async fn genesis_init(network_config: &NetworkConfig, contracts_config: &ContractsConfig) {
+    let mut storage = StorageProcessor::establish_connection(true).await;
+
+    genesis::ensure_genesis_state(
+        &mut storage,
+        L2ChainId(network_config.ola_network_id),
+        &genesis::GenesisParams {
+            base_system_contracts: BaseSystemContracts::load_from_disk(),
+            system_contracts: get_system_smart_contracts(),
+        },
+    )
+    .await;
+}
+
+pub async fn is_genesis_needed() -> bool {
+    let mut storage = StorageProcessor::establish_connection(true).await;
+    storage.blocks_dal().is_genesis_needed().await
 }

@@ -1,5 +1,8 @@
 use ola_basic_types::{Address, H160};
 
+pub mod contracts;
+pub mod crypto;
+pub mod ethereum;
 pub mod trusted_slots;
 
 pub const MAX_NEW_FACTORY_DEPS: usize = 32;
