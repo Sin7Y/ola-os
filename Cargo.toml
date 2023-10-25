@@ -12,4 +12,6 @@ members = [
     "health_check",
     "logs",
     "vm",
+    "mempool",
+    "storage",
 ]

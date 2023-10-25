@@ -9,3 +9,6 @@ olaos_logs = { path = "../logs" }
 tokio = { version = "1", features = ["time"] }
 futures = "0.3"
 thiserror = "1.0"
+itertools = "0.10.5"
+num = { version = "0.3.1", features = ["serde"] }
+bigdecimal = { version = "0.2.2", features = ["serde"]}

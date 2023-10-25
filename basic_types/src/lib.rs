@@ -75,3 +75,19 @@ basic_type!(Nonce, u32);
 basic_type!(L1ChainId, u64);
 
 basic_type!(L2ChainId, u16);
+
+basic_type!(PriorityOpId, u64);
+
+#[allow(clippy::derivable_impls)]
+impl Default for PriorityOpId {
+    fn default() -> Self {
+        Self(0)
+    }
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for L1BatchNumber {
+    fn default() -> Self {
+        Self(0)
+    }
+}

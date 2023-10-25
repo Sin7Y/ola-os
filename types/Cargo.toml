@@ -6,7 +6,8 @@ edition = "2021"
 [dependencies]
 ola_basic_types = { path = "../basic_types" }
 ola_utils = { path = "../utils" }
-ola_config ={ path = "../config"}
+ola_config = { path = "../config" }
+ola_contracts = { path = "../contracts" }
 ethereum_types_old = { package = "ethereum-types", version = "0.12.0" }
 web3 = { version= "0.19.0", default-features = false, features = ["http-rustls-tls", "test", "signing"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -14,3 +15,6 @@ serde_json = "1.0"
 thiserror = "1.0"
 blake2 = "0.10"
 strum = { version = "0.24", features = ["derive"] }
+num_enum = "0.6"
+once_cell = "1.7"
+ethabi = "18.0.0"

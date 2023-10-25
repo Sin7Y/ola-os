@@ -4,11 +4,20 @@ use crate::{
     request::{PaymasterParams, SerializationTransactionError, TransactionRequest},
     tx::execute::Execute,
     utils::unix_timestamp_ms,
-    ExecuteTransactionCommon, InputData, Transaction,
+    ExecuteTransactionCommon, InputData, Transaction, PRIORITY_OPERATION_L2_TX_TYPE,
+    PROTOCOL_UPGRADE_TX_TYPE,
 };
 use serde::{Deserialize, Serialize};
 
 pub mod error;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum TransactionType {
+    EIP1559Transaction = 0,
+    PriorityOpTransaction = PRIORITY_OPERATION_L2_TX_TYPE as u32,
+    ProtocolUpgradeTransaction = PROTOCOL_UPGRADE_TX_TYPE as u32,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L2Tx {

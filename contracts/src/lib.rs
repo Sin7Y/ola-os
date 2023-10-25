@@ -1,7 +1,7 @@
-use std::{fs, path::Path};
-
-use ola_types::{H256, U256};
+use ola_basic_types::{H256, U256};
 use ola_utils::{bytecode::hash_bytecode, convert::bytes_to_be_words};
+use serde::{Deserialize, Serialize};
+use std::{fs, path::Path};
 
 #[derive(Debug, Clone)]
 pub struct SystemContractCode {
@@ -52,6 +52,13 @@ impl BaseSystemContracts {
         let entrypoint = read_proved_block_entrypoint_bytecode();
         BaseSystemContracts::load_with_entrypoint(entrypoint)
     }
+
+    pub fn hashes(&self) -> BaseSystemContractsHashes {
+        BaseSystemContractsHashes {
+            bootloader: self.entrypoint.hash,
+            default_aa: self.default_aa.hash,
+        }
+    }
 }
 
 pub fn read_zbin_bytecode(zbin_path: impl AsRef<Path>) -> Vec<u8> {
@@ -77,4 +84,10 @@ pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {
 pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> Vec<u8> {
     // FIXME: repace zbin_path
     read_zbin_bytecode("etc/system-contracts/contracts/test.zbin")
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
+pub struct BaseSystemContractsHashes {
+    pub bootloader: H256,
+    pub default_aa: H256,
 }
