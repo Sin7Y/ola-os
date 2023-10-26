@@ -1,2 +1,0 @@
-DROP INDEX protective_reads_l1_batch_number_index;
-DROP TABLE protective_reads;

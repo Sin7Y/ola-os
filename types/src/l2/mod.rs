@@ -74,6 +74,7 @@ pub struct L2TxCommonData {
     pub nonce: Nonce,
     pub initiator_address: Address,
     pub signature: Vec<u8>,
+    pub transaction_type: TransactionType,
     pub input: Option<InputData>,
     pub paymaster_params: PaymasterParams,
 }

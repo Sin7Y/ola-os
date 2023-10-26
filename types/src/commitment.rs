@@ -12,8 +12,6 @@ pub struct L1BatchMetadata {
     pub initial_writes_compressed: Vec<u8>,
     pub repeated_writes_compressed: Vec<u8>,
     pub commitment: H256,
-    pub l2_l1_messages_compressed: Vec<u8>,
-    pub l2_l1_merkle_root: H256,
     pub block_meta_params: L1BatchMetaParameters,
     pub aux_data_hash: H256,
     pub meta_parameters_hash: H256,

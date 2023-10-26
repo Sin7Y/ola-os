@@ -1,1 +1,0 @@
-drop table storage_logs_dedup;

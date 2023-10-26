@@ -1,1 +1,0 @@
-DROP TABLE static_artifact_storage;

@@ -1,1 +1,0 @@
-DROP INDEX IF EXISTS events_address_block_event_index_in_block_index;
