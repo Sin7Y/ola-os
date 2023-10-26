@@ -1,1 +1,0 @@
-DROP INDEX eth_txs_history_eth_tx_id_idx;

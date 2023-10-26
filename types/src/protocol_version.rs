@@ -55,12 +55,8 @@ pub struct ProtocolUpgradeTxCommonData {
     pub eth_hash: H256,
     /// Block in which Ethereum transaction was included.
     pub eth_block: u64,
-    /// Tx hash of the transaction in the zkSync network. Calculated as the encoded transaction data hash.
+    /// Tx hash of the transaction. Calculated as the encoded transaction data hash.
     pub canonical_tx_hash: H256,
-    /// The amount of ETH that should be minted with this transaction
-    pub to_mint: U256,
-    /// The recipient of the refund of the transaction
-    pub refund_recipient: Address,
 }
 
 impl ProtocolUpgradeTxCommonData {

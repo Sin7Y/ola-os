@@ -4,6 +4,7 @@ use bigdecimal::{BigDecimal, FromPrimitive};
 use ola_config::constants::ethereum::MAX_GAS_PER_PUBDATA_BYTE;
 use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
+    commitment::L1BatchMetadata,
     protocol_version::ProtocolVersionId,
     L1BatchNumber, MiniblockNumber, H256,
 };
@@ -40,23 +41,51 @@ impl BlocksDal<'_, '_> {
         .map(|hash| H256::from_slice(&hash))
     }
 
+    pub async fn insert_l1_batch(
+        &mut self,
+        header: &L1BatchHeader,
+        initial_bootloader_contents: &[(usize, U256)],
+    ) {
+        let initial_bootloader_contents = serde_json::to_value(initial_bootloader_contents)
+            .expect("failed to serialize initial_bootloader_contents to JSON value");
+        let used_contract_hashes = serde_json::to_value(&header.used_contract_hashes)
+            .expect("failed to serialize used_contract_hashes to JSON value");
+
+        sqlx::query!(
+            "INSERT INTO l1_batches (\
+                number, l1_tx_count, l2_tx_count, timestamp, is_finished, \
+                initial_bootloader_heap_content, used_contract_hashes, \
+                bootloader_code_hash, default_aa_code_hash, protocol_version, \
+                created_at, updated_at \
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())",
+            header.number.0 as i64,
+            header.l1_tx_count as i32,
+            header.l2_tx_count as i32,
+            header.timestamp as i64,
+            header.is_finished,
+            initial_bootloader_contents,
+            used_contract_hashes,
+            header.base_system_contracts_hashes.bootloader.as_bytes(),
+            header.base_system_contracts_hashes.default_aa.as_bytes(),
+            header.protocol_version.map(|v| v as i32),
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
+    }
+
     pub async fn insert_miniblock(&mut self, miniblock_header: &MiniblockHeader) {
         sqlx::query!(
             "INSERT INTO miniblocks ( \
                 number, timestamp, hash, l1_tx_count, l2_tx_count, \
-                base_fee_per_gas, l1_gas_price, l2_fair_gas_price, gas_per_pubdata_limit, \
                 bootloader_code_hash, default_aa_code_hash, protocol_version, \
                 created_at, updated_at \
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())",
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())",
             miniblock_header.number.0 as i64,
             miniblock_header.timestamp as i64,
             miniblock_header.hash.as_bytes(),
             miniblock_header.l1_tx_count as i32,
             miniblock_header.l2_tx_count as i32,
-            BigDecimal::from_u32(0),
-            0,
-            0,
-            MAX_GAS_PER_PUBDATA_BYTE as i64,
             miniblock_header
                 .base_system_contracts_hashes
                 .bootloader
@@ -66,6 +95,21 @@ impl BlocksDal<'_, '_> {
                 .default_aa
                 .as_bytes(),
             miniblock_header.protocol_version.map(|v| v as i32),
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
+    }
+
+    pub async fn mark_miniblocks_as_executed_in_l1_batch(
+        &mut self,
+        l1_batch_number: L1BatchNumber,
+    ) {
+        sqlx::query!(
+            "UPDATE miniblocks \
+            SET l1_batch_number = $1 \
+            WHERE l1_batch_number IS NULL",
+            l1_batch_number.0 as i32,
         )
         .execute(self.storage.conn())
         .await
@@ -89,10 +133,8 @@ impl BlocksDal<'_, '_> {
         let last_l1_batch = sqlx::query_as!(
             StorageL1BatchHeader,
             "SELECT number, l1_tx_count, l2_tx_count, \
-                timestamp, is_finished, fee_account_address, l2_to_l1_logs, l2_to_l1_messages, \
-                bloom, priority_ops_onchain_data, \
-                used_contract_hashes, base_fee_per_gas, l1_gas_price, \
-                l2_fair_gas_price, bootloader_code_hash, default_aa_code_hash, protocol_version \
+                timestamp, is_finished, used_contract_hashes, \
+                bootloader_code_hash, default_aa_code_hash, protocol_version \
             FROM l1_batches \
             ORDER BY number DESC \
             LIMIT 1"
@@ -163,7 +205,6 @@ impl BlocksDal<'_, '_> {
         sqlx::query_as!(
             StorageMiniblockHeader,
             "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, \
-                base_fee_per_gas, l1_gas_price, l2_fair_gas_price, \
                 bootloader_code_hash, default_aa_code_hash, protocol_version \
             FROM miniblocks \
             WHERE number = $1",
@@ -220,20 +261,17 @@ impl BlocksDal<'_, '_> {
         }
     }
 
+    #[tracing::instrument(name = "get_l1_batch_header", skip_all)]
     pub async fn get_l1_batch_header(&mut self, number: L1BatchNumber) -> Option<L1BatchHeader> {
         sqlx::query_as!(
             StorageL1BatchHeader,
             "SELECT number, l1_tx_count, l2_tx_count, \
-                timestamp, is_finished, fee_account_address, l2_to_l1_logs, l2_to_l1_messages, \
-                bloom, priority_ops_onchain_data, \
-                used_contract_hashes, base_fee_per_gas, l1_gas_price, \
-                l2_fair_gas_price, bootloader_code_hash, default_aa_code_hash, protocol_version \
+                timestamp, is_finished, used_contract_hashes, \
+                bootloader_code_hash, default_aa_code_hash, protocol_version \
             FROM l1_batches \
             WHERE number = $1",
             number.0 as i64
         )
-        .instrument("get_l1_batch_header")
-        .with_arg("number", &number)
         .fetch_optional(self.storage.conn())
         .await
         .unwrap()
@@ -245,20 +283,16 @@ impl BlocksDal<'_, '_> {
             "UPDATE l1_batches \
             SET hash = $1, merkle_root_hash = $2, commitment = $3, default_aa_code_hash = $4, \
                 compressed_repeated_writes = $5, compressed_initial_writes = $6, \
-                l2_l1_compressed_messages = $7, l2_l1_merkle_root = $8, \
-                zkporter_is_available = $9, bootloader_code_hash = $10, rollup_last_leaf_index = $11, \
-                aux_data_hash = $12, pass_through_data_hash = $13, meta_parameters_hash = $14, \
+                bootloader_code_hash = $7, rollup_last_leaf_index = $8, \
+                aux_data_hash = $9, pass_through_data_hash = $10, meta_parameters_hash = $11, \
                 updated_at = now() \
-            WHERE number = $15",
+            WHERE number = $12",
             metadata.root_hash.as_bytes(),
             metadata.merkle_root_hash.as_bytes(),
             metadata.commitment.as_bytes(),
             metadata.block_meta_params.default_aa_code_hash.as_bytes(),
             metadata.repeated_writes_compressed,
             metadata.initial_writes_compressed,
-            metadata.l2_l1_messages_compressed,
-            metadata.l2_l1_merkle_root.as_bytes(),
-            metadata.block_meta_params.zkporter_is_available,
             metadata.block_meta_params.bootloader_code_hash.as_bytes(),
             metadata.rollup_last_leaf_index as i64,
             metadata.aux_data_hash.as_bytes(),

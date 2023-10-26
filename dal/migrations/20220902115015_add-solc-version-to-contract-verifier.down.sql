@@ -1,2 +1,0 @@
-ALTER TABLE contract_verification_requests DROP COLUMN compiler_solc_version;
-ALTER TABLE contract_verification_requests RENAME COLUMN compiler_zksolc_version TO compiler_version;

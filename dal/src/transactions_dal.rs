@@ -11,6 +11,7 @@ use ola_types::{
     fee::TransactionExecutionMetrics,
     get_nonce_key,
     l2::{L2Tx, L2TxCommonData},
+    protocol_version::ProtocolUpgradeTx,
     request::PaymasterParams,
     tx::{execute::Execute, tx_execution_info::TxExecutionStatus, TransactionExecutionResult},
     Address, ExecuteTransactionCommon, MiniblockNumber, Nonce, PriorityOpId, Transaction, H256,
@@ -48,6 +49,58 @@ pub struct TransactionsDal<'c, 'a> {
 }
 
 impl TransactionsDal<'_, '_> {
+    pub async fn insert_system_transaction(&mut self, tx: ProtocolUpgradeTx) {
+        let contract_address = tx.execute.contract_address.as_bytes().to_vec();
+        let tx_hash = tx.common_data.hash().0.to_vec();
+        let json_data = serde_json::to_value(&tx.execute)
+            .unwrap_or_else(|_| panic!("cannot serialize tx {:?} to json", tx.common_data.hash()));
+        let upgrade_id = tx.common_data.upgrade_id as i32;
+        let sender = tx.common_data.sender.0.to_vec();
+        let tx_format = tx.common_data.tx_format() as i32;
+        let l1_block_number = tx.common_data.eth_block as i32;
+
+        let secs = (tx.received_timestamp_ms / 1000) as i64;
+        let nanosecs = ((tx.received_timestamp_ms % 1000) * 1_000_000) as u32;
+        let received_at = NaiveDateTime::from_timestamp_opt(secs, nanosecs).unwrap();
+
+        sqlx::query!(
+            "
+                INSERT INTO transactions
+                (
+                    hash,
+                    is_priority,
+                    initiator_address,
+
+                    data,
+                    upgrade_id,
+                    contract_address,
+                    l1_block_number,
+                    tx_format,
+
+                    received_at,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                    (
+                        $1, TRUE, $2, $3, $4, $5, $6, $7, $8, now(), now()
+                    )
+                ON CONFLICT (hash) DO NOTHING
+                ",
+            tx_hash,
+            sender,
+            json_data,
+            upgrade_id,
+            contract_address,
+            l1_block_number,
+            tx_format,
+            received_at,
+        )
+        .fetch_optional(self.storage.conn())
+        .await
+        .unwrap();
+    }
+
     pub async fn insert_transaction_l2(
         &mut self,
         tx: L2Tx,
@@ -59,11 +112,10 @@ impl TransactionsDal<'_, '_> {
             let contract_address = tx.execute.contract_address.as_bytes();
             let json_data = serde_json::to_value(&tx.execute)
                 .unwrap_or_else(|_| panic!("cannot serialize tx {:?} to json", tx.hash()));
+            let tx_format = tx.common_data.transaction_type as i32;
             let signature = tx.common_data.signature;
             let nonce = tx.common_data.nonce.0 as i64;
             let input_data = tx.common_data.input.expect("Data is mandatory").data;
-            let paymaster = tx.common_data.paymaster_params.paymaster.0.as_ref();
-            let paymaster_input = tx.common_data.paymaster_params.paymaster_input;
             let secs = (tx.received_timestamp_ms / 1000) as i64;
             let nanosecs = ((tx.received_timestamp_ms % 1000) * 1_000_000) as u32;
             let received_at = NaiveDateTime::from_timestamp_opt(secs, nanosecs).unwrap();
@@ -86,17 +138,10 @@ impl TransactionsDal<'_, '_> {
                     initiator_address,
                     nonce,
                     signature,
-                    gas_limit,
-                    max_fee_per_gas,
-                    max_priority_fee_per_gas,
-                    gas_per_pubdata_limit,
                     input,
                     data,
                     tx_format,
                     contract_address,
-                    value,
-                    paymaster,
-                    paymaster_input,
                     execution_info,
                     received_at,
                     created_at,
@@ -104,9 +149,9 @@ impl TransactionsDal<'_, '_> {
                 )
                 VALUES
                     (
-                        $1, FALSE, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                        $1, FALSE, $2, $3, $4, $5, $6, $7, $8,
                         jsonb_build_object('gas_used', $16::bigint, 'storage_writes', $17::int, 'contracts_used', $18::int),
-                        $19, now(), now()
+                        $9, now(), now()
                     )
                 ON CONFLICT
                     (initiator_address, nonce)
@@ -137,18 +182,10 @@ impl TransactionsDal<'_, '_> {
                 initiator_address.as_bytes(),
                 nonce,
                 &signature,
-                // FIXME: remove gas in database
-                BigDecimal::new(0.into(), 1),
-                BigDecimal::new(0.into(), 1),
-                BigDecimal::new(0.into(), 1),
-                BigDecimal::new(0.into(), 1),
                 input_data,
                 &json_data,
-                0,
+                tx_format,
                 contract_address,
-                BigDecimal::new(0.into(), 1),
-                &paymaster,
-                &paymaster_input,
                 0,
                 (exec_info.initial_storage_writes + exec_info.repeated_storage_writes) as i32,
                 exec_info.contracts_used as i32,

@@ -1,2 +1,0 @@
-ALTER TABLE transactions ADD COLUMN IF NOT EXISTS paymaster BYTEA NOT NULL;
-ALTER TABLE transactions ADD COLUMN IF NOT EXISTS paymaster_input BYTEA NOT NULL;

@@ -1,2 +1,0 @@
-DROP TABLE contract_verification_zksolc_versions;
-DROP TABLE contract_verification_solc_versions;

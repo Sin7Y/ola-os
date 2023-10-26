@@ -1,8 +1,20 @@
 use blake2::{Blake2s256, Digest};
-use ola_basic_types::{AccountTreeId, Address, H160, H256, U256};
-use ola_config::constants::{contracts::KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS};
+use ola_basic_types::{AccountTreeId, Address, L2ChainId, H160, H256, U256};
+use ola_config::constants::{
+    contracts::{
+        ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
+        SYSTEM_CONTEXT_ADDRESS,
+    },
+    system_context::{
+        SYSTEM_CONTEXT_CHAIN_ID_POSITION, SYSTEM_CONTEXT_COINBASE_POSITION,
+        SYSTEM_CONTEXT_DIFFICULTY, SYSTEM_CONTEXT_DIFFICULTY_POSITION,
+    },
+    NONCE_HOLDER_ADDRESS,
+};
 use ola_utils::convert::address_to_h256;
 use serde::{Deserialize, Serialize};
+
+use crate::log::StorageLog;
 
 pub mod log;
 pub mod writes;
@@ -63,7 +75,34 @@ pub fn get_nonce_key(account: &Address) -> StorageKey {
     StorageKey::new(nonce_manager, key)
 }
 
+pub fn get_code_key(account: &Address) -> StorageKey {
+    let account_code_storage = AccountTreeId::new(ACCOUNT_CODE_STORAGE_ADDRESS);
+    StorageKey::new(account_code_storage, address_to_h256(account))
+}
+
 pub fn get_known_code_key(hash: &H256) -> StorageKey {
     let known_codes_storage = AccountTreeId::new(KNOWN_CODES_STORAGE_ADDRESS);
     StorageKey::new(known_codes_storage, *hash)
+}
+
+pub fn get_system_context_init_logs(chain_id: L2ChainId) -> Vec<StorageLog> {
+    vec![
+        StorageLog::new_write_log(
+            get_system_context_key(SYSTEM_CONTEXT_CHAIN_ID_POSITION),
+            H256::from_low_u64_be(chain_id.0 as u64),
+        ),
+        StorageLog::new_write_log(
+            get_system_context_key(SYSTEM_CONTEXT_COINBASE_POSITION),
+            address_to_h256(&BOOTLOADER_ADDRESS),
+        ),
+        StorageLog::new_write_log(
+            get_system_context_key(SYSTEM_CONTEXT_DIFFICULTY_POSITION),
+            SYSTEM_CONTEXT_DIFFICULTY,
+        ),
+    ]
+}
+
+pub fn get_system_context_key(key: H256) -> StorageKey {
+    let system_context = AccountTreeId::new(SYSTEM_CONTEXT_ADDRESS);
+    StorageKey::new(system_context, key)
 }

@@ -1,1 +1,0 @@
-ALTER TABLE blocks ADD COLUMN IF NOT EXISTS ergs_per_pubdata_limit BIGINT NOT NULL DEFAULT 0;

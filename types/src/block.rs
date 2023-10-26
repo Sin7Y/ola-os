@@ -48,19 +48,33 @@ pub struct L1BatchHeader {
     pub is_finished: bool,
     /// Timestamp when block was first created.
     pub timestamp: u64,
-    /// Address of the fee account that was used when block was created
-    pub fee_account_address: Address,
     /// Total number of processed priority operations in the block
     pub l1_tx_count: u16,
     /// Total number of processed txs that was requested offchain
     pub l2_tx_count: u16,
-    /// The data of the processed priority operations hash which must be sent to the smart contract.
-    pub priority_ops_onchain_data: Vec<PriorityOpOnchainData>,
-    /// Preimages of the hashes that were sent as value of L2 logs by special system L2 contract.
-    pub l2_to_l1_messages: Vec<Vec<u8>>,
     /// Hashes of contracts used this block
     pub used_contract_hashes: Vec<U256>,
     pub base_system_contracts_hashes: BaseSystemContractsHashes,
     /// Version of protocol used for the L1 batch.
     pub protocol_version: Option<ProtocolVersionId>,
+}
+
+impl L1BatchHeader {
+    pub fn new(
+        number: L1BatchNumber,
+        timestamp: u64,
+        base_system_contracts_hashes: BaseSystemContractsHashes,
+        protocol_version: ProtocolVersionId,
+    ) -> L1BatchHeader {
+        Self {
+            number,
+            is_finished: false,
+            timestamp,
+            l1_tx_count: 0,
+            l2_tx_count: 0,
+            used_contract_hashes: vec![],
+            base_system_contracts_hashes,
+            protocol_version: Some(protocol_version),
+        }
+    }
 }

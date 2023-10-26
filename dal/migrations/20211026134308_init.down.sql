@@ -1,39 +1,42 @@
-DROP TABLE tokens;
+DROP TABLE call_traces;
 
-DROP INDEX transactions_block_number_idx;
-DROP TABLE transactions;
+DROP INDEX IF EXISTS ix_initial_writes_t1;
+DROP INDEX initial_writes_index_index;
+DROP INDEX initial_writes_l1_batch_number_index;
+DROP TABLE initial_writes;
 
-DROP TABLE storage;
-
-DROP INDEX contracts_block_number_idx;
-DROP INDEX contracts_tx_hash_idx;
-DROP TABLE contracts;
-
-DROP TABLE proof;
-DROP TABLE aggregated_proof;
-
-DROP INDEX storage_logs_block_number_idx;
-DROP INDEX storage_logs_raw_key_block_number_idx;
-DROP TABLE storage_logs;
-
-DROP TABLE contract_sources;
-DROP TABLE transaction_traces;
-
-DROP INDEX events_tx_location_idx;
-DROP INDEX events_address_idx;
-DROP INDEX events_topic1_idx;
-DROP INDEX events_topic2_idx;
-DROP INDEX events_topic3_idx;
-DROP INDEX events_topic4_idx;
-DROP INDEX events_tx_hash_idx;
-DROP TABLE events;
+DROP INDEX protective_reads_l1_batch_number_index;
+DROP TABLE protective_reads;
 
 DROP TABLE factory_deps;
 
-DROP INDEX blocks_eth_commit_tx_id_idx;
-DROP INDEX blocks_eth_execute_tx_id_idx;
-DROP INDEX blocks_eth_prove_tx_id_idx;
-DROP TABLE blocks;
+DROP TABLE transaction_traces;
 
-DROP TABLE eth_txs_history;
-DROP TABLE eth_txs
+DROP INDEX storage_logs_contract_address_tx_hash_idx_upd;
+DROP INDEX storage_logs_block_number_idx;
+DROP TABLE storage_logs;
+
+DROP INDEX pending_l1_batch_txs;
+DROP INDEX transactions_miniblock_number_tx_index_idx;
+DROP INDEX transactions_l1_batch_number_idx;
+DROP INDEX transactions_in_mempool_idx;
+DROP INDEX transactions_contract_address_idx;
+DROP INDEX transactions_initiator_address_nonce;
+DROP INDEX transactions_priority_op_id_idx;
+DROP INDEX transactions_received_at_idx;
+DROP TABLE transactions;
+
+
+
+DROP INDEX blocks_eth_execute_tx_id_idx;
+DROP INDEX blocks_hash;
+DROP TABLE l1_batches;
+
+DROP INDEX IF EXISTS ix_miniblocks_t1;
+DROP INDEX miniblocks_hash;
+DROP INDEX miniblocks_l1_batch_number_idx;
+DROP TABLE miniblocks;
+
+DROP TABLE protocol_versions;
+
+DROP TABLE storage;

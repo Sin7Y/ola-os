@@ -1,1 +1,0 @@
-CREATE INDEX ON "transactions" (priority_op_id) WHERE priority_op_id IS NOT NULL;

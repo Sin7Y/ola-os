@@ -70,3 +70,14 @@ pub fn h256_to_u32(value: H256) -> u32 {
     let be_u32_bytes: [u8; 4] = value[28..].try_into().unwrap();
     u32::from_be_bytes(be_u32_bytes)
 }
+
+pub fn be_words_to_bytes(words: &[U256]) -> Vec<u8> {
+    words
+        .iter()
+        .flat_map(|w| {
+            let mut bytes = [0u8; 32];
+            w.to_big_endian(&mut bytes);
+            bytes
+        })
+        .collect()
+}

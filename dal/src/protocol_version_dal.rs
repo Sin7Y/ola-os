@@ -1,6 +1,6 @@
 use ola_contracts::BaseSystemContracts;
 use ola_types::{
-    protocol_version::{ProtocolUpgradeTx, ProtocolVersionId},
+    protocol_version::{ProtocolUpgradeTx, ProtocolVersion, ProtocolVersionId},
     H256,
 };
 
@@ -12,6 +12,39 @@ pub struct ProtocolVersionsDal<'a, 'c> {
 }
 
 impl ProtocolVersionsDal<'_, '_> {
+    pub async fn save_protocol_version(&mut self, version: ProtocolVersion) {
+        let tx_hash = version
+            .tx
+            .as_ref()
+            .map(|tx| tx.common_data.hash().0.to_vec());
+
+        let mut db_transaction = self.storage.start_transaction().await;
+        if let Some(tx) = version.tx {
+            db_transaction
+                .transactions_dal()
+                .insert_system_transaction(tx)
+                .await;
+        }
+
+        sqlx::query!(
+            "INSERT INTO protocol_versions
+                    (id, timestamp, bootloader_code_hash,
+                        default_account_code_hash, upgrade_tx_hash, created_at)
+                VALUES ($1, $2, $3, $4, $5, now())
+                ",
+            version.id as i32,
+            version.timestamp as i64,
+            version.base_system_contracts_hashes.bootloader.as_bytes(),
+            version.base_system_contracts_hashes.default_aa.as_bytes(),
+            tx_hash
+        )
+        .execute(db_transaction.conn())
+        .await
+        .unwrap();
+
+        db_transaction.commit().await;
+    }
+
     pub async fn base_system_contracts_by_timestamp(
         &mut self,
         current_timestamp: u64,
