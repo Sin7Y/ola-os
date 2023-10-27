@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE miniblocks SET l1_batch_number = $1 WHERE l1_batch_number IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7df997e5a203e8df350b1346863fddf26d32123159213c02e8794c39240e48dc"
+}

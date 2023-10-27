@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT MAX(priority_op_id) as \"op_id\" from transactions where is_priority = true AND miniblock_number IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "op_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "22b57675a726d9cfeb82a60ba50c36cab1548d197ea56a7658d3f005df07c60b"
+}

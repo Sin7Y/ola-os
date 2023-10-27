@@ -36,7 +36,6 @@ impl BlockContextMode {
 #[derive(Debug, Copy, Clone)]
 pub struct DerivedBlockContext {
     pub context: BlockContext,
-    pub base_fee: u64,
 }
 
 #[derive(Clone, Debug, Copy)]
@@ -44,20 +43,16 @@ pub struct BlockContext {
     pub block_number: u32,
     pub block_timestamp: u64,
     pub operator_address: Address,
-    pub l1_gas_price: u64,
-    pub fair_l2_gas_price: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BlockProperties {
     pub default_aa_code_hash: U256,
-    pub zkporter_is_available: bool,
 }
 
 impl From<BlockContext> for DerivedBlockContext {
     fn from(context: BlockContext) -> Self {
-        let base_fee = 0;
-        DerivedBlockContext { context, base_fee }
+        DerivedBlockContext { context }
     }
 }
 

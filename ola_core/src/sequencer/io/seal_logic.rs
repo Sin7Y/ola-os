@@ -176,14 +176,13 @@ impl MiniblockSealCommand {
         let deployed_contract_count = Self::count_deployed_contracts(&unique_updates);
         // progress.end_stage("extract_contracts_deployed", Some(deployed_contract_count));
 
-        // TODO: do not process L1 & L2 bridge
+        // TODO: do not process L1 & L2 bridge & tokens
         // let added_tokens = extract_added_tokens(self.l2_erc20_bridge_addr, &self.miniblock.events);
-        let added_tokens = vec![];
         // progress.end_stage("extract_added_tokens", Some(added_tokens.len()));
-        let added_tokens_len = added_tokens.len();
-        if !added_tokens.is_empty() {
-            transaction.tokens_dal().add_tokens(added_tokens).await;
-        }
+        // let added_tokens_len = added_tokens.len();
+        // if !added_tokens.is_empty() {
+        //     transaction.tokens_dal().add_tokens(added_tokens).await;
+        // }
         // progress.end_stage("insert_tokens", Some(added_tokens_len));
 
         // TODO: events not supported 23/10/23
