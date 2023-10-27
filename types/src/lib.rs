@@ -25,6 +25,8 @@ pub mod tx;
 pub mod utils;
 pub mod vm_trace;
 
+pub const EIP_1559_TX_TYPE: u8 = 0x02;
+
 /// Denotes the first byte of the priority transaction.
 pub const PRIORITY_OPERATION_L2_TX_TYPE: u8 = 0xff;
 

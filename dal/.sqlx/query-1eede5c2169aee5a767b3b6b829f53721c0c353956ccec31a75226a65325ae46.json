@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE transactions SET in_mempool = FALSE WHERE in_mempool = TRUE",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "1eede5c2169aee5a767b3b6b829f53721c0c353956ccec31a75226a65325ae46"
+}

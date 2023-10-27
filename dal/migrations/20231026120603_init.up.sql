@@ -11,36 +11,6 @@ CREATE TABLE storage
 )
     WITH (fillfactor = 50);
 
-CREATE TABLE protocol_versions (
-    id INT PRIMARY KEY,
-    timestamp BIGINT NOT NULL,
-    bootloader_code_hash BYTEA NOT NULL,
-    default_account_code_hash BYTEA NOT NULL,
-    upgrade_tx_hash BYTEA REFERENCES transactions (hash),
-    created_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE miniblocks (
-    number BIGSERIAL PRIMARY KEY,
-    l1_batch_number BIGINT,
-    timestamp BIGINT NOT NULL,
-    hash BYTEA NOT NULL,
-
-    l1_tx_count INT NOT NULL,
-    l2_tx_count INT NOT NULL,
-
-    bootloader_code_hash BYTEA,
-    default_aa_code_hash BYTEA,
-
-    protocol_version INT REFERENCES protocol_versions (id),
-
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
-);
-CREATE INDEX miniblocks_l1_batch_number_idx ON miniblocks (l1_batch_number);
-CREATE INDEX miniblocks_hash ON miniblocks USING hash (hash);
-CREATE INDEX ix_miniblocks_t1 ON miniblocks USING btree (number) INCLUDE (l1_batch_number, "timestamp");
-
 CREATE TABLE l1_batches
 (
     number BIGSERIAL PRIMARY KEY,
@@ -68,14 +38,30 @@ CREATE TABLE l1_batches
     pass_through_data_hash BYTEA,
     meta_parameters_hash BYTEA,
 
-    protocol_version INT REFERENCES protocol_versions (id),
-
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
 
 CREATE INDEX blocks_hash ON l1_batches USING hash (hash);
-CREATE INDEX blocks_eth_execute_tx_id_idx ON l1_batches (eth_execute_tx_id);
+
+CREATE TABLE miniblocks (
+    number BIGSERIAL PRIMARY KEY,
+    l1_batch_number BIGINT,
+    timestamp BIGINT NOT NULL,
+    hash BYTEA NOT NULL,
+
+    l1_tx_count INT NOT NULL,
+    l2_tx_count INT NOT NULL,
+
+    bootloader_code_hash BYTEA,
+    default_aa_code_hash BYTEA,
+
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+CREATE INDEX miniblocks_l1_batch_number_idx ON miniblocks (l1_batch_number);
+CREATE INDEX miniblocks_hash ON miniblocks USING hash (hash);
+CREATE INDEX ix_miniblocks_t1 ON miniblocks USING btree (number) INCLUDE (l1_batch_number, "timestamp");
 
 CREATE TABLE transactions
 (
@@ -108,18 +94,27 @@ CREATE TABLE transactions
 
 ALTER TABLE transactions ADD CONSTRAINT transactions_miniblock_number_fkey
     FOREIGN KEY (miniblock_number) REFERENCES miniblocks (number);
-ALTER TABLE transactions ADD CONSTRAINT transactions_l1_batch_number_fkey
-    FOREIGN KEY (l1_batch_number) REFERENCES l1_batches (number);
 
 CREATE INDEX transactions_received_at_idx ON transactions(received_at);
 CREATE UNIQUE INDEX transactions_initiator_address_nonce ON transactions (initiator_address, nonce);
 CREATE INDEX ON "transactions" (priority_op_id) WHERE priority_op_id IS NOT NULL;
 CREATE INDEX transactions_contract_address_idx ON transactions (contract_address);
 CREATE INDEX transactions_in_mempool_idx ON transactions (in_mempool) WHERE in_mempool = TRUE;
-CREATE INDEX transactions_l1_batch_number_idx ON transactions (block_number);
+CREATE INDEX transactions_l1_batch_number_idx ON transactions (l1_batch_number);
 CREATE INDEX transactions_miniblock_number_tx_index_idx ON transactions (miniblock_number, index_in_block);
 CREATE INDEX pending_l1_batch_txs ON transactions USING btree (miniblock_number, index_in_block) WHERE ((miniblock_number IS NOT NULL) AND (l1_batch_number IS NULL));
 
+CREATE TABLE protocol_versions (
+    id INT PRIMARY KEY,
+    timestamp BIGINT NOT NULL,
+    bootloader_code_hash BYTEA NOT NULL,
+    default_account_code_hash BYTEA NOT NULL,
+    upgrade_tx_hash BYTEA REFERENCES transactions (hash),
+    created_at TIMESTAMP NOT NULL
+);
+
+ALTER TABLE l1_batches ADD COLUMN IF NOT EXISTS protocol_version INT REFERENCES protocol_versions (id);
+ALTER TABLE miniblocks ADD COLUMN IF NOT EXISTS protocol_version INT REFERENCES protocol_versions (id);
 
 CREATE TABLE storage_logs
 (
@@ -129,21 +124,19 @@ CREATE TABLE storage_logs
     value BYTEA NOT NULL,
     operation_number INT NOT NULL,
     tx_hash BYTEA NOT NULL,
-    miniblock_number BIGINT NOT NULL REFERENCES l1_batches (number) ON DELETE CASCADE,
+    miniblock_number BIGINT NOT NULL REFERENCES miniblocks (number) ON DELETE CASCADE,
 
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
 
-ALTER TABLE storage_logs ADD PRIMARY KEY (hashed_key, block_number, operation_number);
+ALTER TABLE storage_logs ADD PRIMARY KEY (hashed_key, miniblock_number, operation_number);
 
-CREATE INDEX storage_logs_block_number_idx ON storage_logs (block_number);
+CREATE INDEX storage_logs_miniblock_number_idx ON storage_logs (miniblock_number);
 -- This is the ACCOUNT_CODE_STORAGE address.
 -- TODO: replace address
 CREATE INDEX storage_logs_contract_address_tx_hash_idx_upd ON storage_logs (tx_hash) WHERE (address = '\x0000000000000000000000000000000000008002'::bytea);
 
-ALTER TABLE storage_logs ADD CONSTRAINT storage_logs_miniblock_number_fkey
-    FOREIGN KEY (miniblock_number) REFERENCES miniblocks (number);
 
 CREATE TABLE transaction_traces
 (
@@ -158,14 +151,11 @@ CREATE TABLE factory_deps
 (
     bytecode_hash BYTEA PRIMARY KEY,
     bytecode BYTEA NOT NULL,
-    miniblock_number BIGINT NOT NULL REFERENCES l1_batches (number) ON DELETE CASCADE,
+    miniblock_number BIGINT NOT NULL REFERENCES miniblocks (number) ON DELETE CASCADE,
 
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 );
-
-ALTER TABLE factory_deps ADD CONSTRAINT factory_deps_miniblock_number_fkey
-    FOREIGN KEY (miniblock_number) REFERENCES miniblocks (number);
 
 
 CREATE TABLE protective_reads (

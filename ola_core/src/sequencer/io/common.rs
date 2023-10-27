@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use ola_config::constants::crypto::ZKPORTER_IS_AVAILABLE;
 use ola_contracts::BaseSystemContracts;
 use ola_dal::StorageProcessor;
 use ola_types::{protocol_version::ProtocolVersionId, Address, L1BatchNumber, U256};
@@ -22,14 +21,11 @@ pub(crate) fn l1_batch_params(
 ) -> L1BatchParams {
     let block_properties = BlockProperties {
         default_aa_code_hash: h256_to_u256(base_system_contracts.default_aa.hash),
-        zkporter_is_available: ZKPORTER_IS_AVAILABLE,
     };
 
     let context = BlockContext {
         block_number: current_l1_batch_number.0,
         block_timestamp: l1_batch_timestamp,
-        l1_gas_price,
-        fair_l2_gas_price,
         operator_address,
     };
 

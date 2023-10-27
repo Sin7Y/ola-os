@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO storage (hashed_key, address, key, value, tx_hash, created_at, updated_at) SELECT u.hashed_key, u.address, u.key, u.value, u.tx_hash, now(), now() FROM UNNEST ($1::bytea[], $2::bytea[], $3::bytea[], $4::bytea[], $5::bytea[]) AS u(hashed_key, address, key, value, tx_hash) ON CONFLICT (hashed_key) DO UPDATE SET tx_hash = excluded.tx_hash, value = excluded.value, updated_at = now()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "ByteaArray",
+        "ByteaArray",
+        "ByteaArray",
+        "ByteaArray",
+        "ByteaArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "deaf3789ac968e299fe0e5a7f1c72494af8ecd664da9c901ec9c0c5e7c29bb65"
+}
