@@ -45,8 +45,8 @@ impl L2Tx {
                 nonce,
                 initiator_address,
                 signature: Default::default(),
+                transaction_type: TransactionType::EIP1559Transaction,
                 input: None,
-                paymaster_params,
             },
             received_timestamp_ms: unix_timestamp_ms(),
         }
@@ -76,7 +76,6 @@ pub struct L2TxCommonData {
     pub signature: Vec<u8>,
     pub transaction_type: TransactionType,
     pub input: Option<InputData>,
-    pub paymaster_params: PaymasterParams,
 }
 
 impl L2TxCommonData {
@@ -84,17 +83,17 @@ impl L2TxCommonData {
         nonce: Nonce,
         initiator_address: Address,
         signature: Vec<u8>,
+        transaction_type: TransactionType,
         input: Vec<u8>,
         hash: H256,
-        paymaster_params: PaymasterParams,
     ) -> Self {
         let input = Some(InputData { hash, data: input });
         Self {
             nonce,
             initiator_address,
             signature,
+            transaction_type,
             input,
-            paymaster_params,
         }
     }
 
@@ -120,8 +119,8 @@ impl Default for L2TxCommonData {
             nonce: Nonce(0),
             initiator_address: Address::zero(),
             signature: Default::default(),
+            transaction_type: TransactionType::EIP1559Transaction,
             input: Default::default(),
-            paymaster_params: Default::default(),
         }
     }
 }

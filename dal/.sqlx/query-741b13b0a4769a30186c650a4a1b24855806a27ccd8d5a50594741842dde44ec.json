@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT MIN(miniblocks.number) as \"min?\", MAX(miniblocks.number) as \"max?\" FROM miniblocks WHERE l1_batch_number = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "min?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "max?",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "741b13b0a4769a30186c650a4a1b24855806a27ccd8d5a50594741842dde44ec"
+}

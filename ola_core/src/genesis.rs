@@ -54,11 +54,12 @@ pub async fn ensure_genesis_state(
     .await;
     olaos_logs::info!("chain_schema_genesis is complete");
 
-    let storage_logs = L1BatchWithLogs::new(&mut transaction, L1BatchNumber(0)).await;
-    let storage_logs = storage_logs.unwrap().storage_logs;
-    let metadata = ZkSyncTree::process_genesis_batch(&storage_logs);
-    let genesis_root_hash = metadata.root_hash;
-    let rollup_last_leaf_index = metadata.leaf_count + 1;
+    // TODO:
+    // let storage_logs = L1BatchWithLogs::new(&mut transaction, L1BatchNumber(0)).await;
+    // let storage_logs = storage_logs.unwrap().storage_logs;
+    // let metadata = ZkSyncTree::process_genesis_batch(&storage_logs);
+    // let genesis_root_hash = metadata.root_hash;
+    // let rollup_last_leaf_index = metadata.leaf_count + 1;
 
     // let block_commitment = L1BatchCommitment::new(
     //     vec![],
@@ -70,13 +71,13 @@ pub async fn ensure_genesis_state(
     //     base_system_contracts_hashes.default_aa,
     // );
 
-    save_genesis_l1_batch_metadata(
-        &mut transaction,
-        &block_commitment,
-        genesis_root_hash,
-        rollup_last_leaf_index,
-    )
-    .await;
+    // save_genesis_l1_batch_metadata(
+    //     &mut transaction,
+    //     &block_commitment,
+    //     genesis_root_hash,
+    //     rollup_last_leaf_index,
+    // )
+    // .await;
     vlog::info!("operations_schema_genesis is complete");
 
     transaction.commit().await;

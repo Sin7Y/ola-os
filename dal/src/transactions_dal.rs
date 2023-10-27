@@ -150,28 +150,21 @@ impl TransactionsDal<'_, '_> {
                 VALUES
                     (
                         $1, FALSE, $2, $3, $4, $5, $6, $7, $8,
-                        jsonb_build_object('gas_used', $16::bigint, 'storage_writes', $17::int, 'contracts_used', $18::int),
-                        $9, now(), now()
+                        jsonb_build_object('storage_writes', $9::int, 'contracts_used', $10::int),
+                        $11, now(), now()
                     )
                 ON CONFLICT
                     (initiator_address, nonce)
                 DO UPDATE
                     SET hash=$1,
                         signature=$4,
-                        gas_limit=$5,
-                        max_fee_per_gas=$6,
-                        max_priority_fee_per_gas=$7,
-                        gas_per_pubdata_limit=$8,
-                        input=$9,
-                        data=$10,
-                        tx_format=$11,
-                        contract_address=$12,
-                        value=$13,
-                        paymaster=$14,
-                        paymaster_input=$15,
-                        execution_info=jsonb_build_object('gas_used', $16::bigint, 'storage_writes', $17::int, 'contracts_used', $18::int),
+                        input=$5,
+                        data=$6,
+                        tx_format=$7,
+                        contract_address=$8,
+                        execution_info=jsonb_build_object('storage_writes', $9::int, 'contracts_used', $10::int),
                         in_mempool=FALSE,
-                        received_at=$19,
+                        received_at=$11,
                         created_at=now(),
                         updated_at=now(),
                         error = NULL
@@ -186,7 +179,6 @@ impl TransactionsDal<'_, '_> {
                 &json_data,
                 tx_format,
                 contract_address,
-                0,
                 (exec_info.initial_storage_writes + exec_info.repeated_storage_writes) as i32,
                 exec_info.contracts_used as i32,
                 received_at
@@ -270,25 +262,16 @@ impl TransactionsDal<'_, '_> {
             let mut upgrade_effective_gas_prices = Vec::new();
 
             let mut l2_hashes = Vec::with_capacity(transactions.len());
-            let mut l2_values = Vec::with_capacity(transactions.len());
             let mut l2_contract_addresses = Vec::with_capacity(transactions.len());
-            let mut l2_paymaster = Vec::with_capacity(transactions.len());
-            let mut l2_paymaster_input = Vec::with_capacity(transactions.len());
             let mut l2_indices_in_block = Vec::with_capacity(transactions.len());
             let mut l2_initiators = Vec::with_capacity(transactions.len());
             let mut l2_nonces = Vec::with_capacity(transactions.len());
             let mut l2_signatures = Vec::with_capacity(transactions.len());
             let mut l2_tx_formats = Vec::with_capacity(transactions.len());
             let mut l2_errors = Vec::with_capacity(transactions.len());
-            let mut l2_effective_gas_prices = Vec::with_capacity(transactions.len());
             let mut l2_execution_infos = Vec::with_capacity(transactions.len());
             let mut l2_inputs = Vec::with_capacity(transactions.len());
             let mut l2_datas = Vec::with_capacity(transactions.len());
-            let mut l2_gas_limits = Vec::with_capacity(transactions.len());
-            let mut l2_max_fees_per_gas = Vec::with_capacity(transactions.len());
-            let mut l2_max_priority_fees_per_gas = Vec::with_capacity(transactions.len());
-            let mut l2_gas_per_pubdata_limit = Vec::with_capacity(transactions.len());
-            let mut l2_refunded_gas = Vec::with_capacity(transactions.len());
 
             let mut call_traces_tx_hashes = Vec::with_capacity(transactions.len());
             let mut bytea_call_traces = Vec::with_capacity(transactions.len());
@@ -305,13 +288,13 @@ impl TransactionsDal<'_, '_> {
                         ..
                     } = tx_res;
 
-                    // Bootloader currently doesn't return detailed errors.
+                    // Entrypoint currently doesn't return detailed errors.
                     let error = match execution_status {
                         TxExecutionStatus::Success => None,
                         // The string error used here is copied from the previous version.
                         // It is applied to every failed transaction -
                         // currently detailed errors are not supported.
-                        TxExecutionStatus::Failure => Some("Bootloader-based tx failed".to_owned()),
+                        TxExecutionStatus::Failure => Some("Entrypoint-based tx failed".to_owned()),
                     };
 
                     if let Some(call_trace) = tx_res.call_trace() {
@@ -325,10 +308,6 @@ impl TransactionsDal<'_, '_> {
                             let data = serde_json::to_value(&transaction.execute).unwrap();
                             l2_contract_addresses
                                 .push(transaction.execute.contract_address.as_bytes().to_vec());
-                            l2_paymaster_input
-                                .push(common_data.paymaster_params.paymaster_input.clone());
-                            l2_paymaster
-                                .push(common_data.paymaster_params.paymaster.as_bytes().to_vec());
                             l2_hashes.push(hash.0.to_vec());
                             l2_indices_in_block.push(index_in_block as i32);
                             l2_initiators.push(transaction.initiator_account().0.to_vec());
@@ -365,23 +344,14 @@ impl TransactionsDal<'_, '_> {
                             SET 
                                 hash = data_table.hash,
                                 signature = data_table.signature,
-                                gas_limit = data_table.gas_limit,
-                                max_fee_per_gas = data_table.max_fee_per_gas,
-                                max_priority_fee_per_gas = data_table.max_priority_fee_per_gas,
-                                gas_per_pubdata_limit = data_table.gas_per_pubdata_limit,
                                 input = data_table.input,
                                 data = data_table.data,
                                 tx_format = data_table.tx_format,
-                                miniblock_number = $21,
+                                miniblock_number = $12,
                                 index_in_block = data_table.index_in_block,
                                 error = NULLIF(data_table.error, ''),
-                                effective_gas_price = data_table.effective_gas_price,
                                 execution_info = data_table.new_execution_info,
-                                refunded_gas = data_table.refunded_gas,
-                                value = data_table.value,
                                 contract_address = data_table.contract_address,
-                                paymaster = data_table.paymaster,
-                                paymaster_input = data_table.paymaster_input,
                                 in_mempool = FALSE,
                                 updated_at = now()
                         FROM
@@ -392,22 +362,13 @@ impl TransactionsDal<'_, '_> {
                                         UNNEST($2::int[]) AS nonce,
                                         UNNEST($3::bytea[]) AS hash,
                                         UNNEST($4::bytea[]) AS signature,
-                                        UNNEST($5::numeric[]) AS gas_limit,
-                                        UNNEST($6::numeric[]) AS max_fee_per_gas,
-                                        UNNEST($7::numeric[]) AS max_priority_fee_per_gas,
-                                        UNNEST($8::numeric[]) AS gas_per_pubdata_limit,
-                                        UNNEST($9::int[]) AS tx_format,
-                                        UNNEST($10::integer[]) AS index_in_block,
-                                        UNNEST($11::varchar[]) AS error,
-                                        UNNEST($12::numeric[]) AS effective_gas_price,
-                                        UNNEST($13::jsonb[]) AS new_execution_info,
-                                        UNNEST($14::bytea[]) AS input,
-                                        UNNEST($15::jsonb[]) AS data,
-                                        UNNEST($16::bigint[]) as refunded_gas,
-                                        UNNEST($17::numeric[]) as value,
-                                        UNNEST($18::bytea[]) as contract_address,
-                                        UNNEST($19::bytea[]) as paymaster,
-                                        UNNEST($20::bytea[]) as paymaster_input
+                                        UNNEST($5::int[]) AS tx_format,
+                                        UNNEST($6::integer[]) AS index_in_block,
+                                        UNNEST($7::varchar[]) AS error,
+                                        UNNEST($8::jsonb[]) AS new_execution_info,
+                                        UNNEST($9::bytea[]) AS input,
+                                        UNNEST($10::jsonb[]) AS data,
+                                        UNNEST($11::bytea[]) as contract_address
                                 ) AS data_table_temp
                                 JOIN transactions ON transactions.initiator_address = data_table_temp.initiator_address
                                     AND transactions.nonce = data_table_temp.nonce
@@ -420,23 +381,14 @@ impl TransactionsDal<'_, '_> {
                     &l2_nonces,
                     &l2_hashes,
                     &l2_signatures,
-                    &l2_gas_limits,
-                    &l2_max_fees_per_gas,
-                    &l2_max_priority_fees_per_gas,
-                    &l2_gas_per_pubdata_limit,
                     &l2_tx_formats,
                     &l2_indices_in_block,
                     &l2_errors,
-                    &l2_effective_gas_prices,
                     &l2_execution_infos,
                     &l2_inputs as &[&[u8]],
                     &l2_datas,
-                    &l2_refunded_gas,
-                    &l2_values,
                     &l2_contract_addresses,
-                    &l2_paymaster,
-                    &l2_paymaster_input,
-                    miniblock_number.0 as i32,
+                    miniblock_number.0 as i32
                 )
                 .execute(transaction.conn())
                 .await
@@ -493,8 +445,6 @@ impl TransactionsDal<'_, '_> {
                                 error = NULLIF(data_table.error, ''),
                                 in_mempool=FALSE,
                                 execution_info = execution_info || data_table.new_execution_info,
-                                refunded_gas = data_table.refunded_gas,
-                                effective_gas_price = data_table.effective_gas_price,
                                 updated_at = now()
                         FROM
                             (
@@ -502,9 +452,7 @@ impl TransactionsDal<'_, '_> {
                                     UNNEST($2::bytea[]) AS hash,
                                     UNNEST($3::integer[]) AS index_in_block,
                                     UNNEST($4::varchar[]) AS error,
-                                    UNNEST($5::jsonb[]) AS new_execution_info,
-                                    UNNEST($6::bigint[]) as refunded_gas,
-                                    UNNEST($7::numeric[]) as effective_gas_price
+                                    UNNEST($5::jsonb[]) AS new_execution_info
                             ) AS data_table
                         WHERE transactions.hash = data_table.hash
                     "#,
@@ -513,8 +461,6 @@ impl TransactionsDal<'_, '_> {
                     &upgrade_indices_in_block,
                     &upgrade_errors,
                     &upgrade_execution_infos,
-                    &upgrade_refunded_gas,
-                    &upgrade_effective_gas_prices,
                 )
                 .execute(transaction.conn())
                 .await
@@ -607,8 +553,7 @@ impl TransactionsDal<'_, '_> {
                         SELECT hash
                         FROM transactions
                         WHERE miniblock_number IS NULL AND in_mempool = FALSE AND error IS NULL
-                            AND (is_priority = TRUE OR (max_fee_per_gas >= $2 and gas_per_pubdata_limit >= $3))
-                            AND tx_format != $4
+                            AND is_priority = TRUE AND tx_format != $2
                         ORDER BY is_priority DESC, priority_op_id, received_at
                         LIMIT $1
                     ) as subquery1
@@ -617,8 +562,6 @@ impl TransactionsDal<'_, '_> {
                 WHERE transactions.hash = subquery2.hash
                 RETURNING transactions.*",
                 limit as i32,
-                BigDecimal::from(0),
-                BigDecimal::from(0),
                 0 as i32,
             )
             .fetch_all(self.storage.conn())
@@ -717,51 +660,5 @@ impl TransactionsDal<'_, '_> {
         .await
         .unwrap()
         .map(|tx| tx.into())
-    }
-}
-
-impl From<StorageTransaction> for L2TxCommonData {
-    fn from(tx: StorageTransaction) -> Self {
-        let nonce = Nonce(tx.nonce.expect("no nonce in L2 tx in DB") as u32);
-
-        let StorageTransaction {
-            paymaster,
-            paymaster_input,
-            initiator_address,
-            signature,
-            hash,
-            input,
-            ..
-        } = tx;
-
-        let paymaster_params = PaymasterParams {
-            paymaster: Address::from_slice(&paymaster),
-            paymaster_input,
-        };
-
-        L2TxCommonData::new(
-            nonce,
-            Address::from_slice(&initiator_address),
-            signature.unwrap_or_else(|| {
-                panic!("Signature is mandatory for transactions. Tx {:#?}", hash)
-            }),
-            input.expect("input data is mandatory for l2 transactions"),
-            H256::from_slice(&hash),
-            paymaster_params,
-        )
-    }
-}
-
-impl From<StorageTransaction> for Transaction {
-    fn from(tx: StorageTransaction) -> Self {
-        let hash = H256::from_slice(&tx.hash);
-        let execute = serde_json::from_value::<Execute>(tx.data.clone())
-            .unwrap_or_else(|_| panic!("invalid json in database for tx {:?}", hash));
-        let received_timestamp_ms = tx.received_at.timestamp_millis() as u64;
-        Transaction {
-            common_data: ExecuteTransactionCommon::L2(tx.into()),
-            execute,
-            received_timestamp_ms,
-        }
     }
 }
