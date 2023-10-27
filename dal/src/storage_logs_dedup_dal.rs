@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use ola_types::{log::LogQuery, AccountTreeId, Address, L1BatchNumber, StorageKey, H256};
 use ola_utils::u256_to_h256;
+use sqlx::types::chrono::Utc;
 
 use crate::StorageProcessor;
 

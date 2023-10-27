@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO l1_batches (number, l1_tx_count, l2_tx_count, timestamp, is_finished, initial_bootloader_heap_content, used_contract_hashes, bootloader_code_hash, default_aa_code_hash, protocol_version, created_at, updated_at ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4",
+        "Int4",
+        "Int8",
+        "Bool",
+        "Jsonb",
+        "Jsonb",
+        "Bytea",
+        "Bytea",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6881136fac1a8236a0409a61ffc32e090386fa12fd533749e453586b9f17caca"
+}

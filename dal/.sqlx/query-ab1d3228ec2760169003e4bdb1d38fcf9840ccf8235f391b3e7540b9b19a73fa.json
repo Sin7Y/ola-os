@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO transactions\n                (\n                    hash,\n                    is_priority,\n                    initiator_address,\n                    nonce,\n                    signature,\n                    input,\n                    data,\n                    tx_format,\n                    contract_address,\n                    execution_info,\n                    received_at,\n                    created_at,\n                    updated_at\n                )\n                VALUES\n                    (\n                        $1, FALSE, $2, $3, $4, $5, $6, $7, $8,\n                        jsonb_build_object('storage_writes', $9::int, 'contracts_used', $10::int),\n                        $11, now(), now()\n                    )\n                ON CONFLICT\n                    (initiator_address, nonce)\n                DO UPDATE\n                    SET hash=$1,\n                        signature=$4,\n                        input=$5,\n                        data=$6,\n                        tx_format=$7,\n                        contract_address=$8,\n                        execution_info=jsonb_build_object('storage_writes', $9::int, 'contracts_used', $10::int),\n                        in_mempool=FALSE,\n                        received_at=$11,\n                        created_at=now(),\n                        updated_at=now(),\n                        error = NULL\n                    WHERE transactions.is_priority = FALSE AND transactions.miniblock_number IS NULL\n                    RETURNING (SELECT hash FROM transactions WHERE transactions.initiator_address = $2 AND transactions.nonce = $3) IS NOT NULL as \"is_replaced!\"\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "is_replaced!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Bytea",
+        "Int8",
+        "Bytea",
+        "Bytea",
+        "Jsonb",
+        "Int4",
+        "Bytea",
+        "Int4",
+        "Int4",
+        "Timestamp"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ab1d3228ec2760169003e4bdb1d38fcf9840ccf8235f391b3e7540b9b19a73fa"
+}

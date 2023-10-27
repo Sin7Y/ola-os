@@ -23,21 +23,12 @@ pub struct StorageL1BatchHeader {
 
 impl From<StorageL1BatchHeader> for L1BatchHeader {
     fn from(l1_batch: StorageL1BatchHeader) -> Self {
-        let priority_ops_onchain_data: Vec<_> = l1_batch
-            .priority_ops_onchain_data
-            .into_iter()
-            .map(|raw_data| raw_data.into())
-            .collect();
-
         L1BatchHeader {
             number: L1BatchNumber(l1_batch.number as u32),
             is_finished: l1_batch.is_finished,
             timestamp: l1_batch.timestamp as u64,
-            fee_account_address: Address::from_slice(&l1_batch.fee_account_address),
-            priority_ops_onchain_data,
             l1_tx_count: l1_batch.l1_tx_count as u16,
             l2_tx_count: l1_batch.l2_tx_count as u16,
-            l2_to_l1_messages: l1_batch.l2_to_l1_messages,
 
             used_contract_hashes: serde_json::from_value(l1_batch.used_contract_hashes)
                 .expect("invalid value for used_contract_hashes in the DB"),

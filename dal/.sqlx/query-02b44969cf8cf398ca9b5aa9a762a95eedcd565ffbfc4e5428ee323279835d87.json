@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, bootloader_code_hash, default_aa_code_hash, protocol_version FROM miniblocks WHERE number = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "l1_tx_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "l2_tx_count",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "bootloader_code_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "default_aa_code_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 7,
+        "name": "protocol_version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "02b44969cf8cf398ca9b5aa9a762a95eedcd565ffbfc4e5428ee323279835d87"
+}

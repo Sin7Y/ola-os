@@ -6,7 +6,7 @@ use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
     commitment::L1BatchMetadata,
     protocol_version::ProtocolVersionId,
-    L1BatchNumber, MiniblockNumber, H256,
+    L1BatchNumber, MiniblockNumber, H256, U256,
 };
 
 use crate::{

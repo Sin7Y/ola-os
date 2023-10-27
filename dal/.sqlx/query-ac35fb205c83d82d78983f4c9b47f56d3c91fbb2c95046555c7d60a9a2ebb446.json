@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO initial_writes (hashed_key, index, l1_batch_number, created_at, updated_at) SELECT u.hashed_key, u.index, $3, now(), now() FROM UNNEST($1::bytea[], $2::bigint[]) AS u(hashed_key, index)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "ByteaArray",
+        "Int8Array",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ac35fb205c83d82d78983f4c9b47f56d3c91fbb2c95046555c7d60a9a2ebb446"
+}
