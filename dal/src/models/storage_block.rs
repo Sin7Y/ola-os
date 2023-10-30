@@ -7,7 +7,6 @@ use ola_types::{
 };
 use sqlx::{postgres::PgArguments, query::Query, Postgres};
 
-// TODO: remove price
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageL1BatchHeader {
     pub number: i64,

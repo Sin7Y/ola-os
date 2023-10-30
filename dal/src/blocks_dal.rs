@@ -129,7 +129,6 @@ impl BlocksDal<'_, '_> {
 
     #[tracing::instrument(name = "get_newest_l1_batch_header", skip_all)]
     pub async fn get_newest_l1_batch_header(&mut self) -> L1BatchHeader {
-        // TODO: remove price
         let last_l1_batch = sqlx::query_as!(
             StorageL1BatchHeader,
             "SELECT number, l1_tx_count, l2_tx_count, \

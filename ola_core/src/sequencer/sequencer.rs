@@ -104,7 +104,7 @@ impl OlaSequencer {
             Some(previous_batch_protocol_version) => {
                 l1_batch_params.protocol_version != previous_batch_protocol_version
             }
-            // TODO: None is only the case for old blocks. Match will be removed when migration will be done.
+            // None is only the case for old blocks. Match will be removed when migration will be done.
             None => false,
         };
 
