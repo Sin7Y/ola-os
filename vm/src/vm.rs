@@ -31,7 +31,6 @@ pub struct VmPartialExecutionResult {
     pub revert_reason: Option<String>,
     pub contracts_used: usize,
     pub cycles_used: u32,
-    pub computational_gas_used: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

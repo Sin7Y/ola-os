@@ -18,6 +18,8 @@ use ola_utils::{
     be_words_to_bytes, bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
 };
 
+use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
+
 // use crate::metadata_calculator::helpers::L1BatchWithLogs;
 
 #[derive(Debug, Clone)]
@@ -267,9 +269,7 @@ async fn insert_system_contracts(
         })
         .collect();
 
-    // TODO: deduped log queries
-    let deduped_log_queries = log_queries;
-    // let (_, deduped_log_queries) = sort_storage_access_queries(&log_queries);
+    let (_, deduped_log_queries) = sort_storage_access_queries(&log_queries);
 
     let (deduplicated_writes, protective_reads): (Vec<_>, Vec<_>) = deduped_log_queries
         .into_iter()

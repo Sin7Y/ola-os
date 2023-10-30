@@ -132,7 +132,6 @@ impl MiniblockSealCommand {
             .await;
         progress.end_stage("insert_miniblock_header", None);
 
-        // TODO: need check deeper
         transaction
             .transactions_dal()
             .mark_txs_as_executed_in_miniblock(
@@ -350,6 +349,14 @@ impl UpdatesManager {
             storage_log_query_write_read_counts(&full_result.storage_log_queries);
         let (dedup_writes_count, dedup_reads_count) =
             log_query_write_read_counts(deduped_log_queries.iter());
+
+        olaos_logs::info!(
+            "Sealing L1 batch {current_l1_batch_number} with {total_tx_count} \
+                ({l2_tx_count} L2 + {l1_tx_count} L1) txs, \
+                {reads_count} reads ({dedup_reads_count} deduped), \
+                {writes_count} writes ({dedup_writes_count} deduped)",
+            total_tx_count = l1_tx_count + l2_tx_count
+        );
 
         let (prev_hash, prev_timestamp) =
             extractors::wait_for_prev_l1_batch_params(&mut transaction, current_l1_batch_number)
