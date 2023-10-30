@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use ola_contracts::BaseSystemContracts;
 use ola_types::{
-    block::MiniblockReexecuteData, protocol_version::ProtocolVersionId, L1BatchNumber,
-    MiniblockNumber, Transaction,
+    block::MiniblockReexecuteData,
+    protocol_version::{ProtocolUpgradeTx, ProtocolVersionId},
+    L1BatchNumber, MiniblockNumber, Transaction,
 };
 use ola_vm::{
     vm::VmBlockResult,
@@ -21,6 +22,7 @@ use super::updates::{MiniblockSealCommand, UpdatesManager};
 pub mod common;
 pub mod mempool;
 pub mod seal_logic;
+pub mod sort_storage_access;
 
 #[derive(Debug)]
 pub(crate) struct MiniblockSealer {

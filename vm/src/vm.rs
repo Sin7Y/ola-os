@@ -1,18 +1,20 @@
 use ola_types::{
+    log::StorageLogQuery,
     tx::tx_execution_info::{TxExecutionStatus, VmExecutionLogs},
     vm_trace::Call,
     U256,
 };
 
-use crate::Word;
+use crate::{errors::VmRevertReasonParsingResult, Word};
 
 #[derive(Debug, PartialEq, Default)]
 pub struct VmExecutionResult {
+    pub storage_log_queries: Vec<StorageLogQuery>,
     pub used_contract_hashes: Vec<U256>,
     pub return_data: Vec<Word>,
     pub contracts_used: usize,
     pub cycles_used: u32,
-    pub revert_reason: Option<String>,
+    pub revert_reason: Option<VmRevertReasonParsingResult>,
 }
 
 #[derive(Debug, PartialEq)]

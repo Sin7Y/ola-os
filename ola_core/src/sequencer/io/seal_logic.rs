@@ -2,9 +2,7 @@ use itertools::Itertools;
 use ola_config::constants::contracts::ACCOUNT_CODE_STORAGE_ADDRESS;
 use ola_vm::{
     vm::VmBlockResult,
-    vm_with_bootloader::{
-        get_bootloader_memory, BlockContextMode, DerivedBlockContext, TxExecutionMode,
-    },
+    vm_with_bootloader::{BlockContextMode, DerivedBlockContext, TxExecutionMode},
 };
 
 use std::{
@@ -15,15 +13,19 @@ use std::{
 use ola_dal::StorageProcessor;
 use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
-    events::{extract_added_tokens, VmEvent},
     log::{LogQuery, StorageLog, StorageLogQuery},
     tx::{IncludedTxLocation, TransactionExecutionResult},
-    Address, L1BatchNumber, MiniblockNumber, StorageKey, StorageValue, Transaction, H256, U256,
+    AccountTreeId, Address, L1BatchNumber, MiniblockNumber, StorageKey, StorageValue, Transaction,
+    H256, U256,
 };
-use ola_utils::misc::miniblock_hash;
+use ola_utils::{misc::miniblock_hash, u256_to_h256};
 
 use crate::sequencer::{
     extractors,
+    io::{
+        common::set_missing_initial_writes_indices,
+        sort_storage_access::sort_storage_access_queries,
+    },
     updates::{l1_batch_updates::L1BatchUpdates, MiniblockSealCommand, UpdatesManager},
 };
 
@@ -36,11 +38,18 @@ struct SealProgressMetricNames {
 }
 
 impl SealProgressMetricNames {
+    const L1_BATCH: Self = Self {
+        target: "L1 batch",
+        stage_latency: "server.sequencer.l1_batch.sealed_time_stage",
+        entity_count: "server.sequencer.l1_batch.sealed_entity_count",
+        latency_per_unit: "server.sequencer.l1_batch.sealed_entity_per_unit",
+    };
+
     const MINIBLOCK: Self = Self {
         target: "miniblock",
         stage_latency: "server.sequencer.miniblock.sealed_time_stage",
         entity_count: "server.sequencer.miniblock.sealed_entity_count",
-        latency_per_unit: "server.state_sequencerkeeper.miniblock.sealed_entity_per_unit",
+        latency_per_unit: "server.sequencer.miniblock.sealed_entity_per_unit",
     };
 }
 
@@ -79,16 +88,6 @@ impl SealProgress {
             );
         }
 
-        let (l1_batch_labels, miniblock_labels);
-        let labels: &[_] = if let Some(is_fictive) = self.is_fictive {
-            let is_fictive_label = if is_fictive { "true" } else { "false" };
-            miniblock_labels = [("is_fictive", is_fictive_label), ("stage", stage)];
-            &miniblock_labels
-        } else {
-            l1_batch_labels = [("stage", stage)];
-            &l1_batch_labels
-        };
-
         self.stage_start = Instant::now();
     }
 }
@@ -104,8 +103,7 @@ impl MiniblockSealCommand {
         let l1_batch_number = self.l1_batch_number;
         let miniblock_number = self.miniblock_number;
         let started_at = Instant::now();
-        // TODO: no metrics for now
-        // let mut progress = SealProgress::for_miniblock(is_fictive);
+        let mut progress = SealProgress::for_miniblock(is_fictive);
 
         let (l1_tx_count, l2_tx_count) = l1_l2_tx_count(&self.miniblock.executed_transactions);
         let (writes_count, reads_count) =
@@ -132,7 +130,7 @@ impl MiniblockSealCommand {
             .blocks_dal()
             .insert_miniblock(&miniblock_header)
             .await;
-        // progress.end_stage("insert_miniblock_header", None);
+        progress.end_stage("insert_miniblock_header", None);
 
         // TODO: need check deeper
         transaction
@@ -142,13 +140,13 @@ impl MiniblockSealCommand {
                 &self.miniblock.executed_transactions,
             )
             .await;
-        // progress.end_stage(
-        //     "mark_transactions_in_miniblock",
-        //     Some(self.miniblock.executed_transactions.len()),
-        // );
+        progress.end_stage(
+            "mark_transactions_in_miniblock",
+            Some(self.miniblock.executed_transactions.len()),
+        );
 
         let write_logs = self.extract_write_logs(is_fictive);
-        let write_log_count = write_logs.iter().map(|(_, logs)| logs.len()).sum();
+        // let write_log_count = write_logs.iter().map(|(_, logs)| logs.len()).sum();
 
         transaction
             .storage_logs_dal()
@@ -170,11 +168,11 @@ impl MiniblockSealCommand {
                 .insert_factory_deps(miniblock_number, new_factory_deps)
                 .await;
         }
-        // progress.end_stage("insert_factory_deps", Some(new_factory_deps_count));
+        progress.end_stage("insert_factory_deps", Some(new_factory_deps_count));
 
         // Factory deps should be inserted before using `count_deployed_contracts`.
         let deployed_contract_count = Self::count_deployed_contracts(&unique_updates);
-        // progress.end_stage("extract_contracts_deployed", Some(deployed_contract_count));
+        progress.end_stage("extract_contracts_deployed", Some(deployed_contract_count));
 
         // TODO: do not process L1 & L2 bridge & tokens
         // let added_tokens = extract_added_tokens(self.l2_erc20_bridge_addr, &self.miniblock.events);
@@ -271,9 +269,9 @@ impl MiniblockSealCommand {
         count
     }
 
-    fn extract_events(&self, is_fictive: bool) -> Vec<(IncludedTxLocation, Vec<&VmEvent>)> {
-        self.group_by_tx_location(&self.miniblock.events, is_fictive, |event| event.location.1)
-    }
+    // fn extract_events(&self, is_fictive: bool) -> Vec<(IncludedTxLocation, Vec<&VmEvent>)> {
+    //     self.group_by_tx_location(&self.miniblock.events, is_fictive, |event| event.location.1)
+    // }
 
     fn group_by_tx_location<'a, T>(
         &'a self,
@@ -313,10 +311,9 @@ impl UpdatesManager {
         current_l1_batch_number: L1BatchNumber,
         block_result: VmBlockResult,
         block_context: DerivedBlockContext,
-        l2_erc20_bridge_addr: Address,
     ) {
         let started_at = Instant::now();
-        // let mut progress = SealProgress::for_l1_batch();
+        let mut progress = SealProgress::for_l1_batch();
         let mut transaction = storage.start_transaction().await;
 
         // The vm execution was paused right after the last transaction was executed.
@@ -331,25 +328,22 @@ impl UpdatesManager {
             "VM must not revert when finalizing block. Revert reason: {:?}",
             full_result.revert_reason
         );
-        // progress.end_stage("vm_finalization", None);
+        progress.end_stage("vm_finalization", None);
 
         self.extend_from_fictive_transaction(block_tip_result.logs);
         // Seal fictive miniblock with last events and storage logs.
-        let miniblock_command = self.seal_miniblock_command(
-            current_l1_batch_number,
-            current_miniblock_number,
-            l2_erc20_bridge_addr,
-        );
+        let miniblock_command =
+            self.seal_miniblock_command(current_l1_batch_number, current_miniblock_number);
         miniblock_command.seal_inner(&mut transaction, true).await;
-        // progress.end_stage("fictive_miniblock", None);
-        // FIXME: replace count
+        progress.end_stage("fictive_miniblock", None);
+
         let (_, deduped_log_queries) = sort_storage_access_queries(
             full_result
                 .storage_log_queries
                 .iter()
                 .map(|log| &log.log_query),
         );
-        // progress.end_stage("log_deduplication", Some(0));
+        progress.end_stage("log_deduplication", Some(0));
 
         let (l1_tx_count, l2_tx_count) = l1_l2_tx_count(&self.l1_batch.executed_transactions);
         let (writes_count, reads_count) =
@@ -374,11 +368,8 @@ impl UpdatesManager {
             number: current_l1_batch_number,
             is_finished: true,
             timestamp,
-            fee_account_address: block_context.context.operator_address,
-            priority_ops_onchain_data: self.l1_batch.priority_ops_onchain_data.clone(),
             l1_tx_count: l1_tx_count as u16,
             l2_tx_count: l2_tx_count as u16,
-            l2_to_l1_messages: Vec::default(),
             used_contract_hashes: full_result.used_contract_hashes,
             base_system_contracts_hashes: self.base_system_contract_hashes(),
             protocol_version: Some(self.protocol_version()),
@@ -390,19 +381,15 @@ impl UpdatesManager {
 
         transaction
             .blocks_dal()
-            .insert_l1_batch(
-                &l1_batch,
-                &initial_bootloader_contents,
-                self.l1_batch.l1_gas_count,
-            )
+            .insert_l1_batch(&l1_batch, &initial_bootloader_contents)
             .await;
-        // progress.end_stage("insert_l1_batch_header", None);
+        progress.end_stage("insert_l1_batch_header", None);
 
         transaction
             .blocks_dal()
             .mark_miniblocks_as_executed_in_l1_batch(current_l1_batch_number)
             .await;
-        // progress.end_stage("set_l1_batch_number_for_miniblocks", None);
+        progress.end_stage("set_l1_batch_number_for_miniblocks", None);
 
         transaction
             .transactions_dal()
@@ -411,7 +398,7 @@ impl UpdatesManager {
                 &self.l1_batch.executed_transactions,
             )
             .await;
-        // progress.end_stage("mark_txs_as_executed_in_l1_batch", None);
+        progress.end_stage("mark_txs_as_executed_in_l1_batch", None);
 
         let (deduplicated_writes, protective_reads): (Vec<_>, Vec<_>) = deduped_log_queries
             .into_iter()
@@ -420,7 +407,7 @@ impl UpdatesManager {
             .storage_logs_dedup_dal()
             .insert_protective_reads(current_l1_batch_number, &protective_reads)
             .await;
-        // progress.end_stage("insert_protective_reads", Some(protective_reads.len()));
+        progress.end_stage("insert_protective_reads", Some(protective_reads.len()));
 
         let deduplicated_writes_hashed_keys: Vec<_> = deduplicated_writes
             .iter()
@@ -435,7 +422,7 @@ impl UpdatesManager {
             .storage_logs_dedup_dal()
             .filter_written_slots(&deduplicated_writes_hashed_keys)
             .await;
-        // progress.end_stage("filter_written_slots", Some(deduplicated_writes.len()));
+        progress.end_stage("filter_written_slots", Some(deduplicated_writes.len()));
 
         let written_storage_keys: Vec<_> = deduplicated_writes
             .iter()
@@ -447,16 +434,16 @@ impl UpdatesManager {
 
         // One-time migration completion for initial writes' indices.
         set_missing_initial_writes_indices(&mut transaction).await;
-        // progress.end_stage("set_missing_initial_writes_indices", None);
+        progress.end_stage("set_missing_initial_writes_indices", None);
 
         transaction
             .storage_logs_dedup_dal()
             .insert_initial_writes(current_l1_batch_number, &written_storage_keys)
             .await;
-        // progress.end_stage("insert_initial_writes", Some(deduplicated_writes.len()));
+        progress.end_stage("insert_initial_writes", Some(deduplicated_writes.len()));
 
         transaction.commit().await;
-        // progress.end_stage("commit_l1_batch", None);
+        progress.end_stage("commit_l1_batch", None);
 
         let writes_metrics = self.storage_writes_deduplicator.metrics();
         // Sanity check metrics.
@@ -471,32 +458,33 @@ impl UpdatesManager {
         updates_accumulator: &L1BatchUpdates,
         block_context: BlockContextMode,
     ) -> Vec<(usize, U256)> {
-        // TODO: @Pierre
-        let transactions_data = updates_accumulator
-            .executed_transactions
-            .iter()
-            .map(|res| res.transaction.clone().into())
-            .collect();
+        // TODO: @Pierre return tape
+        return vec![(0, U256::default())];
+        // let transactions_data = updates_accumulator
+        //     .executed_transactions
+        //     .iter()
+        //     .map(|res| res.transaction.clone().into())
+        //     .collect();
 
-        let refunds = updates_accumulator
-            .executed_transactions
-            .iter()
-            .map(|res| res.operator_suggested_refund)
-            .collect();
+        // let refunds = updates_accumulator
+        //     .executed_transactions
+        //     .iter()
+        //     .map(|res| res.operator_suggested_refund)
+        //     .collect();
 
-        let compressed_bytecodes = updates_accumulator
-            .executed_transactions
-            .iter()
-            .map(|res| res.compressed_bytecodes.clone())
-            .collect();
+        // let compressed_bytecodes = updates_accumulator
+        //     .executed_transactions
+        //     .iter()
+        //     .map(|res| res.compressed_bytecodes.clone())
+        //     .collect();
 
-        get_bootloader_memory(
-            transactions_data,
-            refunds,
-            compressed_bytecodes,
-            TxExecutionMode::VerifyExecute,
-            block_context,
-        )
+        // get_bootloader_memory(
+        //     transactions_data,
+        //     refunds,
+        //     compressed_bytecodes,
+        //     TxExecutionMode::VerifyExecute,
+        //     block_context,
+        // )
     }
 }
 

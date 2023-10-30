@@ -28,8 +28,30 @@ impl StorageWritesDeduplicator {
         Self::default()
     }
 
+    pub fn metrics(&self) -> DeduplicatedWritesMetrics {
+        self.metrics
+    }
+
     pub fn apply<'a, I: IntoIterator<Item = &'a StorageLogQuery>>(&mut self, logs: I) {
         self.process_storage_logs(logs);
+    }
+
+    pub fn apply_and_rollback<'a, I: IntoIterator<Item = &'a StorageLogQuery>>(
+        &mut self,
+        logs: I,
+    ) -> DeduplicatedWritesMetrics {
+        let updates = self.process_storage_logs(logs);
+        let metrics = self.metrics;
+        self.rollback(updates);
+        metrics
+    }
+
+    pub fn apply_on_empty_state<'a, I: IntoIterator<Item = &'a StorageLogQuery>>(
+        logs: I,
+    ) -> DeduplicatedWritesMetrics {
+        let mut deduplicator = Self::new();
+        deduplicator.apply(logs);
+        deduplicator.metrics
     }
 
     fn process_storage_logs<'a, I: IntoIterator<Item = &'a StorageLogQuery>>(
@@ -84,5 +106,23 @@ impl StorageWritesDeduplicator {
             }
         }
         updates
+    }
+
+    fn rollback(&mut self, updates: Vec<UpdateItem>) {
+        for item in updates.into_iter().rev() {
+            let field_to_change = if item.is_write_initial {
+                &mut self.metrics.initial_storage_writes
+            } else {
+                &mut self.metrics.repeated_storage_writes
+            };
+
+            if item.is_insertion {
+                self.modified_keys.remove(&item.key);
+                *field_to_change -= 1;
+            } else {
+                self.modified_keys.insert(item.key);
+                *field_to_change += 1;
+            }
+        }
     }
 }
