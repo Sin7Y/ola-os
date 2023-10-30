@@ -6,6 +6,8 @@ use ola_types::{protocol_version::ProtocolVersionId, Address, L1BatchNumber, U25
 use ola_utils::h256_to_u256;
 use ola_vm::vm_with_bootloader::{BlockContext, BlockContextMode, BlockProperties};
 
+use itertools::Itertools;
+
 use crate::sequencer::{extractors, io::PendingBatchData};
 
 use super::L1BatchParams;
@@ -102,4 +104,63 @@ pub(crate) fn poll_iters(delay_interval: Duration, max_wait: Duration) -> usize 
     assert!(delay_interval_millis > 0, "delay interval must be positive");
 
     ((max_wait_millis + delay_interval_millis - 1) / delay_interval_millis).max(1) as usize
+}
+
+pub async fn set_missing_initial_writes_indices(storage: &mut StorageProcessor<'_>) {
+    // Indices should start from 1, that's why default is (1, 0).
+    let (mut next_index, start_from_batch) = storage
+        .storage_logs_dedup_dal()
+        .max_set_enumeration_index()
+        .await
+        .map(|(index, l1_batch_number)| (index + 1, l1_batch_number + 1))
+        .unwrap_or((1, L1BatchNumber(0)));
+
+    let sealed_batch = storage.blocks_dal().get_sealed_l1_batch_number().await;
+    if start_from_batch > sealed_batch {
+        olaos_logs::info!("All indices for initial writes are already set, no action is needed");
+        return;
+    } else {
+        let batches_count = sealed_batch.0 - start_from_batch.0 + 1;
+        if batches_count > 100 {
+            olaos_logs::warn!("There are {batches_count} batches to set indices for, it may take substantial time.");
+        }
+    }
+
+    olaos_logs::info!(
+        "Last set index {}. Starting migration from batch {start_from_batch}",
+        next_index - 1
+    );
+    let mut current_l1_batch = start_from_batch;
+    loop {
+        if current_l1_batch > storage.blocks_dal().get_sealed_l1_batch_number().await {
+            break;
+        }
+        olaos_logs::info!("Setting indices for batch {current_l1_batch}");
+
+        let (hashed_keys, _): (Vec<_>, Vec<_>) = storage
+            .storage_logs_dedup_dal()
+            .initial_writes_for_batch(current_l1_batch)
+            .await
+            .into_iter()
+            .unzip();
+        let storage_keys = storage
+            .storage_logs_dal()
+            .resolve_hashed_keys(&hashed_keys)
+            .await;
+
+        // Sort storage key alphanumerically and assign indices.
+        let indexed_keys: Vec<_> = storage_keys
+            .into_iter()
+            .sorted()
+            .enumerate()
+            .map(|(pos, key)| (key.hashed_key(), next_index + pos as u64))
+            .collect();
+        storage
+            .storage_logs_dedup_dal()
+            .set_indices_for_initial_writes(&indexed_keys)
+            .await;
+
+        next_index += indexed_keys.len() as u64;
+        current_l1_batch += 1;
+    }
 }

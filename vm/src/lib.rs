@@ -1,3 +1,4 @@
+pub mod errors;
 pub mod oracles;
 pub mod vm;
 pub mod vm_with_bootloader;

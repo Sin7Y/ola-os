@@ -11,7 +11,7 @@ use ola_config::sequencer::SequencerConfig;
 use ola_dal::connection::ConnectionPool;
 use ola_types::{
     protocol_version::{ProtocolUpgradeTx, ProtocolVersionId},
-    Address, L1BatchNumber, MiniblockNumber, U256,
+    Address, L1BatchNumber, MiniblockNumber, Transaction, U256,
 };
 
 use crate::sequencer::{extractors, types::MempoolGuard, updates::UpdatesManager};
@@ -184,11 +184,8 @@ impl SequencerIO for MempoolIO {
     // }
 
     async fn seal_miniblock(&mut self, updates_manager: &UpdatesManager) {
-        let command = updates_manager.seal_miniblock_command(
-            self.current_l1_batch_number,
-            self.current_miniblock_number,
-            self.l2_erc20_bridge_addr,
-        );
+        let command = updates_manager
+            .seal_miniblock_command(self.current_l1_batch_number, self.current_miniblock_number);
         self.miniblock_sealer_handle.submit(command).await;
         self.current_miniblock_number += 1;
     }
@@ -218,7 +215,6 @@ impl SequencerIO for MempoolIO {
                 self.current_l1_batch_number,
                 block_result,
                 block_context,
-                self.l2_erc20_bridge_addr,
             )
             .await;
         self.current_miniblock_number += 1; // Due to fictive miniblock being sealed.

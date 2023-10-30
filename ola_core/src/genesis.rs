@@ -2,17 +2,23 @@ use ola_contracts::BaseSystemContracts;
 use ola_dal::StorageProcessor;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
-    commitment::L1BatchCommitment,
-    get_code_key, get_system_context_init_logs,
-    log::{LogQuery, StorageLog, StorageLogKind},
+    // commitment::L1BatchCommitment,
+    get_code_key,
+    get_system_context_init_logs,
+    log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
     protocol_version::{ProtocolVersion, ProtocolVersionId},
-    AccountTreeId, L1BatchNumber, MiniblockNumber, H256,
+    AccountTreeId,
+    L1BatchNumber,
+    L2ChainId,
+    MiniblockNumber,
+    StorageKey,
+    H256,
 };
 use ola_utils::{
     be_words_to_bytes, bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
 };
 
-use crate::metadata_calculator::helpers::L1BatchWithLogs;
+// use crate::metadata_calculator::helpers::L1BatchWithLogs;
 
 #[derive(Debug, Clone)]
 pub struct GenesisParams {
@@ -78,20 +84,21 @@ pub async fn ensure_genesis_state(
     //     rollup_last_leaf_index,
     // )
     // .await;
-    vlog::info!("operations_schema_genesis is complete");
+    olaos_logs::info!("operations_schema_genesis is complete");
 
     transaction.commit().await;
 
     // We need to `println` this value because it will be used to initialize the smart contract.
-    println!("CONTRACTS_GENESIS_ROOT={:?}", genesis_root_hash);
-    println!(
-        "CONTRACTS_GENESIS_BLOCK_COMMITMENT={:?}",
-        block_commitment.hash().commitment
-    );
-    println!(
-        "CONTRACTS_GENESIS_ROLLUP_LEAF_INDEX={}",
-        rollup_last_leaf_index
-    );
+    // TODO:
+    // println!("CONTRACTS_GENESIS_ROOT={:?}", genesis_root_hash);
+    // println!(
+    //     "CONTRACTS_GENESIS_BLOCK_COMMITMENT={:?}",
+    //     block_commitment.hash().commitment
+    // );
+    // println!(
+    //     "CONTRACTS_GENESIS_ROLLUP_LEAF_INDEX={}",
+    //     rollup_last_leaf_index
+    // );
     println!(
         "CHAIN_SEQUENCER_BOOTLOADER_HASH={:?}",
         base_system_contracts_hashes.bootloader
@@ -101,7 +108,8 @@ pub async fn ensure_genesis_state(
         base_system_contracts_hashes.default_aa
     );
 
-    genesis_root_hash
+    H256::default()
+    // genesis_root_hash
 }
 
 pub(crate) async fn create_genesis_l1_batch(
@@ -160,31 +168,31 @@ pub(crate) async fn create_genesis_l1_batch(
     transaction.commit().await;
 }
 
-pub(crate) async fn save_genesis_l1_batch_metadata(
-    storage: &mut StorageProcessor<'_>,
-    commitment: &L1BatchCommitment,
-    genesis_root_hash: H256,
-    rollup_last_leaf_index: u64,
-) {
-    let commitment_hash = commitment.hash();
+// pub(crate) async fn save_genesis_l1_batch_metadata(
+//     storage: &mut StorageProcessor<'_>,
+//     commitment: &L1BatchCommitment,
+//     genesis_root_hash: H256,
+//     rollup_last_leaf_index: u64,
+// ) {
+//     let commitment_hash = commitment.hash();
 
-    let metadata = L1BatchMetadata {
-        root_hash: genesis_root_hash,
-        rollup_last_leaf_index,
-        merkle_root_hash: genesis_root_hash,
-        initial_writes_compressed: vec![],
-        repeated_writes_compressed: vec![],
-        commitment: commitment_hash.commitment,
-        block_meta_params: commitment.meta_parameters(),
-        aux_data_hash: commitment_hash.aux_output,
-        meta_parameters_hash: commitment_hash.meta_parameters,
-        pass_through_data_hash: commitment_hash.pass_through_data,
-    };
-    storage
-        .blocks_dal()
-        .save_genesis_l1_batch_metadata(&metadata)
-        .await;
-}
+//     let metadata = L1BatchMetadata {
+//         root_hash: genesis_root_hash,
+//         rollup_last_leaf_index,
+//         merkle_root_hash: genesis_root_hash,
+//         initial_writes_compressed: vec![],
+//         repeated_writes_compressed: vec![],
+//         commitment: commitment_hash.commitment,
+//         block_meta_params: commitment.meta_parameters(),
+//         aux_data_hash: commitment_hash.aux_output,
+//         meta_parameters_hash: commitment_hash.meta_parameters,
+//         pass_through_data_hash: commitment_hash.pass_through_data,
+//     };
+//     storage
+//         .blocks_dal()
+//         .save_genesis_l1_batch_metadata(&metadata)
+//         .await;
+// }
 
 async fn insert_base_system_contracts_to_factory_deps(
     storage: &mut StorageProcessor<'_>,

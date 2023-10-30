@@ -120,4 +120,29 @@ impl StorageLogsDal<'_, '_> {
             })
             .collect()
     }
+
+    pub async fn resolve_hashed_keys(&mut self, hashed_keys: &[H256]) -> Vec<StorageKey> {
+        let hashed_keys: Vec<_> = hashed_keys.iter().map(H256::as_bytes).collect();
+        sqlx::query!(
+            "SELECT \
+                (SELECT ARRAY[address,key] FROM storage_logs \
+                WHERE hashed_key = u.hashed_key \
+                ORDER BY miniblock_number, operation_number \
+                LIMIT 1) as \"address_and_key?\" \
+            FROM UNNEST($1::bytea[]) AS u(hashed_key)",
+            &hashed_keys as &[&[u8]],
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            let address_and_key = row.address_and_key.unwrap();
+            StorageKey::new(
+                AccountTreeId::new(Address::from_slice(&address_and_key[0])),
+                H256::from_slice(&address_and_key[1]),
+            )
+        })
+        .collect()
+    }
 }

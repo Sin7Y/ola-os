@@ -1,11 +1,16 @@
 use std::time::{Duration, Instant};
 
-use ola_types::{block::MiniblockReexecuteData, protocol_version::ProtocolUpgradeTx};
+use ola_types::{
+    block::MiniblockReexecuteData, protocol_version::ProtocolUpgradeTx,
+    storage_writes_deduplicator::StorageWritesDeduplicator,
+    tx::tx_execution_info::TxExecutionStatus, Transaction,
+};
+use ola_vm::errors::TxRevertReason;
 use tokio::sync::watch;
 
 use crate::sequencer::{
-    batch_executor::TxExecutionResult, io::PendingBatchData, types::ExecutionMetricsForCriteria,
-    updates::UpdatesManager, SealData,
+    batch_executor::TxExecutionResult, extractors, io::PendingBatchData,
+    types::ExecutionMetricsForCriteria, updates::UpdatesManager, SealData,
 };
 
 use super::{

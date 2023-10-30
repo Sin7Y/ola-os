@@ -14,8 +14,8 @@ use ola_types::{
     protocol_version::ProtocolUpgradeTx,
     request::PaymasterParams,
     tx::{execute::Execute, tx_execution_info::TxExecutionStatus, TransactionExecutionResult},
-    Address, ExecuteTransactionCommon, MiniblockNumber, Nonce, PriorityOpId, Transaction, H256,
-    U256,
+    Address, ExecuteTransactionCommon, L1BatchNumber, MiniblockNumber, Nonce, PriorityOpId,
+    Transaction, H256, U256,
 };
 use ola_utils::{h256_to_u32, u256_to_big_decimal};
 
@@ -485,6 +485,39 @@ impl TransactionsDal<'_, '_> {
             }
             transaction.commit().await;
         }
+    }
+
+    pub async fn mark_txs_as_executed_in_l1_batch(
+        &mut self,
+        block_number: L1BatchNumber,
+        transactions: &[TransactionExecutionResult],
+    ) {
+        let hashes: Vec<Vec<u8>> = transactions
+            .iter()
+            .map(|tx| tx.hash.as_bytes().to_vec())
+            .collect();
+        let l1_batch_tx_indexes = Vec::from_iter(0..transactions.len() as i32);
+        sqlx::query!(
+            "
+                UPDATE transactions
+                SET 
+                    l1_batch_number = $3,
+                    l1_batch_tx_index = data_table.l1_batch_tx_index,
+                    updated_at = now()
+                FROM
+                    (SELECT
+                            UNNEST($1::int[]) AS l1_batch_tx_index,
+                            UNNEST($2::bytea[]) AS hash
+                    ) AS data_table
+                WHERE transactions.hash=data_table.hash 
+            ",
+            &l1_batch_tx_indexes,
+            &hashes,
+            block_number.0 as i64
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
     }
 
     pub async fn remove_stuck_txs(&mut self, stuck_tx_timeout: Duration) -> usize {
