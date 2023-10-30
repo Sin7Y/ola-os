@@ -5,7 +5,10 @@ use ola_dal::connection::ConnectionPool;
 use ola_state::{rocksdb::RocksdbStorage, storage_view::StorageView};
 use ola_types::{L1BatchNumber, Transaction, U256};
 use ola_utils::bytecode::CompressedBytecodeInfo;
-use ola_vm::vm::{VmBlockResult, VmPartialExecutionResult, VmTxExecutionResult};
+use ola_vm::{
+    errors::TxRevertReason,
+    vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
+};
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
@@ -84,7 +87,7 @@ pub(crate) enum TxExecutionResult {
         compressed_bytecodes: Vec<CompressedBytecodeInfo>,
     },
     /// The VM rejected the tx for some reason.
-    RejectedByVm { rejection_reason: String },
+    RejectedByVm { rejection_reason: TxRevertReason },
     /// Bootloader gas limit is not enough to execute the tx.
     BootloaderOutOfGasForTx,
     /// Bootloader gas limit is enough to run the tx but not enough to execute block tip.
@@ -93,13 +96,12 @@ pub(crate) enum TxExecutionResult {
 
 impl TxExecutionResult {
     /// Returns a revert reason if either transaction was rejected or bootloader ran out of gas.
-    // FIXME: return TxRevertReason
-    pub(super) fn err(&self) -> Option<&String> {
+    pub(super) fn err(&self) -> Option<&TxRevertReason> {
         match self {
             Self::Success { .. } => None,
             Self::RejectedByVm { rejection_reason } => Some(rejection_reason),
             Self::BootloaderOutOfGasForTx | Self::BootloaderOutOfGasForBlockTip { .. } => {
-                Some(&"TxRevertReason::BootloaderOutOfGas".to_string())
+                Some(&TxRevertReason::BootloaderOutOfGas)
             }
         }
     }
@@ -209,7 +211,8 @@ impl BatchExecutor {
                     resp.send(()).unwrap();
                 }
                 Command::FinishBatch(resp) => {
-                    resp.send(self.finish_batch(&mut vm)).unwrap();
+                    // FIXME: initial vm
+                    // resp.send(self.finish_batch(&mut vm)).unwrap();
                     return;
                 }
             }
@@ -218,12 +221,8 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self, vm: &mut VmInstance<'_>) -> VmBlockResult {
-        // FIXME: @pierre
-        // vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
-        VmBlockResult {
-            full_result: VmPartialExecutionResult::default(),
-            block_tip_result: VmPartialExecutionResult::default(),
-        }
-    }
+    // TODO: @Pierre
+    // fn finish_batch(&self, vm: &mut VmInstance<'_>) -> VmBlockResult {
+    //     vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
+    // }
 }

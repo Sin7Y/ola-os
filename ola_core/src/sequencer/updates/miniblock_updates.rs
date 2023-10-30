@@ -69,7 +69,7 @@ impl MiniblockUpdates {
         });
         self.new_factory_deps.extend(known_bytecodes);
 
-        self.events.extend(tx_execution_result.result.logs.events);
+        // self.events.extend(tx_execution_result.result.logs.events);
         self.storage_logs
             .extend(tx_execution_result.result.logs.storage_logs);
 
