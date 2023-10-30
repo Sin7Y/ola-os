@@ -5,7 +5,6 @@ use ola_types::{Address, U256};
 #[derive(Debug, Clone)]
 pub struct ValidationTracerParams {
     pub user_address: Address,
-    pub paymaster_address: Address,
     /// Slots that are trusted (i.e. the user can access them).
     pub trusted_slots: HashSet<(Address, U256)>,
     /// Trusted addresses (the user can access any slots on these addresses).

@@ -21,7 +21,6 @@ pub(crate) struct MiniblockSealCommand {
     pub first_tx_index: usize,
     pub base_system_contracts_hashes: BaseSystemContractsHashes,
     pub protocol_version: ProtocolVersionId,
-    pub l2_erc20_bridge_addr: Address,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -88,7 +87,6 @@ impl UpdatesManager {
         &self,
         l1_batch_number: L1BatchNumber,
         miniblock_number: MiniblockNumber,
-        l2_erc20_bridge_addr: Address,
     ) -> MiniblockSealCommand {
         MiniblockSealCommand {
             l1_batch_number,
@@ -97,7 +95,6 @@ impl UpdatesManager {
             first_tx_index: self.l1_batch.executed_transactions.len(),
             base_system_contracts_hashes: self.base_system_contract_hashes,
             protocol_version: self.protocol_version,
-            l2_erc20_bridge_addr,
         }
     }
 
@@ -119,5 +116,9 @@ impl UpdatesManager {
 
     pub(crate) fn pending_execution_metrics(&self) -> ExecutionMetrics {
         self.l1_batch.block_execution_metrics + self.miniblock.block_execution_metrics
+    }
+
+    pub(crate) fn pending_txs_encoding_size(&self) -> usize {
+        self.l1_batch.txs_encoding_size + self.miniblock.txs_encoding_size
     }
 }

@@ -111,4 +111,63 @@ impl StorageLogsDedupDal<'_, '_> {
             )
         })
     }
+
+    pub async fn filter_written_slots(&mut self, hashed_keys: &[H256]) -> HashSet<H256> {
+        let hashed_keys: Vec<_> = hashed_keys.iter().map(H256::as_bytes).collect();
+        sqlx::query!(
+            "SELECT hashed_key FROM initial_writes \
+            WHERE hashed_key = ANY($1)",
+            &hashed_keys as &[&[u8]],
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| H256::from_slice(&row.hashed_key))
+        .collect()
+    }
+
+    pub async fn initial_writes_for_batch(
+        &mut self,
+        l1_batch_number: L1BatchNumber,
+    ) -> Vec<(H256, Option<u64>)> {
+        sqlx::query!(
+            "SELECT hashed_key, index FROM initial_writes \
+            WHERE l1_batch_number = $1 \
+            ORDER BY index",
+            l1_batch_number.0 as i64
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            (
+                H256::from_slice(&row.hashed_key),
+                row.index.map(|i| i as u64),
+            )
+        })
+        .collect()
+    }
+
+    pub async fn set_indices_for_initial_writes(&mut self, indexed_keys: &[(H256, u64)]) {
+        let (hashed_keys, indices): (Vec<_>, Vec<_>) = indexed_keys
+            .iter()
+            .map(|(hashed_key, index)| (hashed_key.as_bytes(), *index as i64))
+            .unzip();
+        sqlx::query!(
+            "UPDATE initial_writes \
+                SET index = data_table.index \
+            FROM ( \
+                SELECT UNNEST($1::bytea[]) as hashed_key, \
+                    UNNEST($2::bigint[]) as index \
+            ) as data_table \
+            WHERE initial_writes.hashed_key = data_table.hashed_key",
+            &hashed_keys as &[&[u8]],
+            &indices,
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
+    }
 }

@@ -5,7 +5,7 @@ use std::{
 
 use ola_config::constants::trusted_slots::{TRUSTED_ADDRESS_SLOTS, TRUSTED_TOKEN_SLOTS};
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use ola_types::{l2::L2Tx, Transaction};
+use ola_types::{l2::L2Tx, Address, Transaction, U256};
 use ola_vm::oracles::validation::ValidationTracerParams;
 
 use crate::api_server::execution_sandbox::{apply, execute::TxExecutionArgs};
@@ -73,34 +73,38 @@ async fn get_validation_params(
 ) -> ValidationTracerParams {
     let start_time = Instant::now();
     let user_address = tx.common_data.initiator_address;
-    let paymaster_address = tx.common_data.paymaster_params.paymaster;
+    // let paymaster_address = tx.common_data.paymaster_params.paymaster;
 
     // This method assumes that the number of tokens is relatively low. When it grows
     // we may need to introduce some kind of caching.
-    let all_tokens = connection.tokens_dal().get_all_l2_token_addresses().await;
-    metrics::gauge!("api.execution.tokens.amount", all_tokens.len() as f64);
+    // TODO:
+    // let all_tokens = connection.tokens_dal().get_all_l2_token_addresses().await;
+    // metrics::gauge!("api.execution.tokens.amount", all_tokens.len() as f64);
 
     let span = tracing::debug_span!("compute_trusted_slots_for_validation").entered();
-    let trusted_slots: HashSet<_> = all_tokens
-        .iter()
-        .flat_map(|&token| TRUSTED_TOKEN_SLOTS.iter().map(move |&slot| (token, slot)))
-        .collect();
+    // TODO:
+    // let trusted_slots: HashSet<_> = all_tokens
+    //     .iter()
+    //     .flat_map(|&token| TRUSTED_TOKEN_SLOTS.iter().map(move |&slot| (token, slot)))
+    //     .collect();
+    let trusted_slots: HashSet<(Address, U256)> = Default::default();
 
     // We currently don't support any specific trusted addresses.
     let trusted_addresses = HashSet::new();
 
     // The slots the value of which will be added as allowed address on the fly.
     // Required for working with transparent proxies.
-    let trusted_address_slots: HashSet<_> = all_tokens
-        .into_iter()
-        .flat_map(|token| TRUSTED_ADDRESS_SLOTS.iter().map(move |&slot| (token, slot)))
-        .collect();
+    // TODO:
+    // let trusted_address_slots: HashSet<_> = all_tokens
+    //     .into_iter()
+    //     .flat_map(|token| TRUSTED_ADDRESS_SLOTS.iter().map(move |&slot| (token, slot)))
+    //     .collect();
+    let trusted_address_slots: HashSet<(Address, U256)> = Default::default();
 
     span.exit();
 
     ValidationTracerParams {
         user_address,
-        paymaster_address,
         trusted_slots,
         trusted_addresses,
         trusted_address_slots,
