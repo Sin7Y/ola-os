@@ -156,7 +156,7 @@ impl BlocksDal<'_, '_> {
         .number
         .expect("DAL invocation before genesis");
 
-        L1BatchNumber(number as u32)
+        L1BatchNumber(number as u64)
     }
 
     pub async fn get_l1_batch_factory_deps(

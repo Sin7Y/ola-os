@@ -71,6 +71,11 @@ pub fn h256_to_u32(value: H256) -> u32 {
     u32::from_be_bytes(be_u32_bytes)
 }
 
+pub fn h256_to_u64(value: H256) -> u64 {
+    let be_u64_bytes: [u8; 8] = value[24..].try_into().unwrap();
+    u64::from_be_bytes(be_u64_bytes)
+}
+
 pub fn be_words_to_bytes(words: &[U256]) -> Vec<u8> {
     words
         .iter()

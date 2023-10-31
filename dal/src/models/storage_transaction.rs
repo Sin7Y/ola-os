@@ -38,7 +38,7 @@ pub struct StorageTransaction {
 
 impl From<StorageTransaction> for L2TxCommonData {
     fn from(tx: StorageTransaction) -> Self {
-        let nonce = Nonce(tx.nonce.expect("no nonce in L2 tx in DB") as u32);
+        let nonce = Nonce(tx.nonce.expect("no nonce in L2 tx in DB") as u64);
 
         let StorageTransaction {
             initiator_address,

@@ -76,7 +76,7 @@ CREATE TABLE transactions
     priority_op_id BIGINT,
 
     l1_batch_number BIGINT REFERENCES l1_batches (number) ON DELETE SET NULL,
-    l1_block_number INT,
+    l1_block_number BIGINT,
     miniblock_number BIGINT,
     index_in_block INT,
     error VARCHAR,
@@ -122,7 +122,7 @@ CREATE TABLE storage_logs
     address BYTEA NOT NULL,
     key BYTEA NOT NULL,
     value BYTEA NOT NULL,
-    operation_number INT NOT NULL,
+    operation_number BIGINT NOT NULL,
     tx_hash BYTEA NOT NULL,
     miniblock_number BIGINT NOT NULL REFERENCES miniblocks (number) ON DELETE CASCADE,
 

@@ -44,7 +44,7 @@ impl ApiContracts {
 #[derive(Debug, Clone)]
 pub struct TxSenderConfig {
     pub fee_account_addr: Address,
-    pub max_nonce_ahead: u32,
+    pub max_nonce_ahead: u64,
     pub vm_execution_cache_misses_limit: Option<usize>,
     pub default_aa: H256,
     pub entrypoint: H256,
@@ -232,7 +232,7 @@ impl TxSender {
             .get_address_historical_nonce(tx.initiator_account(), latest_block_number)
             .await
             .unwrap();
-        Nonce(nonce.as_u32())
+        Nonce(nonce.as_u64())
     }
 
     fn shared_args(&self) -> TxSharedArgs {

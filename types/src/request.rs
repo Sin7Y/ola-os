@@ -59,7 +59,7 @@ pub struct TransactionRequest {
 impl TransactionRequest {
     pub fn from_bytes(
         bytes: &[u8],
-        chain_id: u16,
+        chain_id: u64,
     ) -> Result<(Self, H256), SerializationTransactionError> {
         // TODO:
         let mut tx = Self::default();
@@ -85,13 +85,13 @@ impl TransactionRequest {
 
     pub fn get_nonce_checked(&self) -> Result<Nonce, SerializationTransactionError> {
         if self.nonce <= U256::from(u32::MAX) {
-            Ok(Nonce(self.nonce.as_u32()))
+            Ok(Nonce(self.nonce.as_u64()))
         } else {
             Err(SerializationTransactionError::TooBigNonce)
         }
     }
 
-    fn get_default_signed_message(&self, chain_id: u16) -> H256 {
+    fn get_default_signed_message(&self, chain_id: u64) -> H256 {
         // TODO:
         H256::default()
     }
