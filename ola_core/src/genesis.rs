@@ -138,6 +138,7 @@ pub(crate) async fn create_genesis_l1_batch(
     let genesis_miniblock_header = MiniblockHeader {
         number: MiniblockNumber(0),
         timestamp: 0,
+        // TODO:
         hash: miniblock_hash(MiniblockNumber(0)),
         l1_tx_count: 0,
         l2_tx_count: 0,

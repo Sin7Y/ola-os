@@ -56,7 +56,7 @@ pub struct StorageMiniblockHeader {
 impl From<StorageMiniblockHeader> for MiniblockHeader {
     fn from(row: StorageMiniblockHeader) -> Self {
         MiniblockHeader {
-            number: MiniblockNumber(row.number as u32),
+            number: MiniblockNumber(row.number as u64),
             timestamp: row.timestamp as u64,
             hash: H256::from_slice(&row.hash),
             l1_tx_count: row.l1_tx_count as u16,

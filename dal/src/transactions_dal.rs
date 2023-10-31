@@ -649,7 +649,7 @@ impl TransactionsDal<'_, '_> {
         .into_iter()
         .map(|(miniblock_number, txs)| {
             (
-                MiniblockNumber(miniblock_number as u32),
+                MiniblockNumber(miniblock_number as u64),
                 txs.map(Transaction::from).collect::<Vec<_>>(),
             )
         })
