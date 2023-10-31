@@ -23,7 +23,7 @@ pub struct StorageL1BatchHeader {
 impl From<StorageL1BatchHeader> for L1BatchHeader {
     fn from(l1_batch: StorageL1BatchHeader) -> Self {
         L1BatchHeader {
-            number: L1BatchNumber(l1_batch.number as u32),
+            number: L1BatchNumber(l1_batch.number as u64),
             is_finished: l1_batch.is_finished,
             timestamp: l1_batch.timestamp as u64,
             l1_tx_count: l1_batch.l1_tx_count as u16,

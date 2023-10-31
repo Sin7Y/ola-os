@@ -66,15 +66,15 @@ impl TryFrom<U256> for AccountTreeId {
 
 basic_type!(MiniblockNumber, u64);
 
-basic_type!(L1BatchNumber, u32);
+basic_type!(L1BatchNumber, u64);
 
-basic_type!(L1BlockNumber, u32);
+basic_type!(L1BlockNumber, u64);
 
-basic_type!(Nonce, u32);
+basic_type!(Nonce, u64);
 
 basic_type!(L1ChainId, u64);
 
-basic_type!(L2ChainId, u16);
+basic_type!(L2ChainId, u64);
 
 basic_type!(PriorityOpId, u64);
 

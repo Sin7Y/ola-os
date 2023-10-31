@@ -193,7 +193,7 @@ impl SealManager {
 
     pub(super) fn should_seal_l1_batch(
         &self,
-        l1_batch_number: u32,
+        l1_batch_number: u64,
         block_open_timestamp_ms: u128,
         tx_count: usize,
         block_data: &SealData,

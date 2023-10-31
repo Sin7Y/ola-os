@@ -115,7 +115,7 @@ impl StorageLogsDal<'_, '_> {
             .map(|row| {
                 (
                     H256::from_slice(&row.hashed_key),
-                    L1BatchNumber(row.l1_batch_number as u32),
+                    L1BatchNumber(row.l1_batch_number as u64),
                 )
             })
             .collect()

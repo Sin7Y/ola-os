@@ -6,13 +6,13 @@ use olaos_storage::db::{NamedColumnFamily, RocksDB};
 
 use crate::{in_memory::InMemoryStorage, ReadStorage};
 
-fn serialize_block_number(block_number: u32) -> [u8; 4] {
+fn serialize_block_number(block_number: u64) -> [u8; 8] {
     block_number.to_le_bytes()
 }
 
-fn deserialize_block_number(bytes: &[u8]) -> u32 {
-    let bytes: [u8; 4] = bytes.try_into().expect("incorrect block number format");
-    u32::from_le_bytes(bytes)
+fn deserialize_block_number(bytes: &[u8]) -> u64 {
+    let bytes: [u8; 8] = bytes.try_into().expect("incorrect block number format");
+    u64::from_le_bytes(bytes)
 }
 
 #[derive(Debug, Clone, Copy)]

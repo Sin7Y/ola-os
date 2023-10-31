@@ -17,7 +17,7 @@ use ola_types::{
     Address, ExecuteTransactionCommon, L1BatchNumber, MiniblockNumber, Nonce, PriorityOpId,
     Transaction, H256, U256,
 };
-use ola_utils::{h256_to_u32, u256_to_big_decimal};
+use ola_utils::{h256_to_u32, h256_to_u64, u256_to_big_decimal};
 
 use crate::{
     models::storage_transaction::StorageTransaction, time_utils::pg_interval_from_duration,
@@ -621,7 +621,7 @@ impl TransactionsDal<'_, '_> {
             .into_iter()
             .map(|row| {
                 let nonce_key = H256::from_slice(&row.hashed_key);
-                let nonce = Nonce(h256_to_u32(H256::from_slice(&row.value)));
+                let nonce = Nonce(h256_to_u64(H256::from_slice(&row.value)));
 
                 (*nonce_keys.get(&nonce_key).unwrap(), nonce)
             })
