@@ -18,3 +18,5 @@ strum = { version = "0.24", features = ["derive"] }
 num_enum = "0.6"
 once_cell = "1.7"
 ethabi = "18.0.0"
+ola_exe_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git", branch = "develop"}
+plonky2 = {git = "https://github.com/Sin7Y/olavm.git", branch = "develop"}
