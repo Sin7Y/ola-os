@@ -64,7 +64,7 @@ impl TryFrom<U256> for AccountTreeId {
     }
 }
 
-basic_type!(MiniblockNumber, u32);
+basic_type!(MiniblockNumber, u64);
 
 basic_type!(L1BatchNumber, u32);
 
