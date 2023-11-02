@@ -65,7 +65,7 @@ impl ValuesCache {
         rt_handle: &Handle,
         connection: &mut StorageProcessor<'_>,
     ) {
-        const MAX_MINIBLOCKS_LAG: u64 = 5;
+        const MAX_MINIBLOCKS_LAG: u32 = 5;
 
         if to_miniblock.0 - from_miniblock.0 > MAX_MINIBLOCKS_LAG {
             let mut lock = self.0.write().expect("value cache is poisoned");

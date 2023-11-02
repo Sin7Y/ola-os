@@ -40,7 +40,7 @@ pub struct DerivedBlockContext {
 
 #[derive(Clone, Debug, Copy)]
 pub struct BlockContext {
-    pub block_number: u64,
+    pub block_number: u32,
     pub block_timestamp: u64,
     pub operator_address: Address,
 }

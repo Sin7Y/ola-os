@@ -5,9 +5,9 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum SubmitTxError {
     #[error("nonce too high. allowed nonce range: {0} - {1}, actual: {2}")]
-    NonceIsTooHigh(u64, u64, u64),
+    NonceIsTooHigh(u32, u32, u32),
     #[error("nonce too low. allowed nonce range: {0} - {1}, actual: {2}")]
-    NonceIsTooLow(u64, u64, u64),
+    NonceIsTooLow(u32, u32, u32),
     #[error("{0}")]
     IncorrectTx(#[from] TxCheckError),
     #[error("execution reverted{}{}" , if .0.is_empty() { "" } else { ": " }, .0)]

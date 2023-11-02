@@ -107,7 +107,7 @@ impl StorageLogsDedupDal<'_, '_> {
         .map(|row| {
             (
                 row.index.unwrap() as u64,
-                L1BatchNumber(row.l1_batch_number as u64),
+                L1BatchNumber(row.l1_batch_number as u32),
             )
         })
     }
