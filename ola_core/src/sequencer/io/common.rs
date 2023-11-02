@@ -68,7 +68,7 @@ pub(crate) async fn load_pending_batch(
         .get_base_system_contracts(
             pending_miniblock_header
                 .base_system_contracts_hashes
-                .bootloader,
+                .entrypoint,
             pending_miniblock_header
                 .base_system_contracts_hashes
                 .default_aa,

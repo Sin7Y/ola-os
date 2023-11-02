@@ -1,5 +1,5 @@
 use crate::l2::L2Tx;
-use ola_basic_types::{Address, Nonce, H256};
+use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 use ola_utils::bytecode::{validate_bytecode, InvalidBytecodeError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -47,7 +47,7 @@ pub struct TransactionRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from: Option<Address>,
     pub to: Option<Address>,
-    pub input: Bytes,
+    pub input: Bytes8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub raw: Option<Bytes>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -59,24 +59,24 @@ pub struct TransactionRequest {
 impl TransactionRequest {
     pub fn from_bytes(
         bytes: &[u8],
-        chain_id: u64,
+        chain_id: u16,
     ) -> Result<(Self, H256), SerializationTransactionError> {
         // TODO:
         let mut tx = Self::default();
-        let factory_deps_ref = tx
-            .eip712_meta
-            .as_ref()
-            .and_then(|m| m.factory_deps.as_ref());
-        if let Some(deps) = factory_deps_ref {
-            validate_factory_deps(deps)?;
-        }
-        tx.raw = Some(Bytes(bytes.to_vec()));
-        let default_signed_message = tx.get_default_signed_message(chain_id);
-        tx.from = match tx.from {
-            Some(_) => tx.from,
-            // FIXME: can from unset?
-            None => panic!("from must be set"),
-        };
+        // let factory_deps_ref = tx
+        //     .eip712_meta
+        //     .as_ref()
+        //     .and_then(|m| m.factory_deps.as_ref());
+        // if let Some(deps) = factory_deps_ref {
+        //     validate_factory_deps(deps)?;
+        // }
+        // tx.raw = Some(Bytes(bytes.to_vec()));
+        // let default_signed_message = tx.get_default_signed_message(chain_id);
+        // tx.from = match tx.from {
+        //     Some(_) => tx.from,
+        //     // FIXME: can from unset?
+        //     None => panic!("from must be set"),
+        // };
         // TODO: hash = default_signed_message + keccak(signature)
         let hash = H256::default();
 
@@ -122,7 +122,7 @@ impl L2Tx {
             request
                 .to
                 .ok_or(SerializationTransactionError::ToAddressIsNull)?,
-            request.input.0.clone(),
+            request.input.clone(),
             nonce,
             request.from.unwrap_or_default(),
             factory_deps,

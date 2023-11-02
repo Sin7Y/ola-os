@@ -34,7 +34,7 @@ impl ProtocolVersionsDal<'_, '_> {
                 ",
             version.id as i32,
             version.timestamp as i64,
-            version.base_system_contracts_hashes.bootloader.as_bytes(),
+            version.base_system_contracts_hashes.entrypoint.as_bytes(),
             version.base_system_contracts_hashes.default_aa.as_bytes(),
             tx_hash
         )

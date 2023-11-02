@@ -7,3 +7,4 @@ edition = "2021"
 serde = { version = "1.0", features = ["derive"] }
 web3 = { version= "0.19.0", default-features = false }
 olavm_exe_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git", branch = "develop"}
+hex = "0.4"

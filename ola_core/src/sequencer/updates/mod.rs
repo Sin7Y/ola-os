@@ -5,7 +5,6 @@ use ola_types::{
     tx::tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
     Address, L1BatchNumber, MiniblockNumber, Transaction,
 };
-use ola_utils::bytecode::CompressedBytecodeInfo;
 use ola_vm::{vm::VmTxExecutionResult, vm_with_bootloader::BlockContextMode};
 
 use self::{l1_batch_updates::L1BatchUpdates, miniblock_updates::MiniblockUpdates};
@@ -63,17 +62,12 @@ impl UpdatesManager {
         &mut self,
         tx: Transaction,
         tx_execution_result: VmTxExecutionResult,
-        compressed_bytecodes: Vec<CompressedBytecodeInfo>,
         execution_metrics: ExecutionMetrics,
     ) {
         self.storage_writes_deduplicator
             .apply(&tx_execution_result.result.logs.storage_logs);
-        self.miniblock.extend_from_executed_transaction(
-            tx,
-            tx_execution_result,
-            execution_metrics,
-            compressed_bytecodes,
-        );
+        self.miniblock
+            .extend_from_executed_transaction(tx, tx_execution_result, execution_metrics);
     }
 
     pub(crate) fn extend_from_fictive_transaction(&mut self, vm_execution_logs: VmExecutionLogs) {

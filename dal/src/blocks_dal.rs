@@ -65,7 +65,7 @@ impl BlocksDal<'_, '_> {
             header.is_finished,
             initial_bootloader_contents,
             used_contract_hashes,
-            header.base_system_contracts_hashes.bootloader.as_bytes(),
+            header.base_system_contracts_hashes.entrypoint.as_bytes(),
             header.base_system_contracts_hashes.default_aa.as_bytes(),
             header.protocol_version.map(|v| v as i32),
         )
@@ -88,7 +88,7 @@ impl BlocksDal<'_, '_> {
             miniblock_header.l2_tx_count as i32,
             miniblock_header
                 .base_system_contracts_hashes
-                .bootloader
+                .entrypoint
                 .as_bytes(),
             miniblock_header
                 .base_system_contracts_hashes

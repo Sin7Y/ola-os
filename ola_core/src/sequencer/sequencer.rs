@@ -229,7 +229,6 @@ impl OlaSequencer {
                 let TxExecutionResult::Success {
                     tx_result,
                     tx_metrics,
-                    compressed_bytecodes,
                     ..
                 } = result
                 else {
@@ -251,7 +250,6 @@ impl OlaSequencer {
                 updates_manager.extend_from_executed_transaction(
                     tx,
                     *tx_result,
-                    compressed_bytecodes,
                     tx_execution_metrics,
                 );
                 olaos_logs::debug!(
@@ -337,7 +335,6 @@ impl OlaSequencer {
                     let TxExecutionResult::Success {
                         tx_result,
                         tx_metrics,
-                        compressed_bytecodes,
                         ..
                     } = exec_result
                     else {
@@ -351,7 +348,6 @@ impl OlaSequencer {
                     updates_manager.extend_from_executed_transaction(
                         tx,
                         *tx_result,
-                        compressed_bytecodes,
                         tx_execution_metrics,
                     );
                 }
@@ -399,7 +395,6 @@ impl OlaSequencer {
                 let TxExecutionResult::Success {
                     tx_result,
                     tx_metrics,
-                    compressed_bytecodes,
                     ..
                 } = exec_result
                 else {
@@ -421,7 +416,6 @@ impl OlaSequencer {
                 updates_manager.extend_from_executed_transaction(
                     tx,
                     *tx_result,
-                    compressed_bytecodes,
                     tx_execution_metrics,
                 );
             }
@@ -455,8 +449,9 @@ impl OlaSequencer {
             TxExecutionResult::Success {
                 tx_result,
                 tx_metrics,
-                bootloader_dry_run_metrics,
-                bootloader_dry_run_result,
+                entrypoint_dry_run_metrics,
+                // TODO: no use?
+                entrypoint_dry_run_result,
                 ..
             } => {
                 let tx_execution_status = tx_result.status;
@@ -482,13 +477,13 @@ impl OlaSequencer {
 
                 let ExecutionMetricsForCriteria {
                     execution_metrics: finish_block_execution_metrics,
-                } = *bootloader_dry_run_metrics;
+                } = *entrypoint_dry_run_metrics;
 
                 let encoding_len = extractors::encoded_transaction_size(tx);
 
                 let logs_to_apply = tx_result.result.logs.storage_logs.iter();
                 let logs_to_apply =
-                    logs_to_apply.chain(&bootloader_dry_run_result.logs.storage_logs);
+                    logs_to_apply.chain(&entrypoint_dry_run_result.logs.storage_logs);
                 let block_writes_metrics = updates_manager
                     .storage_writes_deduplicator
                     .apply_and_rollback(logs_to_apply.clone());

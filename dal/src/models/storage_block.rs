@@ -115,11 +115,11 @@ pub fn bind_block_where_sql_params<'q>(
 }
 
 fn convert_base_system_contracts_hashes(
-    bootloader_code_hash: Option<Vec<u8>>,
+    entrypoint_code_hash: Option<Vec<u8>>,
     default_aa_code_hash: Option<Vec<u8>>,
 ) -> BaseSystemContractsHashes {
     BaseSystemContractsHashes {
-        bootloader: bootloader_code_hash
+        entrypoint: entrypoint_code_hash
             .map(|hash| H256::from_slice(&hash))
             .expect("should not be none"),
         default_aa: default_aa_code_hash

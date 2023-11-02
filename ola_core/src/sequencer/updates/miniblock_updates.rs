@@ -9,7 +9,7 @@ use ola_types::{
     },
     Transaction, H256,
 };
-use ola_utils::bytecode::{hash_bytecode, CompressedBytecodeInfo};
+use ola_utils::bytecode::hash_bytecode;
 use ola_vm::vm::VmTxExecutionResult;
 
 use crate::sequencer::extractors;
@@ -43,7 +43,6 @@ impl MiniblockUpdates {
         tx: Transaction,
         tx_execution_result: VmTxExecutionResult,
         execution_metrics: ExecutionMetrics,
-        compressed_bytecodes: Vec<CompressedBytecodeInfo>,
     ) {
         // Get bytecode hashes that were marked as known
         let saved_factory_deps =
@@ -81,7 +80,6 @@ impl MiniblockUpdates {
             transaction: tx,
             execution_info: execution_metrics,
             execution_status: tx_execution_result.status,
-            compressed_bytecodes,
             call_traces: tx_execution_result.call_traces,
             revert_reason: tx_execution_result
                 .result

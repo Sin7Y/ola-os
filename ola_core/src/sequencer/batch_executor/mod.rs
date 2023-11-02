@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use ola_dal::connection::ConnectionPool;
 use ola_state::{rocksdb::RocksdbStorage, storage_view::StorageView};
 use ola_types::{L1BatchNumber, Transaction, U256};
-use ola_utils::bytecode::CompressedBytecodeInfo;
 use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
@@ -82,9 +81,8 @@ pub(crate) enum TxExecutionResult {
     Success {
         tx_result: Box<VmTxExecutionResult>,
         tx_metrics: ExecutionMetricsForCriteria,
-        bootloader_dry_run_metrics: ExecutionMetricsForCriteria,
-        bootloader_dry_run_result: Box<VmPartialExecutionResult>,
-        compressed_bytecodes: Vec<CompressedBytecodeInfo>,
+        entrypoint_dry_run_metrics: ExecutionMetricsForCriteria,
+        entrypoint_dry_run_result: Box<VmPartialExecutionResult>,
     },
     /// The VM rejected the tx for some reason.
     RejectedByVm { rejection_reason: TxRevertReason },
