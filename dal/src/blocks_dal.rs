@@ -124,7 +124,7 @@ impl BlocksDal<'_, '_> {
             .unwrap()
             .number
             .unwrap_or(0);
-        MiniblockNumber(number as u64)
+        MiniblockNumber(number as u32)
     }
 
     #[tracing::instrument(name = "get_newest_l1_batch_header", skip_all)]
@@ -156,7 +156,7 @@ impl BlocksDal<'_, '_> {
         .number
         .expect("DAL invocation before genesis");
 
-        L1BatchNumber(number as u64)
+        L1BatchNumber(number as u32)
     }
 
     pub async fn get_l1_batch_factory_deps(
@@ -192,8 +192,8 @@ impl BlocksDal<'_, '_> {
         .unwrap();
 
         Some((
-            MiniblockNumber(row.min? as u64),
-            MiniblockNumber(row.max? as u64),
+            MiniblockNumber(row.min? as u32),
+            MiniblockNumber(row.max? as u32),
         ))
     }
 

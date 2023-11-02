@@ -85,7 +85,7 @@ impl TransactionRequest {
 
     pub fn get_nonce_checked(&self) -> Result<Nonce, SerializationTransactionError> {
         if self.nonce <= U256::from(u32::MAX) {
-            Ok(Nonce(self.nonce.as_u64()))
+            Ok(Nonce(self.nonce.as_u32()))
         } else {
             Err(SerializationTransactionError::TooBigNonce)
         }

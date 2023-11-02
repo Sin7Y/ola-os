@@ -19,7 +19,7 @@ impl BlocksWeb3Dal<'_, '_> {
             .await?
             .number
             .expect("DAL invocation before genesis");
-        Ok(MiniblockNumber(number as u64))
+        Ok(MiniblockNumber(number as u32))
     }
 
     pub async fn resolve_block_id(
@@ -46,7 +46,7 @@ impl BlocksWeb3Dal<'_, '_> {
 
         let block_number = row
             .and_then(|row| row.get::<Option<i64>, &str>("number"))
-            .map(|n| MiniblockNumber(n as u64));
+            .map(|n| MiniblockNumber(n as u32));
         Ok(block_number)
     }
 }

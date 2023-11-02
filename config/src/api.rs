@@ -28,7 +28,7 @@ pub struct Web3JsonRpcConfig {
     pub filters_limit: Option<u32>,
     pub subscriptions_limit: Option<u32>,
     pub threads_per_server: u32,
-    pub max_nonce_ahead: u64,
+    pub max_nonce_ahead: u32,
     pub transactions_per_sec_limit: Option<u32>,
     pub max_tx_size: usize,
     pub vm_execution_cache_misses_limit: Option<usize>,

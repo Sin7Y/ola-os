@@ -621,7 +621,7 @@ impl TransactionsDal<'_, '_> {
             .into_iter()
             .map(|row| {
                 let nonce_key = H256::from_slice(&row.hashed_key);
-                let nonce = Nonce(h256_to_u64(H256::from_slice(&row.value)));
+                let nonce = Nonce(h256_to_u32(H256::from_slice(&row.value)));
 
                 (*nonce_keys.get(&nonce_key).unwrap(), nonce)
             })
@@ -649,7 +649,7 @@ impl TransactionsDal<'_, '_> {
         .into_iter()
         .map(|(miniblock_number, txs)| {
             (
-                MiniblockNumber(miniblock_number as u64),
+                MiniblockNumber(miniblock_number as u32),
                 txs.map(Transaction::from).collect::<Vec<_>>(),
             )
         })
