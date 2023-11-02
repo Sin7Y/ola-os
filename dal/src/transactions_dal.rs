@@ -313,6 +313,7 @@ impl TransactionsDal<'_, '_> {
                             l2_initiators.push(transaction.initiator_account().0.to_vec());
                             l2_nonces.push(common_data.nonce.0 as i32);
                             l2_signatures.push(common_data.signature.clone());
+                            l2_tx_formats.push(common_data.transaction_type as i32);
                             l2_errors.push(error.unwrap_or_default());
                             l2_execution_infos.push(serde_json::to_value(execution_info).unwrap());
                             // Normally input data is mandatory
