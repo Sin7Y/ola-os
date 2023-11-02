@@ -1,6 +1,6 @@
 use std::fmt;
 
-use ola_basic_types::{Address, U256};
+use ola_basic_types::{bytes8::Bytes8, Address, U256};
 use ola_config::constants::contracts::BOOTLOADER_ADDRESS;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -32,9 +32,9 @@ pub struct Call {
     /// Address of the callee.
     pub to: Address,
     /// Input data.
-    pub input: Vec<u8>,
+    pub input: Bytes8,
     /// Output data.
-    pub output: Vec<u8>,
+    pub output: Bytes8,
     /// Error message provided by vm or some unexpected errors.
     pub error: Option<String>,
     /// Revert reason.
@@ -62,8 +62,8 @@ impl Default for Call {
             r#type: CallType::Call(FarCallOpcode::Normal),
             from: Default::default(),
             to: Default::default(),
-            input: vec![],
-            output: vec![],
+            input: Bytes8(vec![]),
+            output: Bytes8(vec![]),
             error: None,
             revert_reason: None,
             calls: vec![],
@@ -88,8 +88,8 @@ impl fmt::Debug for Call {
 
 impl Call {
     pub fn new_high_level(
-        input: Vec<u8>,
-        output: Vec<u8>,
+        input: Bytes8,
+        output: Bytes8,
         revert_reason: Option<String>,
         calls: Vec<Call>,
     ) -> Self {

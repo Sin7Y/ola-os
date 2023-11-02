@@ -23,7 +23,7 @@ impl SequencerConfig {
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct NetworkConfig {
     pub network: Network,
-    pub ola_network_id: u64,
+    pub ola_network_id: u16,
     pub ola_network_name: String,
 }
 

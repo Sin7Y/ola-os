@@ -1,4 +1,4 @@
-use ola_basic_types::{Address, Nonce, H256};
+use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 
 use crate::{
     request::{PaymasterParams, SerializationTransactionError, TransactionRequest},
@@ -29,7 +29,7 @@ pub struct L2Tx {
 impl L2Tx {
     pub fn new(
         contract_address: Address,
-        calldata: Vec<u8>,
+        calldata: Bytes8,
         nonce: Nonce,
         initiator_address: Address,
         factory_deps: Option<Vec<Vec<u8>>>,

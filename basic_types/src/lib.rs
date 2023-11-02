@@ -10,6 +10,7 @@ pub use web3::types::{Address, Bytes, H160, H256, U256};
 #[macro_use]
 mod macros;
 
+pub mod bytes8;
 pub mod network;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash, PartialOrd, Ord)]
@@ -74,7 +75,7 @@ basic_type!(Nonce, u64);
 
 basic_type!(L1ChainId, u64);
 
-basic_type!(L2ChainId, u64);
+basic_type!(L2ChainId, u16);
 
 basic_type!(PriorityOpId, u64);
 

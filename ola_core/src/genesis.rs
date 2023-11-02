@@ -103,7 +103,7 @@ pub async fn ensure_genesis_state(
     // );
     println!(
         "CHAIN_SEQUENCER_BOOTLOADER_HASH={:?}",
-        base_system_contracts_hashes.bootloader
+        base_system_contracts_hashes.entrypoint
     );
     println!(
         "CHAIN_SEQUENCER_DEFAULT_AA_HASH={:?}",
@@ -203,7 +203,7 @@ async fn insert_base_system_contracts_to_factory_deps(
 ) {
     let factory_deps = [&contracts.entrypoint, &contracts.default_aa]
         .iter()
-        .map(|c| (c.hash, be_words_to_bytes(&c.code)))
+        .map(|c| (c.hash, c.code.clone()))
         .collect();
 
     storage

@@ -1,6 +1,5 @@
 use itertools::Itertools;
 use ola_contracts::{BaseSystemContracts, SystemContractCode};
-use ola_utils::bytes_to_be_words;
 
 use std::collections::HashMap;
 
@@ -96,16 +95,16 @@ impl StorageDal<'_, '_> {
 
     pub async fn get_base_system_contracts(
         &mut self,
-        bootloader_hash: H256,
+        entrypoint_hash: H256,
         default_aa_hash: H256,
     ) -> BaseSystemContracts {
-        let bootloader_bytecode = self
-            .get_factory_dep(bootloader_hash)
+        let entrypoint_bytecode = self
+            .get_factory_dep(entrypoint_hash)
             .await
             .expect("Bootloader code should be present in the database");
         let entrypoint_code = SystemContractCode {
-            code: bytes_to_be_words(bootloader_bytecode),
-            hash: bootloader_hash,
+            code: entrypoint_bytecode,
+            hash: entrypoint_hash,
         };
 
         let default_aa_bytecode = self
@@ -114,7 +113,7 @@ impl StorageDal<'_, '_> {
             .expect("Default account code should be present in the database");
 
         let default_aa_code = SystemContractCode {
-            code: bytes_to_be_words(default_aa_bytecode),
+            code: default_aa_bytecode,
             hash: default_aa_hash,
         };
         BaseSystemContracts {

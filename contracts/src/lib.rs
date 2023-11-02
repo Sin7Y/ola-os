@@ -1,11 +1,12 @@
 use ola_basic_types::{H256, U256};
 use ola_utils::{bytecode::hash_bytecode, convert::bytes_to_be_words};
+use olavm_core::program::binary_program::BinaryProgram;
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path};
+use std::{fs::File, io::BufReader, path::Path};
 
 #[derive(Debug, Clone)]
 pub struct SystemContractCode {
-    pub code: Vec<U256>,
+    pub code: Vec<u8>,
     pub hash: H256,
 }
 
@@ -26,14 +27,14 @@ impl BaseSystemContracts {
     fn load_with_entrypoint(entrypoint_bytecode: Vec<u8>) -> Self {
         let hash = hash_bytecode(&entrypoint_bytecode);
         let entrypoint = SystemContractCode {
-            code: bytes_to_be_words(entrypoint_bytecode),
+            code: entrypoint_bytecode,
             hash,
         };
 
         let bytecode = read_sys_contract_bytecode("", "DefaultAccount");
         let hash = hash_bytecode(&bytecode);
         let default_aa = SystemContractCode {
-            code: bytes_to_be_words(bytecode),
+            code: bytecode,
             hash,
         };
 
@@ -55,40 +56,41 @@ impl BaseSystemContracts {
 
     pub fn hashes(&self) -> BaseSystemContractsHashes {
         BaseSystemContractsHashes {
-            bootloader: self.entrypoint.hash,
+            entrypoint: self.entrypoint.hash,
             default_aa: self.default_aa.hash,
         }
     }
 }
 
-pub fn read_zbin_bytecode(zbin_path: impl AsRef<Path>) -> Vec<u8> {
+pub fn read_json_program(json_path: impl AsRef<Path>) -> Vec<u8> {
     let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
-    let bytecode_path = Path::new(&ola_home).join(zbin_path);
-    fs::read(&bytecode_path).unwrap_or_else(|err| {
-        panic!(
-            "Failed reading .zbin bytecode at {:?}: {}",
-            bytecode_path, err
-        )
-    })
+    let bytecode_path = Path::new(&ola_home).join(json_path);
+    let file = File::open(bytecode_path).unwrap();
+    let reader = BufReader::new(file);
+    let program: BinaryProgram = serde_json::from_reader(reader).unwrap();
+    bincode::serialize(&program).expect("failed to read system contracts")
 }
 
-pub fn read_bootloader_code(bootloader_type: &str) -> Vec<u8> {
+pub fn read_entrypoint_code(entrypoint_type: &str) -> Vec<u8> {
     // FIXME:
-    read_zbin_bytecode(format!("etc/system-contracts/contracts/test.zbin"))
+    read_json_program(format!("etc/system-contracts/contracts/entrypoint.json"))
 }
 
 pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {
-    read_bootloader_code("bootloader_type")
+    read_entrypoint_code("entrypoint_type")
 }
 
 pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> Vec<u8> {
     // FIXME: repace zbin_path
-    read_zbin_bytecode("etc/system-contracts/contracts/test.zbin")
+    read_json_program(format!(
+        "etc/system-contracts/contracts/{0}{1}.json",
+        directory, name
+    ))
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct BaseSystemContractsHashes {
     // TODO: replace hash type
-    pub bootloader: H256,
+    pub entrypoint: H256,
     pub default_aa: H256,
 }

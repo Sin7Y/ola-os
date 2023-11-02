@@ -1,4 +1,4 @@
-use ola_basic_types::Address;
+use ola_basic_types::{bytes8::Bytes8, Address};
 use serde::{Deserialize, Serialize};
 
 // TODO: @Pierre
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct Execute {
     pub contract_address: Address,
-    pub calldata: Vec<u8>,
+    pub calldata: Bytes8,
     pub factory_deps: Option<Vec<Vec<u8>>>,
 }
 

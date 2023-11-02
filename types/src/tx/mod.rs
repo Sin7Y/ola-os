@@ -1,5 +1,4 @@
-use ola_basic_types::{Address, H256};
-use ola_utils::bytecode::CompressedBytecodeInfo;
+use ola_basic_types::{bytes8::Bytes8, Address, H256};
 
 use crate::{vm_trace::Call, Transaction};
 
@@ -14,7 +13,6 @@ pub struct TransactionExecutionResult {
     pub hash: H256,
     pub execution_info: ExecutionMetrics,
     pub execution_status: TxExecutionStatus,
-    pub compressed_bytecodes: Vec<CompressedBytecodeInfo>,
     pub call_traces: Vec<Call>,
     pub revert_reason: Option<String>,
 }
@@ -26,7 +24,7 @@ impl TransactionExecutionResult {
         } else {
             Some(Call::new_high_level(
                 self.transaction.execute.calldata.clone(),
-                vec![],
+                Bytes8(vec![]),
                 self.revert_reason.clone(),
                 self.call_traces.clone(),
             ))
