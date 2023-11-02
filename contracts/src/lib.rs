@@ -73,7 +73,10 @@ pub fn read_json_program(json_path: impl AsRef<Path>) -> Vec<u8> {
 
 pub fn read_entrypoint_code(entrypoint_type: &str) -> Vec<u8> {
     // FIXME:
-    read_json_program(format!("etc/system-contracts/contracts/entrypoint.json"))
+    read_json_program(format!(
+        "etc/system-contracts/contracts/{}.json",
+        entrypoint_type
+    ))
 }
 
 pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {

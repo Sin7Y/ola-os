@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use ola_basic_types::H256;
+use ola_basic_types::{blake3, H256};
 use std::collections::HashMap;
 
 use crate::convert::bytes_to_chunks;
@@ -18,10 +18,9 @@ pub enum InvalidBytecodeError {
 }
 
 pub fn hash_bytecode(code: &[u8]) -> H256 {
-    let chunked_code = bytes_to_chunks(code);
-    // FIXME: calculate hash
-    let hash = [0u8; 32];
-    H256(hash)
+    // FIXME: check bytecode hash
+    let hash = blake3::hash(code);
+    H256::from(hash.as_bytes())
 }
 
 pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
