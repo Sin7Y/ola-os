@@ -15,7 +15,7 @@ use ola_types::{
     request::PaymasterParams,
     tx::{execute::Execute, tx_execution_info::TxExecutionStatus, TransactionExecutionResult},
     Address, ExecuteTransactionCommon, L1BatchNumber, MiniblockNumber, Nonce, PriorityOpId,
-    Transaction, H256, U256,
+    Transaction, H256, PROTOCOL_UPGRADE_TX_TYPE, U256,
 };
 use ola_utils::{h256_to_u32, h256_to_u64, u256_to_big_decimal};
 
@@ -320,7 +320,7 @@ impl TransactionsDal<'_, '_> {
                             l2_inputs.push(common_data.input_data().unwrap_or_default());
                             l2_datas.push(data);
                         }
-                        ExecuteTransactionCommon::ProtocolUpgrade(common_data) => {
+                        ExecuteTransactionCommon::ProtocolUpgrade(_common_data) => {
                             upgrade_hashes.push(hash.0.to_vec());
                             upgrade_indices_in_block.push(index_in_block as i32);
                             upgrade_errors.push(error.unwrap_or_default());
@@ -553,10 +553,9 @@ impl TransactionsDal<'_, '_> {
         purged_accounts: Vec<Address>,
         limit: usize,
     ) -> (Vec<Transaction>, HashMap<Address, Nonce>) {
-        {
-            let stashed_addresses: Vec<_> =
-                stashed_accounts.into_iter().map(|a| a.0.to_vec()).collect();
-            sqlx::query!(
+        let stashed_addresses: Vec<_> =
+            stashed_accounts.into_iter().map(|a| a.0.to_vec()).collect();
+        sqlx::query!(
                 "UPDATE transactions SET in_mempool = FALSE \
                 FROM UNNEST ($1::bytea[]) AS s(address) \
                 WHERE transactions.in_mempool = TRUE AND transactions.initiator_address = s.address",
@@ -566,21 +565,20 @@ impl TransactionsDal<'_, '_> {
             .await
             .unwrap();
 
-            let purged_addresses: Vec<_> =
-                purged_accounts.into_iter().map(|a| a.0.to_vec()).collect();
-            sqlx::query!(
-                "DELETE FROM transactions \
+        let purged_addresses: Vec<_> = purged_accounts.into_iter().map(|a| a.0.to_vec()).collect();
+        sqlx::query!(
+            "DELETE FROM transactions \
                 WHERE in_mempool = TRUE AND initiator_address = ANY($1)",
-                &purged_addresses[..]
-            )
-            .execute(self.storage.conn())
-            .await
-            .unwrap();
+            &purged_addresses[..]
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
 
-            // Note, that transactions are updated in order of their hashes to avoid deadlocks with other UPDATE queries.
-            let transactions = sqlx::query_as!(
-                StorageTransaction,
-                "UPDATE transactions
+        // Note, that transactions are updated in order of their hashes to avoid deadlocks with other UPDATE queries.
+        let transactions = sqlx::query_as!(
+            StorageTransaction,
+            "UPDATE transactions
                 SET in_mempool = TRUE
                 FROM (
                     SELECT hash FROM (
@@ -595,44 +593,43 @@ impl TransactionsDal<'_, '_> {
                 ) as subquery2
                 WHERE transactions.hash = subquery2.hash
                 RETURNING transactions.*",
-                limit as i32,
-                0 as i32,
-            )
-            .fetch_all(self.storage.conn())
-            .await
-            .unwrap();
+            limit as i32,
+            PROTOCOL_UPGRADE_TX_TYPE as i32,
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap();
 
-            let nonce_keys: HashMap<_, _> = transactions
-                .iter()
-                .map(|tx| {
-                    let address = Address::from_slice(&tx.initiator_address);
-                    let nonce_key = get_nonce_key(&address).hashed_key();
-                    (nonce_key, address)
-                })
-                .collect();
-
-            let storage_keys: Vec<_> = nonce_keys.keys().map(|key| key.0.to_vec()).collect();
-            let nonces: HashMap<_, _> = sqlx::query!(
-                r#"SELECT hashed_key, value as "value!" FROM storage WHERE hashed_key = ANY($1)"#,
-                &storage_keys,
-            )
-            .fetch_all(self.storage.conn())
-            .await
-            .unwrap()
-            .into_iter()
-            .map(|row| {
-                let nonce_key = H256::from_slice(&row.hashed_key);
-                let nonce = Nonce(h256_to_u32(H256::from_slice(&row.value)));
-
-                (*nonce_keys.get(&nonce_key).unwrap(), nonce)
+        let nonce_keys: HashMap<_, _> = transactions
+            .iter()
+            .map(|tx| {
+                let address = Address::from_slice(&tx.initiator_address);
+                let nonce_key = get_nonce_key(&address).hashed_key();
+                (nonce_key, address)
             })
             .collect();
 
-            (
-                transactions.into_iter().map(|tx| tx.into()).collect(),
-                nonces,
-            )
-        }
+        let storage_keys: Vec<_> = nonce_keys.keys().map(|key| key.0.to_vec()).collect();
+        let nonces: HashMap<_, _> = sqlx::query!(
+            r#"SELECT hashed_key, value as "value!" FROM storage WHERE hashed_key = ANY($1)"#,
+            &storage_keys,
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            let nonce_key = H256::from_slice(&row.hashed_key);
+            let nonce = Nonce(h256_to_u32(H256::from_slice(&row.value)));
+
+            (*nonce_keys.get(&nonce_key).unwrap(), nonce)
+        })
+        .collect();
+
+        (
+            transactions.into_iter().map(|tx| tx.into()).collect(),
+            nonces,
+        )
     }
 
     pub async fn get_miniblocks_to_reexecute(&mut self) -> Vec<MiniblockReexecuteData> {

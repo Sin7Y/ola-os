@@ -1,5 +1,5 @@
 use blake2::{Blake2s256, Digest};
-use ola_basic_types::{AccountTreeId, Address, L2ChainId, H160, H256, U256};
+use ola_basic_types::{blake3, AccountTreeId, Address, L2ChainId, H160, H256, U256};
 use ola_config::constants::{
     contracts::{
         ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
@@ -62,8 +62,8 @@ pub type StorageValue = H256;
 
 fn get_address_mapping_key(address: &Address, position: H256) -> H256 {
     let padded_address = address_to_h256(address);
-    // FIXME:
-    H256::default()
+    let hash = blake3::hash(&[padded_address.as_bytes(), position.as_bytes()].concat());
+    H256::from(hash.as_bytes())
 }
 
 pub fn get_nonce_key(account: &Address) -> StorageKey {
