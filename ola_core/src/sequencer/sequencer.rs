@@ -5,6 +5,7 @@ use ola_types::{
     storage_writes_deduplicator::StorageWritesDeduplicator,
     tx::tx_execution_info::TxExecutionStatus, Transaction,
 };
+
 use ola_vm::errors::TxRevertReason;
 use tokio::sync::watch;
 
@@ -100,6 +101,8 @@ impl OlaSequencer {
         );
 
         let previous_batch_protocol_version = self.io.load_previous_batch_version_id().await;
+
+        // TODO: @Payne add protocol upgrade logic
         let version_changed = match previous_batch_protocol_version {
             Some(previous_batch_protocol_version) => {
                 l1_batch_params.protocol_version != previous_batch_protocol_version
@@ -108,7 +111,6 @@ impl OlaSequencer {
             None => false,
         };
 
-        // TODO: @Payne add protocol upgrade logic
         let mut protocol_upgrade_tx: Option<ProtocolUpgradeTx> = None;
 
         let mut batch_executor = self

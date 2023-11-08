@@ -85,10 +85,7 @@ impl TxSender {
             }
         }
 
-        let mut stage_started_at = Instant::now();
         self.validate_tx(&tx).await?;
-
-        stage_started_at = Instant::now();
 
         let shared_args = self.shared_args();
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
@@ -111,8 +108,6 @@ impl TxSender {
             tx_metrics
         );
 
-        stage_started_at = Instant::now();
-
         let validation_result = shared_args
             .validate_tx_with_pending_state(
                 vm_permit,
@@ -120,8 +115,6 @@ impl TxSender {
                 tx.clone(),
             )
             .await;
-
-        stage_started_at = Instant::now();
 
         if let Err(err) = validation_result {
             // FIXME:

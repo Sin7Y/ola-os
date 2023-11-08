@@ -39,7 +39,6 @@ impl UpdatesManager {
         protocol_version: ProtocolVersionId,
     ) -> Self {
         let batch_timestamp = block_context.timestamp();
-        let context = block_context.inner_block_context().context;
         Self {
             batch_timestamp,
             protocol_version,
