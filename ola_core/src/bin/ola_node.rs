@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
         genesis_init(&network, &contracts).await;
     }
 
-    let components = vec![Component::HttpApi, Component::Sequencer];
+    let components = vec![Component::HttpApi, Component::Sequencer, Component::Tree];
     let (core_task_handles, stop_sender, health_check_handle) = initialize_components(components)
         .await
         .expect("Unable to start Core actors");

@@ -41,6 +41,7 @@ pub enum Component {
     HttpApi,
     WsApi,
     Sequencer,
+    Tree,
 }
 pub async fn initialize_components(
     components: Vec<Component>,
@@ -64,7 +65,7 @@ pub async fn initialize_components(
 
     let mut task_futures: Vec<JoinHandle<()>> = vec![];
 
-    if components.contains(&Component::WsApi) || components.contains(&Component::HttpApi) {
+    if components.contains(&Component::HttpApi) {
         // TODO:
         // let api_config = ApiConfig::from_env();
         let api_config = load_api_config().expect("failed to load api config");
