@@ -1,4 +1,4 @@
-use ola_basic_types::{Address, H256};
+use ola_basic_types::Address;
 use serde::Deserialize;
 
 use crate::{envy_load, load_config};

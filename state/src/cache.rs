@@ -32,8 +32,7 @@ where
     }
 
     pub fn get(&self, key: &K) -> Option<V> {
-        let entry = self.cache.as_ref()?.get(key);
-        entry
+        self.cache.as_ref()?.get(key)
     }
 
     pub fn insert(&self, key: K, value: V) {

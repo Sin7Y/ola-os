@@ -1,9 +1,8 @@
-use bigdecimal::BigDecimal;
 use ola_contracts::BaseSystemContractsHashes;
 use ola_types::{
     api,
     block::{L1BatchHeader, MiniblockHeader},
-    Address, L1BatchNumber, MiniblockNumber, H256,
+    L1BatchNumber, MiniblockNumber, H256,
 };
 use sqlx::{postgres::PgArguments, query::Query, Postgres};
 

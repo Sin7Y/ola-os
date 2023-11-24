@@ -58,11 +58,11 @@ pub struct TransactionRequest {
 
 impl TransactionRequest {
     pub fn from_bytes(
-        bytes: &[u8],
-        chain_id: u16,
+        _bytes: &[u8],
+        _chain_id: u16,
     ) -> Result<(Self, H256), SerializationTransactionError> {
         // TODO:
-        let mut tx = Self::default();
+        let tx = Self::default();
         // let factory_deps_ref = tx
         //     .eip712_meta
         //     .as_ref()
@@ -91,7 +91,7 @@ impl TransactionRequest {
         }
     }
 
-    fn get_default_signed_message(&self, chain_id: u64) -> H256 {
+    fn get_default_signed_message(&self, _chain_id: u64) -> H256 {
         // TODO:
         H256::default()
     }
@@ -110,7 +110,7 @@ pub struct Eip712Meta {
 impl L2Tx {
     pub fn from_request(
         request: TransactionRequest,
-        max_tx_size: usize,
+        _max_tx_size: usize,
     ) -> Result<Self, SerializationTransactionError> {
         let nonce = request.get_nonce_checked()?;
         let (factory_deps, paymaster_params) = request

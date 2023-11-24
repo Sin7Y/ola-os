@@ -1,10 +1,9 @@
-use bigdecimal::BigDecimal;
 use ola_types::{
     l2::{L2TxCommonData, TransactionType},
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
     Address, ExecuteTransactionCommon, Nonce, Transaction, EIP_1559_TX_TYPE, H256,
-    PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
+    PROTOCOL_UPGRADE_TX_TYPE,
 };
 use sqlx::types::chrono::NaiveDateTime;
 

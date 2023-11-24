@@ -1,5 +1,5 @@
-use ola_basic_types::{H256, U256};
-use ola_utils::{bytecode::hash_bytecode, convert::bytes_to_be_words};
+use ola_basic_types::H256;
+use ola_utils::bytecode::hash_bytecode;
 use olavm_core::program::binary_program::BinaryProgram;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader, path::Path};

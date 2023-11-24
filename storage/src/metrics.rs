@@ -35,18 +35,7 @@ impl WriteMetrics {
 
 #[must_use = "stats should be `report()`ed"]
 #[derive(Debug)]
-pub(crate) struct RocksDBSizeStats {
-    /// Estimated size of all live data in the DB in bytes.
-    pub estimated_live_data_size: u64,
-    /// Total size of all SST files in bytes.
-    pub total_sst_file_size: u64,
-    /// Total size of all memtables in bytes.
-    pub total_mem_table_size: u64,
-    /// Total size of block cache.
-    pub block_cache_size: u64,
-    /// Total size of index and Bloom filter blocks.
-    pub index_and_filters_size: u64,
-}
+pub(crate) struct RocksDBSizeStats {}
 
 impl RocksDBSizeStats {
     const ESTIMATED_LIVE_DATA_SIZE: &'static str = "rocksdb.live_data_size";
