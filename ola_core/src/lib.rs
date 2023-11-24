@@ -341,16 +341,11 @@ async fn run_tree(
     let config = metadata_calculator::MetadataCalculatorConfig::for_main_node(config, operation_manager);
     // let metadata_calculator = metadata_calculator::MetadataCalculator::new(&config).await;
     // let tree_health_check = metadata_calculator.tree_health_check();
+    let (tree_health_check, _) = ReactiveHealthCheck::new("health");
     let pool = ConnectionPool::singleton(DbVariant::Master).build().await;
     let prover_pool = ConnectionPool::singleton(DbVariant::Prover).build().await;
     // let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
-    let future = tokio::spawn(|| {});
-    vlog::info!("Initialized {mode_str} tree in {:?}", started_at.elapsed());
-    metrics::gauge!(
-        "server.init.latency",
-        started_at.elapsed(),
-        "stage" => "tree",
-        "tree" => mode_str
-    );
+    let future = tokio::spawn(async {});
+    olaos_logs::info!("Initialized merkle tree in {:?}", started_at.elapsed());
     (future, tree_health_check)
 }
