@@ -6,11 +6,14 @@ use tokio::sync::watch;
 
 type SharedHealthchecks = Arc<[Box<dyn CheckHealth>]>;
 
+#[tracing::instrument(name = "check_health", skip_all)]
 async fn check_health(health_checks: State<SharedHealthchecks>) -> (StatusCode, Json<AppHealth>) {
     let response = AppHealth::new(&health_checks).await;
     let response_code = if response.is_ready() {
+        olaos_logs::info!("check_health result: OK");
         StatusCode::OK
     } else {
+        olaos_logs::error!("check_health result: SERVICE_UNAVAILABLE");
         StatusCode::SERVICE_UNAVAILABLE
     };
     (response_code, Json(response))
