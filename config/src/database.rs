@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{envy_load, load_config};
 
+const BYTES_IN_MEGABYTE: usize = 1_024 * 1_024;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MerkleTreeNode {
     #[default]
@@ -59,6 +61,11 @@ impl MerkleTreeConfig {
 
     const fn default_max_l1_batches_per_iter() -> usize {
         20
+    }
+
+    /// Returns the size of block cache size for Merkle tree in bytes.
+    pub fn block_cache_size(&self) -> usize {
+        self.block_cache_size_mb * BYTES_IN_MEGABYTE
     }
 }
 

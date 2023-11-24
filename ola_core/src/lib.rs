@@ -12,7 +12,7 @@ use ola_config::{
         load_api_config, load_healthcheck_config, load_web3_json_rpc_config, ApiConfig,
         Web3JsonRpcConfig,
     },
-    chain::{load_mempool_config, MempoolConfig},
+    chain::{load_mempool_config, MempoolConfig, OperationsManagerConfig},
     contracts::{load_contract_config, ContractsConfig},
     database::{load_db_config, DBConfig},
     sequencer::{load_sequencer_config, NetworkConfig, SequencerConfig},
@@ -123,6 +123,19 @@ pub async fn initialize_components(
         olaos_logs::info!("initialized Sequencer in {:?}", started_at.elapsed());
     }
 
+    if components.contains(&Component::Tree) {
+        let started_at = Instant::now();
+        olaos_logs::info!("initializing Merkle Tree");
+        add_trees_to_task_futures(
+            &mut task_futures,
+            &mut healthchecks,
+            &components,
+            stop_receiver.clone(),
+        )
+        .await;
+        olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
+    }
+    
     healthchecks.push(Box::new(ConnectionPoolHealthCheck::new(
         replica_connection_pool,
     )));
@@ -303,4 +316,41 @@ pub async fn genesis_init(network_config: &NetworkConfig, contracts_config: &Con
 pub async fn is_genesis_needed() -> bool {
     let mut storage = StorageProcessor::establish_connection(true).await;
     storage.blocks_dal().is_genesis_needed().await
+}
+
+async fn add_trees_to_task_futures(
+    task_futures: &mut Vec<JoinHandle<()>>,
+    healthchecks: &mut Vec<Box<dyn CheckHealth>>,
+    components: &[Component],
+    stop_receiver: watch::Receiver<bool>,
+) {
+    let db_config = DBConfig::from_env();
+    let operation_config = OperationsManagerConfig::from_env();
+    let (future, tree_health_check) =
+        run_tree(&db_config, &operation_config, stop_receiver).await;
+    task_futures.push(future);
+    healthchecks.push(Box::new(tree_health_check));
+}
+
+async fn run_tree(
+    config: &DBConfig,
+    operation_manager: &OperationsManagerConfig,
+    stop_receiver: watch::Receiver<bool>,
+) -> (JoinHandle<()>, ReactiveHealthCheck) {
+    let started_at = Instant::now();
+    let config = metadata_calculator::MetadataCalculatorConfig::for_main_node(config, operation_manager);
+    // let metadata_calculator = metadata_calculator::MetadataCalculator::new(&config).await;
+    // let tree_health_check = metadata_calculator.tree_health_check();
+    let pool = ConnectionPool::singleton(DbVariant::Master).build().await;
+    let prover_pool = ConnectionPool::singleton(DbVariant::Prover).build().await;
+    // let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
+    let future = tokio::spawn(|| {});
+    vlog::info!("Initialized {mode_str} tree in {:?}", started_at.elapsed());
+    metrics::gauge!(
+        "server.init.latency",
+        started_at.elapsed(),
+        "stage" => "tree",
+        "tree" => mode_str
+    );
+    (future, tree_health_check)
 }

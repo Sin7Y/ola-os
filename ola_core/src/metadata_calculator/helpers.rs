@@ -1,7 +1,75 @@
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    future::Future,
+    mem,
+    path::{Path, PathBuf},
+    time::Duration,
+};
+#[cfg(test)]
+use tokio::sync::mpsc;
 
 use ola_dal::StorageProcessor;
 use ola_types::{block::L1BatchHeader, log::StorageLog, L1BatchNumber, H256};
+use olavm_core::core::merkle_tree::tree::AccountTree;
+
+#[derive(Debug, Default)]
+pub(super) struct AsyncTree(Option<AccountTree>);
+
+impl AsyncTree {
+    pub async fn new(
+        db_path: PathBuf,
+        multi_get_chunk_size: usize,
+        block_cache_capacity: usize,
+    ) -> Self {
+        vlog::info!(
+            "Initializing Merkle tree at `{db_path}` with {multi_get_chunk_size} multi-get chunk size, \
+             {block_cache_capacity}B block cache",
+            db_path = db_path.display()
+        );
+
+        let mut tree = tokio::task::spawn_blocking(move || {
+            let db = Self::create_db(&db_path, block_cache_capacity);
+            AccountTree::new(db)
+
+        })
+        .await
+        .unwrap();
+
+        // tree.set_multi_get_chunk_size(multi_get_chunk_size);
+        Self(Some(tree))
+    }
+}
+
+/// Component implementing the delay policy in [`MetadataCalculator`] when there are no
+/// L1 batches to seal.
+#[derive(Debug, Clone)]
+pub(super) struct Delayer {
+    delay_interval: Duration,
+    // Notifies the tests about the next L1 batch number and tree root hash when the calculator
+    // runs out of L1 batches to process. (Since RocksDB is exclusive, we cannot just create
+    // another instance to check these params on the test side without stopping the calc.)
+    #[cfg(test)]
+    pub delay_notifier: mpsc::UnboundedSender<(L1BatchNumber, H256)>,
+}
+
+impl Delayer {
+    pub fn new(delay_interval: Duration) -> Self {
+        Self {
+            delay_interval,
+            #[cfg(test)]
+            delay_notifier: mpsc::unbounded_channel().0,
+        }
+    }
+
+    #[cfg_attr(not(test), allow(unused))] // `tree` is only used in test mode
+    pub fn wait(&self, tree: &AsyncTree) -> impl Future<Output = ()> {
+        #[cfg(test)]
+        self.delay_notifier
+            .send((tree.next_l1_batch_number(), tree.root_hash()))
+            .ok();
+        tokio::time::sleep(self.delay_interval)
+    }
+}
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]

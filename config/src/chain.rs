@@ -35,3 +35,19 @@ impl MempoolConfig {
 pub fn load_mempool_config() -> Result<MempoolConfig, config::ConfigError> {
     load_config("config/configuration/mempool")
 }
+
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub struct OperationsManagerConfig {
+    /// Sleep time in ms when there is no new input data
+    pub delay_interval: u64,
+}
+
+impl OperationsManagerConfig {
+    pub fn from_env() -> Self {
+        envy_load("operations_manager", "CHAIN_OPERATIONS_MANAGER_")
+    }
+
+    pub fn delay_interval(&self) -> Duration {
+        Duration::from_millis(self.delay_interval)
+    }
+}
