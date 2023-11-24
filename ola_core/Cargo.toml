@@ -39,6 +39,7 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
 derivative = "*"
 rayon = "*"
+olavm_core = { git = "https://github.com/Sin7Y/olavm", branch = "main", package = "core"}
 
 [features]
 # default = ["server", "client"]
