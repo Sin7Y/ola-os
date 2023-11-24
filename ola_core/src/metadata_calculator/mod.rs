@@ -6,11 +6,6 @@ use ola_config::{
 
 pub mod helpers;
 
-use self::{
-    helpers::Delayer,
-
-}
-
 /// Configuration of [`MetadataCalculator`].
 #[derive(Debug)]
 pub struct MetadataCalculatorConfig<'a> {

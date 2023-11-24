@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 
 use ola_dal::StorageProcessor;
 use ola_types::{block::L1BatchHeader, log::StorageLog, L1BatchNumber, H256};
-use olavm_core::core::merkle_tree::tree::AccountTree;
+use olavm_core::{merkle_tree::tree::AccountTree, storage::db::{RocksDB, Database}};
 
 #[derive(Debug, Default)]
 pub(super) struct AsyncTree(Option<AccountTree>);
@@ -21,14 +21,8 @@ impl AsyncTree {
         multi_get_chunk_size: usize,
         block_cache_capacity: usize,
     ) -> Self {
-        vlog::info!(
-            "Initializing Merkle tree at `{db_path}` with {multi_get_chunk_size} multi-get chunk size, \
-             {block_cache_capacity}B block cache",
-            db_path = db_path.display()
-        );
-
         let mut tree = tokio::task::spawn_blocking(move || {
-            let db = Self::create_db(&db_path, block_cache_capacity);
+            let db = Self::create_db(&db_path);
             AccountTree::new(db)
 
         })
@@ -37,6 +31,10 @@ impl AsyncTree {
 
         // tree.set_multi_get_chunk_size(multi_get_chunk_size);
         Self(Some(tree))
+    }
+
+    fn create_db(path: &Path) -> RocksDB {
+        RocksDB::new(Database::MerkleTree, path, true)
     }
 }
 
@@ -61,14 +59,14 @@ impl Delayer {
         }
     }
 
-    #[cfg_attr(not(test), allow(unused))] // `tree` is only used in test mode
-    pub fn wait(&self, tree: &AsyncTree) -> impl Future<Output = ()> {
-        #[cfg(test)]
-        self.delay_notifier
-            .send((tree.next_l1_batch_number(), tree.root_hash()))
-            .ok();
-        tokio::time::sleep(self.delay_interval)
-    }
+    // #[cfg_attr(not(test), allow(unused))] // `tree` is only used in test mode
+    // pub fn wait(&self, tree: &AsyncTree) -> impl Future<Output = ()> {
+    //     #[cfg(test)]
+    //     self.delay_notifier
+    //         .send((tree.next_l1_batch_number(), tree.root_hash()))
+    //         .ok();
+    //     tokio::time::sleep(self.delay_interval)
+    // }
 }
 
 #[derive(Debug)]
