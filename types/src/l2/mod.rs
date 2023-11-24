@@ -1,9 +1,7 @@
 use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 
 use crate::{
-    request::{PaymasterParams, SerializationTransactionError, TransactionRequest},
-    tx::execute::Execute,
-    utils::unix_timestamp_ms,
+    request::PaymasterParams, tx::execute::Execute, utils::unix_timestamp_ms,
     ExecuteTransactionCommon, InputData, Transaction, PRIORITY_OPERATION_L2_TX_TYPE,
     PROTOCOL_UPGRADE_TX_TYPE,
 };
@@ -33,7 +31,7 @@ impl L2Tx {
         nonce: Nonce,
         initiator_address: Address,
         factory_deps: Option<Vec<Vec<u8>>>,
-        paymaster_params: PaymasterParams,
+        _paymaster_params: PaymasterParams,
     ) -> Self {
         Self {
             execute: Execute {

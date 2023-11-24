@@ -92,7 +92,7 @@ pub struct HealthCheckConfig {
 
 impl HealthCheckConfig {
     pub fn from_env() -> Self {
-        envy_load("healthcheck", "API_HEALTHCHECK_")
+        envy_load("healthcheck", "OLSOS_API_HEALTHCHECK_")
     }
 
     pub fn bind_addr(&self) -> SocketAddr {
@@ -118,9 +118,80 @@ pub fn load_healthcheck_config() -> Result<HealthCheckConfig, config::ConfigErro
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::EnvMutex;
+    // use crate::utils::EnvMutex;
+
+    use std::{
+        collections::HashMap,
+        env,
+        ffi::{OsStr, OsString},
+        sync::{Mutex, PoisonError},
+    };
 
     use super::{ApiConfig, HealthCheckConfig, Web3JsonRpcConfig};
+
+    pub(crate) struct EnvMutex(Mutex<()>);
+
+    impl EnvMutex {
+        pub const fn new() -> Self {
+            Self(Mutex::new(()))
+        }
+
+        pub fn lock(&self) -> EnvMutexGuard {
+            let _guard = self.0.lock().unwrap_or_else(PoisonError::into_inner);
+            EnvMutexGuard {
+                redefined_vars: HashMap::new(),
+            }
+        }
+    }
+
+    pub(crate) struct EnvMutexGuard {
+        redefined_vars: HashMap<OsString, Option<OsString>>,
+    }
+
+    impl Drop for EnvMutexGuard {
+        fn drop(&mut self) {
+            for (env_name, value) in std::mem::take(&mut self.redefined_vars) {
+                if let Some(value) = value {
+                    env::set_var(env_name, value);
+                } else {
+                    env::remove_var(env_name);
+                }
+            }
+        }
+    }
+
+    impl EnvMutexGuard {
+        pub fn set_env(&mut self, fixture: &str) {
+            for line in fixture.split('\n').map(str::trim) {
+                if line.is_empty() {
+                    continue;
+                }
+
+                let elements: Vec<_> = line.split('=').collect();
+                let variable_name: &OsStr = elements[0].as_ref();
+                let variable_value: &OsStr = elements[1].trim_matches('"').as_ref();
+
+                if !self.redefined_vars.contains_key(variable_name) {
+                    let prev_value = env::var_os(variable_name);
+                    self.redefined_vars
+                        .insert(variable_name.to_os_string(), prev_value);
+                }
+                env::set_var(variable_name, variable_value);
+            }
+        }
+
+        pub fn remove_env(&mut self, var_names: &[&str]) {
+            for &var_name in var_names {
+                let variable_name: &OsStr = var_name.as_ref();
+                if !self.redefined_vars.contains_key(variable_name) {
+                    let prev_value = env::var_os(variable_name);
+                    self.redefined_vars
+                        .insert(variable_name.to_os_string(), prev_value);
+                }
+                env::remove_var(variable_name);
+            }
+        }
+    }
 
     static MUTEX: EnvMutex = EnvMutex::new();
 
@@ -160,6 +231,7 @@ mod tests {
             OLAOS_API_WEB3_JSON_RPC_WS_PORT="1002"
             OLAOS_API_WEB3_JSON_RPC_WS_URL="ws://127.0.0.1:1002"
             OLAOS_API_WEB3_JSON_RPC_MAX_TX_SIZE=1000000
+            OLAOS_API_WEB3_JSON_RPC_SUBSCRIPTIONS_LIMIT=10000
             OLAOS_API_WEB3_JSON_RPC_FILTERS_LIMIT=10000
             OLAOS_API_WEB3_JSON_RPC_THREADS_PER_SERVER=128
             OLAOS_API_WEB3_JSON_RPC_HTTP_THREADS=128
@@ -172,6 +244,7 @@ mod tests {
             OLAOS_API_WEB3_JSON_RPC_FACTORY_DEPS_CACHE_SIZE_MB=128
             OLAOS_API_WEB3_JSON_RPC_INITIAL_WRITES_CACHE_SIZE_MB=32
             OLAOS_API_WEB3_JSON_RPC_LATEST_VALUES_CACHE_SIZE_MB=128
+            OLSOS_API_HEALTHCHECK_PORT=8081
         "#;
         lock.set_env(config);
 

@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use bigdecimal::{BigDecimal, FromPrimitive};
-use ola_config::constants::ethereum::MAX_GAS_PER_PUBDATA_BYTE;
 use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
     commitment::L1BatchMetadata,

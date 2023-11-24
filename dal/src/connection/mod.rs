@@ -100,13 +100,13 @@ impl ConnectionPool {
         self.access_storage_inner(Some(requester)).await
     }
 
-    async fn access_storage_inner(&self, requester: Option<&'static str>) -> StorageProcessor<'_> {
+    async fn access_storage_inner(&self, _requester: Option<&'static str>) -> StorageProcessor<'_> {
         match self {
             ConnectionPool::Real(real_pool) => {
                 let conn = Self::acquire_connection_retried(real_pool).await;
                 StorageProcessor::from_pool(conn)
             }
-            ConnectionPool::Test(test_pool) => {
+            ConnectionPool::Test(_test_pool) => {
                 panic!("test pool not supported!")
             }
         }
