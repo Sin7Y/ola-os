@@ -63,6 +63,7 @@ impl BaseSystemContracts {
 }
 
 pub fn read_json_program(json_path: impl AsRef<Path>) -> Vec<u8> {
+    // dbg!(json_path.as_ref().to_str());
     let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
     let bytecode_path = Path::new(&ola_home).join(json_path);
     let file = File::open(bytecode_path).unwrap();

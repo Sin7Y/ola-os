@@ -15,7 +15,7 @@ use ola_config::{
     chain::{load_mempool_config, MempoolConfig},
     contracts::{load_contract_config, ContractsConfig},
     database::{load_db_config, DBConfig},
-    sequencer::{load_sequencer_config, NetworkConfig, SequencerConfig},
+    sequencer::{load_network_config, load_sequencer_config, NetworkConfig, SequencerConfig},
 };
 use ola_contracts::BaseSystemContracts;
 use ola_dal::{
@@ -69,8 +69,8 @@ pub async fn initialize_components(
         // TODO:
         // let api_config = ApiConfig::from_env();
         let api_config = load_api_config().expect("failed to load api config");
-        let sequencer_config = SequencerConfig::from_env();
-        let network_config = NetworkConfig::from_env();
+        let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
+        let network_config = load_network_config().expect("failed to load network config");
         let tx_sender_config = TxSenderConfig::new(&sequencer_config, &api_config.web3_json_rpc);
         let internal_api_config = InternalApiconfig::new(
             &network_config,
