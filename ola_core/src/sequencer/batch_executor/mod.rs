@@ -2,11 +2,11 @@ use std::{fmt, time::Instant};
 
 use async_trait::async_trait;
 use ola_dal::connection::ConnectionPool;
-use ola_state::rocksdb::RocksdbStorage;
-use ola_types::Transaction;
+use ola_state::{rocksdb::RocksdbStorage, storage_view::StorageView};
+use ola_types::{L1BatchNumber, Transaction, U256};
 use ola_vm::{
     errors::TxRevertReason,
-    vm::{VmBlockResult, VmPartialExecutionResult, VmTxExecutionResult},
+    vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
 use tokio::{
     sync::{mpsc, oneshot},
@@ -61,7 +61,7 @@ impl BatchExecutorHandle {
             .send(Command::FinishBatch(response_sender))
             .await
             .unwrap();
-        let _start = Instant::now();
+        let start = Instant::now();
         let resp = response_receiver.await.unwrap();
         self.handle.await.unwrap();
         resp
@@ -156,11 +156,7 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
-    pub(super) fn run(
-        mut self,
-        _secondary_storage: RocksdbStorage,
-        l1_batch_params: L1BatchParams,
-    ) {
+    pub(super) fn run(mut self, secondary_storage: RocksdbStorage, l1_batch_params: L1BatchParams) {
         olaos_logs::info!(
             "Starting executing batch #{}",
             l1_batch_params
@@ -201,7 +197,7 @@ impl BatchExecutor {
 
         while let Some(cmd) = self.commands.blocking_recv() {
             match cmd {
-                Command::ExecuteTx(_tx, resp) => {
+                Command::ExecuteTx(tx, resp) => {
                     // FIXME: @pierre
                     // let result = self.execute_tx(&tx, &mut vm);
                     let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
@@ -212,7 +208,7 @@ impl BatchExecutor {
                     // self.rollback_last_tx(&mut vm);
                     resp.send(()).unwrap();
                 }
-                Command::FinishBatch(_resp) => {
+                Command::FinishBatch(resp) => {
                     // FIXME: initial vm
                     // resp.send(self.finish_batch(&mut vm)).unwrap();
                     return;

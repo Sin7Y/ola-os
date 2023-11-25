@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use ola_config::chain::MempoolConfig;
 use ola_dal::connection::ConnectionPool;
@@ -46,7 +49,7 @@ impl MempoolFetcher {
                 olaos_logs::info!("Stop signal received, mempool is shutting down");
                 break;
             }
-            let _started_at = Instant::now();
+            let started_at = Instant::now();
             let mut storage = pool.access_storage_tagged("sequencer").await;
             let mempool_info = self.mempool.get_mempool_info();
 

@@ -22,7 +22,7 @@ use self::{error::SubmitTxError, proxy::TxProxy};
 
 use super::execution_sandbox::{
     execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs,
-    VmConcurrencyLimiter,
+    VmConcurrencyBarrier, VmConcurrencyLimiter,
 };
 
 pub mod error;

@@ -3,6 +3,7 @@ use std::{
     time::Instant,
 };
 
+use ola_config::constants::trusted_slots::{TRUSTED_ADDRESS_SLOTS, TRUSTED_TOKEN_SLOTS};
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{l2::L2Tx, Address, Transaction, U256};
 use ola_vm::oracles::validation::ValidationTracerParams;
@@ -16,7 +17,7 @@ pub type ValidationError = String;
 
 impl TxSharedArgs {
     pub async fn validate_tx_with_pending_state(
-        self,
+        mut self,
         vm_permit: VmPermit,
         connection_pool: ConnectionPool,
         tx: L2Tx,
@@ -35,13 +36,13 @@ impl TxSharedArgs {
         tx: L2Tx,
         block_args: BlockArgs,
     ) -> Result<(), ValidationError> {
-        let _stage_started_at = Instant::now();
+        let stage_started_at = Instant::now();
         let mut connection = connection_pool.access_storage_tagged("api").await;
-        let _validation_params = get_validation_params(&mut connection, &tx).await;
+        let validation_params = get_validation_params(&mut connection, &tx).await;
         drop(connection);
 
         let execution_args = TxExecutionArgs::for_validation(&tx);
-        let _execution_mode = execution_args.execution_mode;
+        let execution_mode = execution_args.execution_mode;
         let tx: Transaction = tx.into();
         let (validation_result, _) = tokio::task::spawn_blocking(move || {
             let span = tracing::debug_span!("validate_in_sandbox").entered();
@@ -54,7 +55,7 @@ impl TxSharedArgs {
                 block_args,
                 HashMap::new(),
                 // FIXME: replace real apply Fn
-                |_tx| Ok(()),
+                |tx| Ok(()),
             );
             span.exit();
             result
@@ -67,10 +68,10 @@ impl TxSharedArgs {
 }
 
 async fn get_validation_params(
-    _connection: &mut StorageProcessor<'_>,
+    connection: &mut StorageProcessor<'_>,
     tx: &L2Tx,
 ) -> ValidationTracerParams {
-    let _start_time = Instant::now();
+    let start_time = Instant::now();
     let user_address = tx.common_data.initiator_address;
     // let paymaster_address = tx.common_data.paymaster_params.paymaster;
 

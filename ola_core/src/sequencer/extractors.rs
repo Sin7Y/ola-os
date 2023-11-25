@@ -8,7 +8,7 @@ use std::{
 
 use chrono::{DateTime, TimeZone, Utc};
 
-pub(super) fn encoded_transaction_size(_tx: Transaction) -> usize {
+pub(super) fn encoded_transaction_size(tx: Transaction) -> usize {
     // TODO:
     0
 }
