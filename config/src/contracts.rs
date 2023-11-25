@@ -36,6 +36,38 @@ impl ContractsConfig {
     }
 }
 
-pub fn load_contract_config() -> Result<ContractsConfig, config::ConfigError> {
-    load_config("config/configuration/contract")
+pub fn load_contracts_config() -> Result<ContractsConfig, config::ConfigError> {
+    load_config("configuration/contracts", "OLAOS_CONTRACTS")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use ola_basic_types::Address;
+
+    use crate::{contracts::load_contracts_config, utils::tests::EnvMutex};
+
+    use super::ContractsConfig;
+
+    static MUTEX: EnvMutex = EnvMutex::new();
+
+    fn default_contracts_config() -> ContractsConfig {
+        ContractsConfig {
+            l2_erc20_bridge_addr: Address::from_str("0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCF")
+                .expect("failed to initial l2_erc20_bridge_addr"),
+        }
+    }
+
+    #[test]
+    fn test_load_contracts_config() {
+        let mut lock = MUTEX.lock();
+        let config = r#"
+            OLAOS_CONTRACTS_L2_ERC20_BRIDGE_ADDR=0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCF
+        "#;
+        lock.set_env(config);
+
+        let contracts_config = load_contracts_config().expect("failed to load contracts config");
+        assert_eq!(contracts_config, default_contracts_config());
+    }
 }

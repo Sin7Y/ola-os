@@ -1,0 +1,4 @@
+path: "./db/main/tree"
+backup_path: "./db/main/backups"
+multi_get_chunk_size: 1000
+max_l1_batches_per_iter: 50
