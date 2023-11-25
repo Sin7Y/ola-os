@@ -35,3 +35,37 @@ impl MempoolConfig {
 pub fn load_mempool_config() -> Result<MempoolConfig, config::ConfigError> {
     load_config("configuration/mempool", "OLAOS_MEMPOOL")
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{chain::load_mempool_config, utils::tests::EnvMutex};
+
+    use super::MempoolConfig;
+
+    static MUTEX: EnvMutex = EnvMutex::new();
+
+    fn default_mempool_config() -> MempoolConfig {
+        MempoolConfig {
+            sync_interval_ms: 10,
+            sync_batch_size: 1000,
+            capacity: 10000,
+            stuck_tx_timeout: 50,
+            remove_stuck_txs: true,
+            delay_interval: 200,
+        }
+    }
+
+    #[test]
+    fn test_load_mempool_config() {
+        let mut lock = MUTEX.lock();
+        let config = r#"
+            OLAOS_MEMPOOL_CAPACITY=10000
+            OLAOS_MEMPOOL_STUCK_TX_TIMEOUT=50
+            OLAOS_MEMPOOL_DELAY_INTERVAL=200
+        "#;
+        lock.set_env(config);
+
+        let api_config = load_mempool_config().expect("failed to load mempool config");
+        assert_eq!(api_config, default_mempool_config());
+    }
+}
