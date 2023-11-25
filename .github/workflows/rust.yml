@@ -67,9 +67,9 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-      #     components: rustfmt, clippy
-      # - name: fmt
-      #   run: cargo fmt --all -- --check
+          components: rustfmt, clippy
+      - name: fmt
+        run: cargo fmt --all -- --check
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
