@@ -22,7 +22,7 @@ COPY . .
 # Copy over the cached dependencies
 COPY --from=cacher /olaos/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
-ENV DATABASE_URL postgres://postgres:password@host.docker.internal:15432/olaos
+ENV DATABASE_URL postgres://postgres:password@host.docker.internal:5432/olaos
 ENV SQLX_OFFLINE true
 # Build our application, leveraging the cached deps!
 RUN cargo build --release --bin ola_node

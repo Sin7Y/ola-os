@@ -21,8 +21,8 @@ DB_USER=${POSTGRES_USER:=postgres}
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 # Check if a custom database name has been set, otherwise default to 'olaos'
 DB_NAME="${POSTGRES_DB:=olaos}"
-# Check if a custom port has been set, otherwise default to '15432'
-DB_PORT="${POSTGRES_PORT:=15432}"
+# Check if a custom port has been set, otherwise default to '5432'
+DB_PORT="${POSTGRES_PORT:=5432}"
 
 if [[ -z "${SKIP_DOCKER}" ]]
 then
@@ -30,7 +30,7 @@ then
         -e POSTGRES_USER=${DB_USER} \
         -e POSTGRES_PASSWORD=${DB_PASSWORD} \
         -e POSTGRES_DB=${DB_NAME} \
-        -p "${DB_PORT}":15432 \
+        -p "${DB_PORT}":5432 \
         -d postgres \
         postgres -N 1000
         # ^ Increased maximum number of connections for testing purposes

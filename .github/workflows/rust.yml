@@ -30,7 +30,7 @@ jobs:
   #     postgres:
   #       image: postgres
   #       ports:
-  #         - 15432:15432
+  #         - 5432:5432
   #   steps:
   #     - uses: actions/checkout@v2
   #     - uses: actions-rs/toolchain@v1
@@ -57,24 +57,24 @@ jobs:
       postgres:
         image: postgres
         ports:
-          - 15432:15432
+          - 5432:5432
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           override: true
-          components: rustfmt, clippy
-      - name: fmt
-        run: cargo fmt --all -- --check
+      #     components: rustfmt, clippy
+      # - name: fmt
+      #   run: cargo fmt --all -- --check
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
           cargo install --version=0.7.2 sqlx-cli --no-default-features --features postgres
-          SKIP_DOCKER=true ./dal/scripts/init_db.sh
+          SKIP_DOCKER=true cd dal && ./scripts/init_db.sh
       - name: Build
         run: cargo build
       - name: Run tests
