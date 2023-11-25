@@ -105,5 +105,54 @@ impl DBConfig {
 }
 
 pub fn load_db_config() -> Result<DBConfig, config::ConfigError> {
-    load_config("configuration/database", "OLAOS_DATABASE")
+    Ok(DBConfig {
+        merkle_tree: load_merkle_tree_config()?,
+        ..load_config("configuration/database", "OLAOS_DATABASE")?
+    })
+    // load_config("configuration/database", "OLAOS_DATABASE")
+}
+
+pub fn load_merkle_tree_config() -> Result<MerkleTreeConfig, config::ConfigError> {
+    load_config("configuration/merkle_tree", "OLAOS_MERKLE_TREE")
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::tests::EnvMutex;
+
+    use super::{load_db_config, DBConfig, MerkleTreeConfig};
+
+    static MUTEX: EnvMutex = EnvMutex::new();
+
+    fn default_db_config() -> DBConfig {
+        DBConfig {
+            statement_timeout_sec: Some(300),
+            sequencer_db_path: "./db/main/sequencer".to_string(),
+            merkle_tree: MerkleTreeConfig {
+                path: "./db/main/tree".to_string(),
+                backup_path: "./db/main/backups".to_string(),
+                mode: Default::default(),
+                multi_get_chunk_size: 1000,
+                block_cache_size_mb: 128,
+                max_l1_batches_per_iter: 50,
+            },
+            backup_count: 5,
+            backup_interval_ms: 60000,
+        }
+    }
+
+    #[test]
+    fn test_load_database_config() {
+        let mut lock = MUTEX.lock();
+        let config = r#"
+            OLAOS_DATABASE_STATEMENT_TIMEOUT_SEC=300
+            OLAOS_DATABASE_SEQUENCER_DB_PATH=./db/main/sequencer
+            OLAOS_DATABASE_BACKUP_COUNT=5
+            OLAOS_DATABASE_BACKUP_INTERVAL_MS=60000
+        "#;
+        lock.set_env(config);
+
+        let db_config = load_db_config().expect("failed to load db config");
+        assert_eq!(db_config, default_db_config());
+    }
 }
