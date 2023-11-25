@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ola_config::{contracts::load_contract_config, sequencer::load_network_config};
+use ola_config::{contracts::load_contracts_config, sequencer::load_network_config};
 use ola_core::{
     genesis_init, initialize_components, is_genesis_needed, setup_sigint_handler, Component,
 };
@@ -14,9 +14,8 @@ async fn main() -> anyhow::Result<()> {
     olaos_logs::info!("init_subscriber finished");
 
     if is_genesis_needed().await {
-        // FIXME: load config from env?
         let network = load_network_config().expect("failed to load network config");
-        let contracts = load_contract_config().expect("failed to laod contract config");
+        let contracts = load_contracts_config().expect("failed to laod contract config");
         genesis_init(&network, &contracts).await;
     }
 

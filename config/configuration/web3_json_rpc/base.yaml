@@ -3,6 +3,16 @@ http_url: http://127.0.0.1:13000
 ws_port: 13001
 ws_url: http://127.0.0.1:13001
 max_tx_size: 1000000
+subscriptions_limit: 10000
 filters_limit: 10000
+vm_concurrency_limit: 2048
 threads_per_server: 128
+http_threads: 128
+ws_threads: 256
+max_batch_request_size: 200
+max_response_body_size_mb: 10
 max_nonce_ahead: 50
+transactions_per_sec_limit: 1000
+factory_deps_cache_size_mb: 128
+initial_writes_cache_size_mb: 32
+latest_values_cache_size_mb: 128
