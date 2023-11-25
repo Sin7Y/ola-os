@@ -279,7 +279,7 @@ async fn add_sequencer_to_task_futures(
     task_futures.push(mempool_fetcher_handle);
 }
 
-pub async fn genesis_init(network_config: &NetworkConfig, _contracts_config: &ContractsConfig) {
+pub async fn genesis_init(network_config: &NetworkConfig, contracts_config: &ContractsConfig) {
     let mut storage = StorageProcessor::establish_connection(true).await;
 
     genesis::ensure_genesis_state(
