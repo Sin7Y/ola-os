@@ -105,5 +105,5 @@ impl DBConfig {
 }
 
 pub fn load_db_config() -> Result<DBConfig, config::ConfigError> {
-    load_config("config/configuration/database", "OLAOS_DATABASE")
+    load_config("configuration/database", "OLAOS_DATABASE")
 }

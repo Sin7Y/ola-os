@@ -37,5 +37,5 @@ impl ContractsConfig {
 }
 
 pub fn load_contract_config() -> Result<ContractsConfig, config::ConfigError> {
-    load_config("config/configuration/contract", "OLAOS_CONTRACTS")
+    load_config("configuration/contract", "OLAOS_CONTRACTS")
 }

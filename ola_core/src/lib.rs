@@ -47,9 +47,6 @@ pub async fn initialize_components(
     components: Vec<Component>,
 ) -> anyhow::Result<(Vec<JoinHandle<()>>, watch::Sender<bool>, HealthCheckHandle)> {
     olaos_logs::info!("Starting the components: {components:?}");
-
-    // FIXME:
-    // let db_config = DBConfig::from_env();
     let db_config = load_db_config().expect("failed to load database config");
     let connection_pool = ConnectionPool::builder(DbVariant::Master).build().await;
     let replica_connection_pool = ConnectionPool::builder(DbVariant::Replica)
@@ -66,8 +63,6 @@ pub async fn initialize_components(
     let mut task_futures: Vec<JoinHandle<()>> = vec![];
 
     if components.contains(&Component::HttpApi) {
-        // TODO:
-        // let api_config = ApiConfig::from_env();
         let api_config = load_api_config().expect("failed to load api config");
         let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
         let network_config = load_network_config().expect("failed to load network config");
@@ -202,8 +197,6 @@ fn build_storage_caches(
     replica_connection_pool: &ConnectionPool,
     task_futures: &mut Vec<JoinHandle<()>>,
 ) -> PostgresStorageCaches {
-    // TODO:
-    // let rpc_config = Web3JsonRpcConfig::from_env();
     let rpc_config = load_web3_json_rpc_config().expect("failed to load web3_json_rpc_config");
     let factory_deps_capacity = rpc_config.factory_deps_cache_size() as u64;
     let initial_writes_capacity = rpc_config.initial_writes_cache_size() as u64;
