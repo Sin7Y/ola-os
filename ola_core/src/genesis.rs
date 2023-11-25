@@ -14,9 +14,7 @@ use ola_types::{
     StorageKey,
     H256,
 };
-use ola_utils::{
-    be_words_to_bytes, bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
-};
+use ola_utils::{bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256};
 
 use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 

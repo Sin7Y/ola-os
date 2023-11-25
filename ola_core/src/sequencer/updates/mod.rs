@@ -3,7 +3,7 @@ use ola_types::{
     protocol_version::ProtocolVersionId,
     storage_writes_deduplicator::StorageWritesDeduplicator,
     tx::tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
-    Address, L1BatchNumber, MiniblockNumber, Transaction,
+    L1BatchNumber, MiniblockNumber, Transaction,
 };
 use ola_vm::{vm::VmTxExecutionResult, vm_with_bootloader::BlockContextMode};
 

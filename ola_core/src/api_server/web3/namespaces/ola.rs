@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use ola_types::H256;
 use ola_web3_decl::error::Web3Error;
 use web3::types::Bytes;
