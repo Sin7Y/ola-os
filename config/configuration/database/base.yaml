@@ -1,1 +1,4 @@
-backup_interval_ms: 1234
+statement_timeout_sec: 300
+sequencer_db_path: "./db/main/sequencer"
+backup_count: 5
+backup_interval_ms: 60000
