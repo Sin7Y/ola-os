@@ -24,6 +24,7 @@ impl BlocksDal<'_, '_> {
             .await
             .unwrap()
             .count;
+        olaos_logs::debug!("is_genesis_needed count = {}", count);
         count == 0
     }
 

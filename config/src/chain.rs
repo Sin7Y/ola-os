@@ -28,10 +28,10 @@ impl MempoolConfig {
     }
 
     pub fn from_env() -> Self {
-        envy_load("mempool", "CHAIN_MEMPOOL_")
+        envy_load("mempool", "OLAOS_MEMPOOL_")
     }
 }
 
 pub fn load_mempool_config() -> Result<MempoolConfig, config::ConfigError> {
-    load_config("config/configuration/mempool")
+    load_config("config/configuration/mempool", "OLAOS_MEMPOOL")
 }

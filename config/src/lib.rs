@@ -24,7 +24,10 @@ pub fn envy_try_load<T: DeserializeOwned>(prefix: &str) -> Result<T, envy::Error
     envy::prefixed(prefix).from_env()
 }
 
-pub fn load_config<P: AsRef<Path>, T: DeserializeOwned>(path: P) -> Result<T, config::ConfigError> {
+pub fn load_config<P: AsRef<Path>, T: DeserializeOwned>(
+    path: P,
+    prefix: &str,
+) -> Result<T, config::ConfigError> {
     let mut settings = config::Config::default();
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join(path);
@@ -42,7 +45,7 @@ pub fn load_config<P: AsRef<Path>, T: DeserializeOwned>(path: P) -> Result<T, co
     )?;
     // Add in settings from environment variables (with a prefix of APP and '__' as separator)
     // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port`
-    settings.merge(config::Environment::with_prefix("OLAOS").separator("__"))?;
+    settings.merge(config::Environment::with_prefix(prefix).separator("__"))?;
     // Try to convert the configuration values it read into
     // our Settings type
     settings.try_into()
