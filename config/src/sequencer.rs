@@ -29,14 +29,14 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     pub fn from_env() -> Self {
-        envy_load("ola_network", "OLAOS_CHAIN_ETH_")
+        envy_load("ola_network", "OLAOS_NETWORK_")
     }
 }
 
 pub fn load_sequencer_config() -> Result<SequencerConfig, config::ConfigError> {
-    load_config("config/configuration/sequencer")
+    load_config("config/configuration/sequencer", "OLAOS_SEQUENCER")
 }
 
 pub fn load_network_config() -> Result<NetworkConfig, config::ConfigError> {
-    load_config("config/configuration/network")
+    load_config("config/configuration/network", "OLAOS_NETWORK")
 }
