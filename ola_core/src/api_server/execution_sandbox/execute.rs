@@ -30,7 +30,7 @@ impl TxExecutionArgs {
 #[tracing::instrument(skip_all)]
 pub(crate) async fn execute_tx_with_pending_state(
     vm_permit: VmPermit,
-    mut shared_args: TxSharedArgs,
+    shared_args: TxSharedArgs,
     execution_args: TxExecutionArgs,
     connection_pool: ConnectionPool,
     tx: Transaction,
@@ -66,8 +66,8 @@ async fn execute_tx_in_sandbox(
     connection_pool: ConnectionPool,
     tx: Transaction,
     block_args: BlockArgs,
-    job_type: BootloaderJobType,
-    trace_call: bool,
+    _job_type: BootloaderJobType,
+    _trace_call: bool,
     storage_read_cache: &mut HashMap<StorageKey, H256>,
 ) -> (
     Result<VmExecutionResult, SandboxExecutionError>,
@@ -82,7 +82,7 @@ async fn execute_tx_in_sandbox(
     let moved_cache = std::mem::take(storage_read_cache);
     let (execution_result, moved_cache) = tokio::task::spawn_blocking(move || {
         let span = tracing::span!(Level::DEBUG, "execute_in_sandbox").entered();
-        let execution_mode = execution_args.execution_mode;
+        let _execution_mode = execution_args.execution_mode;
         let result = apply::apply_vm_in_sandbox(
             vm_permit,
             shared_args,
@@ -92,7 +92,7 @@ async fn execute_tx_in_sandbox(
             block_args,
             moved_cache,
             // FIXME: replace apply return real VmExecutionResult
-            |tx| VmExecutionResult::default(),
+            |_tx| VmExecutionResult::default(),
         );
         span.exit();
         result
