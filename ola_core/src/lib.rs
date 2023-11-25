@@ -13,7 +13,7 @@ use ola_config::{
         Web3JsonRpcConfig,
     },
     chain::{load_mempool_config, MempoolConfig},
-    contracts::{load_contract_config, ContractsConfig},
+    contracts::{load_contracts_config, ContractsConfig},
     database::{load_db_config, DBConfig},
     sequencer::{load_network_config, load_sequencer_config, NetworkConfig, SequencerConfig},
 };
@@ -56,7 +56,7 @@ pub async fn initialize_components(
 
     let mut healthchecks: Vec<Box<dyn CheckHealth>> = Vec::new();
     // FIXME: load from env?
-    let contracts_config = load_contract_config().expect("failed to load contract config");
+    let contracts_config = load_contracts_config().expect("failed to load contract config");
 
     let (stop_sender, stop_receiver) = watch::channel(false);
 
