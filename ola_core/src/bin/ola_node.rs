@@ -14,7 +14,6 @@ async fn main() -> anyhow::Result<()> {
     olaos_logs::info!("init_subscriber finished");
 
     if is_genesis_needed().await {
-        // FIXME: load config from env?
         let network = load_network_config().expect("failed to load network config");
         let contracts = load_contract_config().expect("failed to laod contract config");
         genesis_init(&network, &contracts).await;

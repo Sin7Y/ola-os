@@ -33,5 +33,5 @@ impl MempoolConfig {
 }
 
 pub fn load_mempool_config() -> Result<MempoolConfig, config::ConfigError> {
-    load_config("config/configuration/mempool", "OLAOS_MEMPOOL")
+    load_config("configuration/mempool", "OLAOS_MEMPOOL")
 }

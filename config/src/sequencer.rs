@@ -34,9 +34,9 @@ impl NetworkConfig {
 }
 
 pub fn load_sequencer_config() -> Result<SequencerConfig, config::ConfigError> {
-    load_config("config/configuration/sequencer", "OLAOS_SEQUENCER")
+    load_config("configuration/sequencer", "OLAOS_SEQUENCER")
 }
 
 pub fn load_network_config() -> Result<NetworkConfig, config::ConfigError> {
-    load_config("config/configuration/network", "OLAOS_NETWORK")
+    load_config("configuration/network", "OLAOS_NETWORK")
 }

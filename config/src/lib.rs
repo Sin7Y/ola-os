@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use environment::Environment;
 use serde::de::DeserializeOwned;
@@ -29,7 +29,7 @@ pub fn load_config<P: AsRef<Path>, T: DeserializeOwned>(
     prefix: &str,
 ) -> Result<T, config::ConfigError> {
     let mut settings = config::Config::default();
-    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
+    let base_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let configuration_directory = base_path.join(path);
     // Read the "default" configuration file
     settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
