@@ -152,7 +152,7 @@ mod tests {
     }
 
     #[test]
-    fn test_api_config() {
+    fn test_load_api_config() {
         let mut lock = MUTEX.lock();
         let config = r#"
             OLAOS_WEB3_JSON_RPC_HTTP_PORT="1001"
