@@ -20,7 +20,7 @@ use ola_utils::{
 
 use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 
-// use crate::metadata_calculator::helpers::L1BatchWithLogs;
+use crate::metadata_calculator::L1BatchWithLogs;
 
 #[derive(Debug, Clone)]
 pub struct GenesisParams {
@@ -63,9 +63,8 @@ pub async fn ensure_genesis_state(
     olaos_logs::info!("chain_schema_genesis is complete");
 
     // TODO:
-    // let storage_logs = L1BatchWithLogs::new(&mut transaction, L1BatchNumber(0)).await;
-    // let storage_logs = storage_logs.unwrap().storage_logs;
-    // let metadata = ZkSyncTree::process_genesis_batch(&storage_logs);
+    let storage_logs = crate::metadata_calculator::get_logs_for_l1_batch(&mut transaction, L1BatchNumber(0)).await;
+    let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(&storage_logs.unwrap().storage_logs);
     // let genesis_root_hash = metadata.root_hash;
     // let rollup_last_leaf_index = metadata.leaf_count + 1;
 
