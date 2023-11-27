@@ -1,10 +1,22 @@
 use std::time::Duration;
+use tokio::sync::watch;
 use ola_config::{
     chain::OperationsManagerConfig,
     database::DBConfig,
 };
+use ola_dal::connection::ConnectionPool;
+use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
+use ola_types::log::StorageLog;
 
-pub mod helpers;
+mod helpers;
+mod updater;
+
+pub(crate) use self::helpers::L1BatchWithLogs;
+pub(crate) use self::helpers::get_logs_for_l1_batch;
+pub use self::helpers::AsyncTree;
+
+use self::helpers::Delayer;
+use self::updater::TreeUpdater;
 
 /// Configuration of [`MetadataCalculator`].
 #[derive(Debug)]
@@ -37,9 +49,43 @@ impl<'a> MetadataCalculatorConfig<'a> {
     }
 }
 
-// #[derive(Debug)]
-// pub struct MetadataCalculator {
-//     updater: TreeUpdater,
-//     delayer: Delayer,
-//     health_updater: HealthUpdater,
-// }
+#[derive(Debug)]
+pub struct MetadataCalculator {
+    updater: TreeUpdater,
+    delayer: Delayer,
+    health_updater: HealthUpdater,
+}
+
+impl MetadataCalculator {
+    /// Creates a calculator with the specified `config`.
+    pub async fn new(config: &MetadataCalculatorConfig<'_>) -> Self {
+        let updater = TreeUpdater::new( config).await;
+        let (_, health_updater) = ReactiveHealthCheck::new("tree");
+        Self {
+            updater,
+            delayer: Delayer::new(config.delay_interval),
+            health_updater,
+        }
+    }
+
+    /// Returns a health check for this calculator.
+    pub fn tree_health_check(&self) -> ReactiveHealthCheck {
+        self.health_updater.subscribe()
+    }
+
+    pub async fn run(
+        self,
+        pool: ConnectionPool,
+        prover_pool: ConnectionPool,
+        stop_receiver: watch::Receiver<bool>,
+    ) {
+        let update_task = self.updater.loop_updating_tree(
+            self.delayer,
+            &pool,
+            &prover_pool,
+            stop_receiver,
+            self.health_updater,
+        );
+        update_task.await;
+    }
+}
