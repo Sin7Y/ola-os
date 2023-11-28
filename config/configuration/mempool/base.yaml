@@ -1,0 +1,6 @@
+sync_interval_ms: 10
+sync_batch_size: 1000
+capacity: 10000
+stuck_tx_timeout: 10
+remove_stuck_txs: true
+delay_interval: 100

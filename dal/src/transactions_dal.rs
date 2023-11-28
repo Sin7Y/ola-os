@@ -10,23 +10,19 @@ use ola_types::{
     block::MiniblockReexecuteData,
     fee::TransactionExecutionMetrics,
     get_nonce_key,
-    l2::{L2Tx, L2TxCommonData},
+    l2::L2Tx,
     protocol_version::ProtocolUpgradeTx,
-    request::PaymasterParams,
-    tx::{execute::Execute, tx_execution_info::TxExecutionStatus, TransactionExecutionResult},
+    tx::{tx_execution_info::TxExecutionStatus, TransactionExecutionResult},
     Address, ExecuteTransactionCommon, L1BatchNumber, MiniblockNumber, Nonce, PriorityOpId,
     Transaction, H256, PROTOCOL_UPGRADE_TX_TYPE, U256,
 };
-use ola_utils::{h256_to_u32, h256_to_u64, u256_to_big_decimal};
+use ola_utils::{h256_to_u32, u256_to_big_decimal};
 
 use crate::{
     models::storage_transaction::StorageTransaction, time_utils::pg_interval_from_duration,
     StorageProcessor,
 };
-use sqlx::{
-    error,
-    types::{chrono::NaiveDateTime, BigDecimal},
-};
+use sqlx::{error, types::chrono::NaiveDateTime};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum L2TxSubmissionResult {
@@ -298,7 +294,7 @@ impl TransactionsDal<'_, '_> {
                     };
 
                     if let Some(call_trace) = tx_res.call_trace() {
-                        let started_at = Instant::now();
+                        let _started_at = Instant::now();
                         bytea_call_traces.push(bincode::serialize(&call_trace).unwrap());
                         call_traces_tx_hashes.push(hash.0.to_vec());
                     }
@@ -326,7 +322,7 @@ impl TransactionsDal<'_, '_> {
                             upgrade_errors.push(error.unwrap_or_default());
                             upgrade_execution_infos
                                 .push(serde_json::to_value(execution_info).unwrap());
-                            upgrade_refunded_gas.push(0 as i64);
+                            upgrade_refunded_gas.push(0_i64);
                             upgrade_effective_gas_prices.push(u256_to_big_decimal(U256::from(0)));
                         }
                     }
@@ -469,7 +465,7 @@ impl TransactionsDal<'_, '_> {
             }
 
             if !bytea_call_traces.is_empty() {
-                let started_at = Instant::now();
+                let _started_at = Instant::now();
                 sqlx::query!(
                     r#"
                         INSERT INTO call_traces (tx_hash, call_trace)

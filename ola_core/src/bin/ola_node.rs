@@ -1,9 +1,6 @@
 use std::time::Duration;
 
-use ola_config::{
-    contracts::{load_contract_config, ContractsConfig},
-    sequencer::{load_network_config, NetworkConfig},
-};
+use ola_config::{contracts::load_contracts_config, sequencer::load_network_config};
 use ola_core::{
     genesis_init, initialize_components, is_genesis_needed, setup_sigint_handler, Component,
 };
@@ -12,13 +9,13 @@ use olaos_logs::telemetry::{get_subscriber, init_subscriber};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let subscriber = get_subscriber("olaos".into(), "info".into(), std::io::stdout);
+    let (subscriber, _guard) = get_subscriber("olaos".into(), "info".into());
     init_subscriber(subscriber);
+    olaos_logs::info!("init_subscriber finished");
 
     if is_genesis_needed().await {
-        // FIXME: load config from env?
         let network = load_network_config().expect("failed to load network config");
-        let contracts = load_contract_config().expect("failed to laod contract config");
+        let contracts = load_contracts_config().expect("failed to laod contract config");
         genesis_init(&network, &contracts).await;
     }
 

@@ -10,8 +10,13 @@ use tokio::sync::mpsc;
 use tempfile::TempDir;
 
 use ola_dal::StorageProcessor;
-use ola_types::{block::{L1BatchHeader, WitnessBlockWithLogs}, L1BatchNumber, H256, storage::StorageKey};
-use olavm_core::{merkle_tree::{tree::AccountTree, log::{WitnessStorageLog, StorageLog}}, storage::db::{RocksDB, Database}};
+use ola_types::{block::{L1BatchHeader, WitnessBlockWithLogs}, L1BatchNumber, H256, storage::StorageKey, log::{StorageLog, WitnessStorageLog}};
+use olavm_core::{
+    merkle_tree::{
+        tree::AccountTree, log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog}
+    }, storage::db::{RocksDB, Database},
+    types::merkle_tree::TreeMetadata,
+};
 
 #[derive(Debug, Default)]
 pub struct AsyncTree(Option<AccountTree>);
@@ -38,12 +43,13 @@ impl AsyncTree {
         RocksDB::new(Database::MerkleTree, path, true)
     }
 
-    pub fn process_genesis_batch(storage_logs: &[WitnessStorageLog]) -> BlockOutput {
+    pub fn process_genesis_batch(storage_logs: &[WitnessStorageLog]) -> Option<TreeMetadata> {
         let temp_dir = TempDir::new().expect("failed get temporary directory for RocksDB");
         let db = RocksDB::new(Database::MerkleTree, temp_dir.as_ref(), false);
         let mut tree = AccountTree::new(db);
+        let storage_logs: Vec<OlavmWitnessStorageLog> = storage_logs.iter().map(|sl| sl.to_olavm_type()).collect();
         let metadata = tree.process_block(storage_logs);
-        output
+        metadata.1
     }
 }
 
@@ -170,7 +176,7 @@ pub(crate) async fn get_logs_for_l1_batch(
     storage: &mut StorageProcessor<'_>,
     l1_batch_number: L1BatchNumber,
 ) -> Option<WitnessBlockWithLogs> {
-    let header = storage.blocks_dal().get_l1_batch_header(l1_batch_number).await;
+    let header = storage.blocks_dal().get_l1_batch_header(l1_batch_number).await.unwrap();
 
     // `BTreeMap` is used because tree needs to process slots in lexicographical order.
     let mut storage_logs: BTreeMap<StorageKey, WitnessStorageLog> = BTreeMap::new();
@@ -192,11 +198,11 @@ pub(crate) async fn get_logs_for_l1_batch(
         .get_previous_storage_values(&hashed_keys, l1_batch_number).await;
 
     for storage_key in protective_reads {
-        let previous_value = previous_values[&storage_key.hashed_key()];
+        let previous_value = previous_values[&storage_key.hashed_key()].unwrap();
         // Sanity check: value must not change for slots that require protective reads.
         if let Some(value) = touched_slots.get(&storage_key) {
             assert_eq!(
-                previous_value, Some(*value),
+                previous_value, *value,
                 "Value was changed for slot that requires protective read"
             );
         }
@@ -211,8 +217,8 @@ pub(crate) async fn get_logs_for_l1_batch(
     }
 
     for (storage_key, value) in touched_slots {
-        let previous_value = previous_values[&storage_key.hashed_key()];
-        if previous_value != Some(value) {
+        let previous_value = previous_values[&storage_key.hashed_key()].unwrap();
+        if previous_value != value {
             storage_logs.insert(
                 storage_key,
                 WitnessStorageLog {

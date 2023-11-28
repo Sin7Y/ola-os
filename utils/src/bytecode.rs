@@ -1,8 +1,4 @@
-use itertools::Itertools;
 use ola_basic_types::{blake3, H256};
-use std::collections::HashMap;
-
-use crate::convert::bytes_to_chunks;
 
 const MAX_BYTECODE_LENGTH_IN_WORDS: usize = (1 << 16) - 1;
 const MAX_BYTECODE_LENGTH_BYTES: usize = MAX_BYTECODE_LENGTH_IN_WORDS * 32;

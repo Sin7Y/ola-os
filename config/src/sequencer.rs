@@ -29,14 +29,82 @@ pub struct NetworkConfig {
 
 impl NetworkConfig {
     pub fn from_env() -> Self {
-        envy_load("ola_network", "OLAOS_CHAIN_ETH_")
+        envy_load("ola_network", "OLAOS_NETWORK_")
     }
 }
 
 pub fn load_sequencer_config() -> Result<SequencerConfig, config::ConfigError> {
-    load_config("config/configuration/sequencer")
+    load_config("configuration/sequencer", "OLAOS_SEQUENCER")
 }
 
 pub fn load_network_config() -> Result<NetworkConfig, config::ConfigError> {
-    load_config("config/configuration/network")
+    load_config("configuration/network", "OLAOS_NETWORK")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use ola_basic_types::{network::Network, Address, H256};
+
+    use crate::{
+        sequencer::{load_network_config, load_sequencer_config},
+        utils::tests::EnvMutex,
+    };
+
+    use super::{NetworkConfig, SequencerConfig};
+
+    static MUTEX: EnvMutex = EnvMutex::new();
+
+    fn default_sequencer_config() -> SequencerConfig {
+        SequencerConfig {
+            miniblock_seal_queue_capacity: 10,
+            miniblock_commit_deadline_ms: 1000,
+            block_commit_deadline_ms: 2500,
+            fee_account_addr: Address::from_str("0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7")
+                .unwrap(),
+            entrypoint_hash: H256::from_str(
+                "0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b594c",
+            )
+            .unwrap(),
+            default_aa_hash: H256::from_str(
+                "0x0100038dc66b69be75ec31653c64cb931678299b9b659472772b2550b703f41c",
+            )
+            .unwrap(),
+            transaction_slots: 250,
+            save_call_traces: true,
+        }
+    }
+
+    fn default_network_config() -> NetworkConfig {
+        NetworkConfig {
+            network: Network::Localhost,
+            ola_network_id: 360,
+            ola_network_name: "localhost".to_string(),
+        }
+    }
+    #[test]
+    fn test_load_sequencer_config() {
+        let mut lock = MUTEX.lock();
+        let config = r#"
+            OLAOS_SEQUENCER_ENTRYPOINT_HASH=0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b594c
+            OLAOS_SEQUENCER_DEFAULT_AA_HASH=0x0100038dc66b69be75ec31653c64cb931678299b9b659472772b2550b703f41c
+        "#;
+        lock.set_env(config);
+
+        let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
+        assert_eq!(sequencer_config, default_sequencer_config());
+    }
+
+    #[test]
+    fn test_load_network_config() {
+        let mut lock = MUTEX.lock();
+        let config = r#"
+            OLAOS_NETWORK_OLA_NETWORK_ID=360
+        "#;
+        lock.set_env(config);
+
+        let network_config = load_network_config().expect("failed to load db config");
+        assert_eq!(network_config, default_network_config());
+    }
 }

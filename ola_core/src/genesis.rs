@@ -64,9 +64,9 @@ pub async fn ensure_genesis_state(
 
     // TODO:
     let storage_logs = crate::metadata_calculator::get_logs_for_l1_batch(&mut transaction, L1BatchNumber(0)).await;
-    let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(&storage_logs.unwrap().storage_logs);
-    // let genesis_root_hash = metadata.root_hash;
-    // let rollup_last_leaf_index = metadata.leaf_count + 1;
+    let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(&storage_logs.unwrap().storage_logs).unwrap();
+    let genesis_root_hash = metadata.root_hash;
+    let rollup_last_leaf_index = metadata.rollup_last_leaf_index;
 
     // let block_commitment = L1BatchCommitment::new(
     //     vec![],
