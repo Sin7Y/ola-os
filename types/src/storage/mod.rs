@@ -13,6 +13,13 @@ use ola_config::constants::{
 };
 use ola_utils::convert::address_to_h256;
 use serde::{Deserialize, Serialize};
+use olavm_exe_core::{
+    // merkle_tree::log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind},
+    // types::merkle_tree::{TreeKey, TreeValue},
+    types::storage::StorageKey as OlavmStorageKey,
+    types::account::{AccountTreeId as OlavmAccountTreeId, Address as OlavmAddress},
+    types::merkle_tree::{TreeKey as OlavmTreeKey, TreeValue as OlavmTreeValue, h256_to_tree_key},
+};
 
 use crate::log::StorageLog;
 

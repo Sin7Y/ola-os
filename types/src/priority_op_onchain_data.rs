@@ -1,4 +1,4 @@
-use ola_basic_types::{H256, U256};
+use ola_basic_types::H256;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

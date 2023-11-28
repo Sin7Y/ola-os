@@ -1,6 +1,6 @@
 use std::fmt;
 
-use ola_basic_types::{bytes8::Bytes8, Address, U256};
+use ola_basic_types::{bytes8::Bytes8, Address};
 use ola_config::constants::contracts::BOOTLOADER_ADDRESS;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 

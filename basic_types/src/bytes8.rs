@@ -21,7 +21,7 @@ impl Serialize for Bytes8 {
     {
         let mut serialized = "0x".to_owned();
         let data: Vec<u8> = self.0.iter().flat_map(|w| w.to_be_bytes()).collect();
-        serialized.push_str(&hex::encode(&data));
+        serialized.push_str(&hex::encode(data));
         serializer.serialize_str(serialized.as_ref())
     }
 }
@@ -38,7 +38,7 @@ impl<'a> Deserialize<'a> for Bytes8 {
 impl fmt::Debug for Bytes8 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let data: Vec<u8> = self.0.iter().flat_map(|w| w.to_be_bytes()).collect();
-        let serialized = format!("0x{}", hex::encode(&data));
+        let serialized = format!("0x{}", hex::encode(data));
         f.debug_tuple("Bytes").field(&serialized).finish()
     }
 }

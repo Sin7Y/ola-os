@@ -39,7 +39,7 @@ impl MempoolStore {
         let mut removed = 0;
         // We want to fetch the next transaction that would match the fee requirements.
         // TODO: add filter
-        let tx_pointer = self.l2_priority_queue.iter().rfind(|el| true)?.clone();
+        let tx_pointer = self.l2_priority_queue.iter().rfind(|_el| true)?.clone();
 
         // Stash all observed transactions that don't meet criteria
         for stashed_pointer in self

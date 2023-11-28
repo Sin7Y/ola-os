@@ -1,13 +1,11 @@
-use ola_basic_types::{AccountTreeId, Address, L1BatchNumber, MiniblockNumber, H256, U256};
+use ola_basic_types::{AccountTreeId, L1BatchNumber, MiniblockNumber, H256, U256};
 use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    priority_op_onchain_data::PriorityOpOnchainData, protocol_version::ProtocolVersionId,
-    Transaction,
-};
+use crate::{protocol_version::ProtocolVersionId, Transaction};
 
-use olavm_exe_core::merkle_tree::log::WitnessStorageLog;
+// use olavm_exe_core::merkle_tree::log::WitnessStorageLog;
+use super::storage::log::WitnessStorageLog;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeployedContract {

@@ -48,10 +48,10 @@ impl Default for AccountTreeId {
     }
 }
 
-impl Into<U256> for AccountTreeId {
-    fn into(self) -> U256 {
+impl From<AccountTreeId> for U256 {
+    fn from(val: AccountTreeId) -> Self {
         let mut be_data = [0_u8; 32];
-        be_data[12..].copy_from_slice(&self.to_fixed_bytes());
+        be_data[12..].copy_from_slice(&val.to_fixed_bytes());
         U256::from_big_endian(&be_data)
     }
 }

@@ -44,7 +44,7 @@ pub struct Web3JsonRpcConfig {
 
 impl Web3JsonRpcConfig {
     pub fn from_env() -> Self {
-        envy_load("ola_web3_json_rpc", "OLAOS_API_WEB3_JSON_RPC_")
+        envy_load("ola_web3_json_rpc", "OLAOS_WEB3_JSON_RPC_")
     }
 
     pub fn filters_limit(&self) -> usize {
@@ -92,7 +92,7 @@ pub struct HealthCheckConfig {
 
 impl HealthCheckConfig {
     pub fn from_env() -> Self {
-        envy_load("healthcheck", "API_HEALTHCHECK_")
+        envy_load("healthcheck", "OLAOS_HEALTHCHECK_")
     }
 
     pub fn bind_addr(&self) -> SocketAddr {
@@ -108,19 +108,19 @@ pub fn load_api_config() -> Result<ApiConfig, config::ConfigError> {
 }
 
 pub fn load_web3_json_rpc_config() -> Result<Web3JsonRpcConfig, config::ConfigError> {
-    load_config("config/configuration/web3_json_rpc")
+    load_config("configuration/web3_json_rpc", "OLAOS_WEB3_JSON_RPC")
 }
 
 pub fn load_healthcheck_config() -> Result<HealthCheckConfig, config::ConfigError> {
-    load_config("config/configuration/health_check")
+    load_config("configuration/health_check", "OLAOS_HEALTHCHECK")
 }
 
 #[cfg(test)]
 mod tests {
 
-    use crate::utils::EnvMutex;
-
     use super::{ApiConfig, HealthCheckConfig, Web3JsonRpcConfig};
+
+    use crate::{api::load_api_config, utils::tests::EnvMutex};
 
     static MUTEX: EnvMutex = EnvMutex::new();
 
@@ -152,30 +152,19 @@ mod tests {
     }
 
     #[test]
-    fn test_from_env() {
+    fn test_load_api_config() {
         let mut lock = MUTEX.lock();
         let config = r#"
-            OLAOS_API_WEB3_JSON_RPC_HTTP_PORT="1001"
-            OLAOS_API_WEB3_JSON_RPC_HTTP_URL="http://127.0.0.1:1001"
-            OLAOS_API_WEB3_JSON_RPC_WS_PORT="1002"
-            OLAOS_API_WEB3_JSON_RPC_WS_URL="ws://127.0.0.1:1002"
-            OLAOS_API_WEB3_JSON_RPC_MAX_TX_SIZE=1000000
-            OLAOS_API_WEB3_JSON_RPC_FILTERS_LIMIT=10000
-            OLAOS_API_WEB3_JSON_RPC_THREADS_PER_SERVER=128
-            OLAOS_API_WEB3_JSON_RPC_HTTP_THREADS=128
-            OLAOS_API_WEB3_JSON_RPC_WS_THREADS=256
-            OLAOS_API_WEB3_JSON_RPC_MAX_BATCH_REQUEST_SIZE=200
-            OLAOS_API_WEB3_JSON_RPC_MAX_RESPONSE_BODY_SIZE_MB=10
-            OLAOS_API_WEB3_JSON_RPC_MAX_NONCE_AHEAD=5
-            OLAOS_API_WEB3_JSON_RPC_TRANSACTIONS_PER_SEC_LIMIT=1000
-            OLAOS_API_WEB3_JSON_RPC_VM_CONCURRENCY_LIMIT=2048
-            OLAOS_API_WEB3_JSON_RPC_FACTORY_DEPS_CACHE_SIZE_MB=128
-            OLAOS_API_WEB3_JSON_RPC_INITIAL_WRITES_CACHE_SIZE_MB=32
-            OLAOS_API_WEB3_JSON_RPC_LATEST_VALUES_CACHE_SIZE_MB=128
+            OLAOS_WEB3_JSON_RPC_HTTP_PORT="1001"
+            OLAOS_WEB3_JSON_RPC_HTTP_URL="http://127.0.0.1:1001"
+            OLAOS_WEB3_JSON_RPC_WS_PORT="1002"
+            OLAOS_WEB3_JSON_RPC_WS_URL="ws://127.0.0.1:1002"
+            OLAOS_WEB3_JSON_RPC_MAX_NONCE_AHEAD=5
+            OLAOS_HEALTHCHECK_PORT=8081
         "#;
         lock.set_env(config);
 
-        let api_config = ApiConfig::from_env();
+        let api_config = load_api_config().expect("failed to load api config");
         assert_eq!(api_config, default_config());
     }
 }

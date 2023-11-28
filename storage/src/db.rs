@@ -3,8 +3,7 @@ use std::{
     fmt,
     marker::PhantomData,
     path::Path,
-    sync::{Condvar, Mutex, MutexGuard, PoisonError},
-    time::{Duration, Instant},
+    sync::{Condvar, Mutex},
 };
 
 use rocksdb::{
@@ -52,7 +51,6 @@ impl<CF: NamedColumnFamily> WriteBatch<'_, CF> {
 pub struct RocksDB<CF> {
     db: DB,
     sync_writes: bool,
-    sizes_reported_at: Mutex<Option<Instant>>,
     _registry_entry: RegistryEntry,
     _cf: PhantomData<CF>,
     // Importantly, `Cache`s must be dropped after `DB`, so we place them as the last field
@@ -114,8 +112,6 @@ struct RocksDBCaches {
 }
 
 impl<CF: NamedColumnFamily> RocksDB<CF> {
-    const SIZE_REPORT_INTERVAL: Duration = Duration::from_secs(1);
-
     pub fn new<P: AsRef<Path>>(path: P, tune_options: bool) -> Self {
         Self::with_cache(path, tune_options, None)
     }
@@ -176,7 +172,6 @@ impl<CF: NamedColumnFamily> RocksDB<CF> {
         Self {
             db,
             sync_writes: false,
-            sizes_reported_at: Mutex::new(None),
             _registry_entry: RegistryEntry::new(),
             _cf: PhantomData,
             _caches: caches,

@@ -1,8 +1,6 @@
 use ola_basic_types::H256;
 use serde::{Deserialize, Serialize};
 
-use crate::writes::{InitialStorageWrite, RepeatedStorageWrite};
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct L1BatchMetadata {
     pub root_hash: H256,
