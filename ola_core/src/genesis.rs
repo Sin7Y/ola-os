@@ -2,7 +2,7 @@ use ola_contracts::BaseSystemContracts;
 use ola_dal::StorageProcessor;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
-    // commitment::L1BatchCommitment,
+    commitment::{L1BatchCommitment, L1BatchMetadata},
     get_code_key,
     get_system_context_init_logs,
     log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
@@ -17,6 +17,8 @@ use ola_types::{
 use ola_utils::{
     be_words_to_bytes, bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
 };
+
+use olavm_core::types::merkle_tree::tree_key_to_h256;
 
 use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 
@@ -65,41 +67,40 @@ pub async fn ensure_genesis_state(
     // TODO:
     let storage_logs = crate::metadata_calculator::get_logs_for_l1_batch(&mut transaction, L1BatchNumber(0)).await;
     let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(&storage_logs.unwrap().storage_logs).unwrap();
-    let genesis_root_hash = metadata.root_hash;
+    let genesis_root_hash = tree_key_to_h256(&metadata.root_hash);
     let rollup_last_leaf_index = metadata.rollup_last_leaf_index;
 
-    // let block_commitment = L1BatchCommitment::new(
-    //     vec![],
-    //     rollup_last_leaf_index,
-    //     genesis_root_hash,
-    //     vec![],
-    //     vec![],
-    //     base_system_contracts_hashes.bootloader,
-    //     base_system_contracts_hashes.default_aa,
-    // );
+    let block_commitment = L1BatchCommitment::new(
+        rollup_last_leaf_index,
+        genesis_root_hash,
+        vec![],
+        vec![],
+        base_system_contracts_hashes.entrypoint,
+        base_system_contracts_hashes.default_aa,
+    );
 
-    // save_genesis_l1_batch_metadata(
-    //     &mut transaction,
-    //     &block_commitment,
-    //     genesis_root_hash,
-    //     rollup_last_leaf_index,
-    // )
-    // .await;
+    save_genesis_l1_batch_metadata(
+        &mut transaction,
+        &block_commitment,
+        genesis_root_hash,
+        rollup_last_leaf_index,
+    )
+    .await;
     olaos_logs::info!("operations_schema_genesis is complete");
 
     transaction.commit().await;
 
     // We need to `println` this value because it will be used to initialize the smart contract.
     // TODO:
-    // println!("CONTRACTS_GENESIS_ROOT={:?}", genesis_root_hash);
-    // println!(
-    //     "CONTRACTS_GENESIS_BLOCK_COMMITMENT={:?}",
-    //     block_commitment.hash().commitment
-    // );
-    // println!(
-    //     "CONTRACTS_GENESIS_ROLLUP_LEAF_INDEX={}",
-    //     rollup_last_leaf_index
-    // );
+    println!("CONTRACTS_GENESIS_ROOT={:?}", genesis_root_hash);
+    println!(
+        "CONTRACTS_GENESIS_BLOCK_COMMITMENT={:?}",
+        block_commitment.hash().commitment
+    );
+    println!(
+        "CONTRACTS_GENESIS_ROLLUP_LEAF_INDEX={}",
+        rollup_last_leaf_index
+    );
     println!(
         "CHAIN_SEQUENCER_BOOTLOADER_HASH={:?}",
         base_system_contracts_hashes.entrypoint
@@ -109,9 +110,7 @@ pub async fn ensure_genesis_state(
         base_system_contracts_hashes.default_aa
     );
 
-    // TODO:
-    H256::default()
-    // genesis_root_hash
+    genesis_root_hash
 }
 
 pub(crate) async fn create_genesis_l1_batch(
@@ -170,31 +169,31 @@ pub(crate) async fn create_genesis_l1_batch(
     transaction.commit().await;
 }
 
-// pub(crate) async fn save_genesis_l1_batch_metadata(
-//     storage: &mut StorageProcessor<'_>,
-//     commitment: &L1BatchCommitment,
-//     genesis_root_hash: H256,
-//     rollup_last_leaf_index: u64,
-// ) {
-//     let commitment_hash = commitment.hash();
+pub(crate) async fn save_genesis_l1_batch_metadata(
+    storage: &mut StorageProcessor<'_>,
+    commitment: &L1BatchCommitment,
+    genesis_root_hash: H256,
+    rollup_last_leaf_index: u64,
+) {
+    let commitment_hash = commitment.hash();
 
-//     let metadata = L1BatchMetadata {
-//         root_hash: genesis_root_hash,
-//         rollup_last_leaf_index,
-//         merkle_root_hash: genesis_root_hash,
-//         initial_writes_compressed: vec![],
-//         repeated_writes_compressed: vec![],
-//         commitment: commitment_hash.commitment,
-//         block_meta_params: commitment.meta_parameters(),
-//         aux_data_hash: commitment_hash.aux_output,
-//         meta_parameters_hash: commitment_hash.meta_parameters,
-//         pass_through_data_hash: commitment_hash.pass_through_data,
-//     };
-//     storage
-//         .blocks_dal()
-//         .save_genesis_l1_batch_metadata(&metadata)
-//         .await;
-// }
+    let metadata = L1BatchMetadata {
+        root_hash: genesis_root_hash,
+        rollup_last_leaf_index,
+        merkle_root_hash: genesis_root_hash,
+        initial_writes_compressed: vec![],
+        repeated_writes_compressed: vec![],
+        commitment: commitment_hash.commitment,
+        block_meta_params: commitment.meta_parameters(),
+        aux_data_hash: commitment_hash.aux_output,
+        meta_parameters_hash: commitment_hash.meta_parameters,
+        pass_through_data_hash: commitment_hash.pass_through_data,
+    };
+    storage
+        .blocks_dal()
+        .save_genesis_l1_batch_metadata(&metadata)
+        .await;
+}
 
 async fn insert_base_system_contracts_to_factory_deps(
     storage: &mut StorageProcessor<'_>,
