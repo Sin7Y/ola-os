@@ -1,7 +1,7 @@
-use ola_basic_types::H256;
-use serde::{Deserialize, Serialize};
 use super::storage::writes::{InitialStorageWrite, RepeatedStorageWrite};
+use ola_basic_types::H256;
 use ola_utils::bytecode::hash_bytecode;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct L1BatchMetadata {
@@ -77,7 +77,12 @@ impl L1BatchPassThroughData {
         // We assume that currently we have only one shared state: Rollup.
         const SERIALIZED_SIZE: usize = 8 + 32;
         let mut result = Vec::with_capacity(SERIALIZED_SIZE);
-        assert_eq!(self.shared_states.len(), 1, "Shared states' length is {} instead of 1", self.shared_states.len());
+        assert_eq!(
+            self.shared_states.len(),
+            1,
+            "Shared states' length is {} instead of 1",
+            self.shared_states.len()
+        );
         for state in self.shared_states.iter() {
             result.extend_from_slice(&state.last_leaf_index.to_be_bytes());
             result.extend_from_slice(state.root_hash.as_bytes());
@@ -204,10 +209,7 @@ impl L1BatchCommitment {
                     },
                 ],
             },
-            auxiliary_output: L1BatchAuxiliaryOutput::new(
-                initial_writes,
-                repeated_writes,
-            ),
+            auxiliary_output: L1BatchAuxiliaryOutput::new(initial_writes, repeated_writes),
             meta_parameters,
         }
     }

@@ -1,19 +1,16 @@
+use ola_config::{chain::OperationsManagerConfig, database::DBConfig};
+use ola_dal::connection::ConnectionPool;
+use ola_types::log::StorageLog;
+use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
 use std::time::Duration;
 use tokio::sync::watch;
-use ola_config::{
-    chain::OperationsManagerConfig,
-    database::DBConfig,
-};
-use ola_dal::connection::ConnectionPool;
-use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
-use ola_types::log::StorageLog;
 
 mod helpers;
 mod updater;
 
-pub(crate) use self::helpers::L1BatchWithLogs;
 pub(crate) use self::helpers::get_logs_for_l1_batch;
 pub use self::helpers::AsyncTree;
+pub(crate) use self::helpers::L1BatchWithLogs;
 
 use self::helpers::Delayer;
 use self::updater::TreeUpdater;
@@ -59,7 +56,7 @@ pub struct MetadataCalculator {
 impl MetadataCalculator {
     /// Creates a calculator with the specified `config`.
     pub async fn new(config: &MetadataCalculatorConfig<'_>) -> Self {
-        let updater = TreeUpdater::new( config).await;
+        let updater = TreeUpdater::new(config).await;
         let (_, health_updater) = ReactiveHealthCheck::new("tree");
         Self {
             updater,

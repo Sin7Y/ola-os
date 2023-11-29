@@ -1,15 +1,21 @@
-use ola_basic_types::{AccountTreeId, Address, U256, H256};
+use ola_basic_types::{AccountTreeId, Address, H256, U256};
 use ola_utils::u256_to_h256;
 use serde::{Deserialize, Serialize};
 
 use crate::{StorageKey, StorageValue};
 use olavm_exe_core::{
-    merkle_tree::log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind},
+    merkle_tree::log::{
+        StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind,
+        WitnessStorageLog as OlavmWitnessStorageLog,
+    },
     types::{
         account::AccountTreeId as OlavmAccountTreeId,
-        merkle_tree::{TreeKey as OlavmTreeKey, TreeValue as OlavmTreeValue, h256_to_tree_key, h256_to_tree_value},
+        merkle_tree::{
+            h256_to_tree_key, h256_to_tree_value, TreeKey as OlavmTreeKey,
+            TreeValue as OlavmTreeValue,
+        },
         storage::StorageKey as OlavmStorageKey,
-    }
+    },
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,11 +106,11 @@ impl WitnessStorageLog {
     pub fn to_olavm_type(&self) -> OlavmWitnessStorageLog {
         OlavmWitnessStorageLog {
             storage_log: OlavmStorageLog {
-                 kind: if self.storage_log.kind == StorageLogKind::Read {
+                kind: if self.storage_log.kind == StorageLogKind::Read {
                     OlavmStorageLogKind::Read
-                 } else {
+                } else {
                     OlavmStorageLogKind::Write
-                 },
+                },
                 key: h256_to_tree_key(&self.storage_log.key.hashed_key()),
                 value: h256_to_tree_value(&self.storage_log.value),
             },
