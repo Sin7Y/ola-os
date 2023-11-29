@@ -3,16 +3,10 @@ use ola_dal::StorageProcessor;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
     commitment::{L1BatchCommitment, L1BatchMetadata},
-    get_code_key,
-    get_system_context_init_logs,
+    get_code_key, get_system_context_init_logs,
     log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
     protocol_version::{ProtocolVersion, ProtocolVersionId},
-    AccountTreeId,
-    L1BatchNumber,
-    L2ChainId,
-    MiniblockNumber,
-    StorageKey,
-    H256,
+    AccountTreeId, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
 };
 use ola_utils::{
     be_words_to_bytes, bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
@@ -65,8 +59,12 @@ pub async fn ensure_genesis_state(
     olaos_logs::info!("chain_schema_genesis is complete");
 
     // TODO:
-    let storage_logs = crate::metadata_calculator::get_logs_for_l1_batch(&mut transaction, L1BatchNumber(0)).await;
-    let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(&storage_logs.unwrap().storage_logs).unwrap();
+    let storage_logs =
+        crate::metadata_calculator::get_logs_for_l1_batch(&mut transaction, L1BatchNumber(0)).await;
+    let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(
+        &storage_logs.unwrap().storage_logs,
+    )
+    .unwrap();
     let genesis_root_hash = tree_key_to_h256(&metadata.root_hash);
     let rollup_last_leaf_index = metadata.rollup_last_leaf_index;
 

@@ -1,9 +1,10 @@
-use tokio::sync::watch;
 use super::{
-    helpers::{AsyncTree, Delayer}, MetadataCalculator, MetadataCalculatorConfig,
+    helpers::{AsyncTree, Delayer},
+    MetadataCalculator, MetadataCalculatorConfig,
 };
 use ola_dal::connection::ConnectionPool;
 use olaos_health_check::HealthUpdater;
+use tokio::sync::watch;
 
 #[derive(Debug)]
 pub(super) struct TreeUpdater {
@@ -12,9 +13,7 @@ pub(super) struct TreeUpdater {
 }
 
 impl TreeUpdater {
-    pub async fn new(
-        config: &MetadataCalculatorConfig<'_>
-    ) -> Self {
+    pub async fn new(config: &MetadataCalculatorConfig<'_>) -> Self {
         assert!(
             config.max_l1_batches_per_iter > 0,
             "Maximum L1 batches per iteration is misconfigured to be 0; please update it to positive value"
@@ -29,7 +28,7 @@ impl TreeUpdater {
         .await;
         Self {
             tree,
-            max_l1_batches_per_iter: config.max_l1_batches_per_iter
+            max_l1_batches_per_iter: config.max_l1_batches_per_iter,
         }
     }
 
@@ -42,6 +41,5 @@ impl TreeUpdater {
         mut stop_receiver: watch::Receiver<bool>,
         health_updater: HealthUpdater,
     ) {
-
     }
 }

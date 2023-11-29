@@ -130,7 +130,7 @@ pub async fn initialize_components(
         .await;
         olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
     }
-    
+
     healthchecks.push(Box::new(ConnectionPoolHealthCheck::new(
         replica_connection_pool,
     )));
@@ -319,8 +319,7 @@ async fn add_trees_to_task_futures(
 ) {
     let db_config = DBConfig::from_env();
     let operation_config = OperationsManagerConfig::from_env();
-    let (future, tree_health_check) =
-        run_tree(&db_config, &operation_config, stop_receiver).await;
+    let (future, tree_health_check) = run_tree(&db_config, &operation_config, stop_receiver).await;
     task_futures.push(future);
     healthchecks.push(Box::new(tree_health_check));
 }
@@ -331,7 +330,8 @@ async fn run_tree(
     stop_receiver: watch::Receiver<bool>,
 ) -> (JoinHandle<()>, ReactiveHealthCheck) {
     let started_at = Instant::now();
-    let config = metadata_calculator::MetadataCalculatorConfig::for_main_node(config, operation_manager);
+    let config =
+        metadata_calculator::MetadataCalculatorConfig::for_main_node(config, operation_manager);
     let metadata_calculator = metadata_calculator::MetadataCalculator::new(&config).await;
     let tree_health_check = metadata_calculator.tree_health_check();
     let pool = ConnectionPool::singleton(DbVariant::Master).build().await;

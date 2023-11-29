@@ -5,16 +5,23 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
+use tempfile::TempDir;
 #[cfg(test)]
 use tokio::sync::mpsc;
-use tempfile::TempDir;
 
 use ola_dal::StorageProcessor;
-use ola_types::{block::{L1BatchHeader, WitnessBlockWithLogs}, L1BatchNumber, H256, storage::StorageKey, log::{StorageLog, WitnessStorageLog}};
+use ola_types::{
+    block::{L1BatchHeader, WitnessBlockWithLogs},
+    log::{StorageLog, WitnessStorageLog},
+    storage::StorageKey,
+    L1BatchNumber, H256,
+};
 use olavm_core::{
     merkle_tree::{
-        tree::AccountTree, log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog}
-    }, storage::db::{RocksDB, Database},
+        log::{StorageLog as OlavmStorageLog, WitnessStorageLog as OlavmWitnessStorageLog},
+        tree::AccountTree,
+    },
+    storage::db::{Database, RocksDB},
     types::merkle_tree::TreeMetadata,
 };
 
@@ -30,7 +37,6 @@ impl AsyncTree {
         let mut tree = tokio::task::spawn_blocking(move || {
             let db = Self::create_db(&db_path);
             AccountTree::new(db)
-
         })
         .await
         .unwrap();
@@ -47,7 +53,8 @@ impl AsyncTree {
         let temp_dir = TempDir::new().expect("failed get temporary directory for RocksDB");
         let db = RocksDB::new(Database::MerkleTree, temp_dir.as_ref(), false);
         let mut tree = AccountTree::new(db);
-        let storage_logs: Vec<OlavmWitnessStorageLog> = storage_logs.iter().map(|sl| sl.to_olavm_type()).collect();
+        let storage_logs: Vec<OlavmWitnessStorageLog> =
+            storage_logs.iter().map(|sl| sl.to_olavm_type()).collect();
         let metadata = tree.process_block(storage_logs);
         metadata.1
     }
@@ -176,17 +183,23 @@ pub(crate) async fn get_logs_for_l1_batch(
     storage: &mut StorageProcessor<'_>,
     l1_batch_number: L1BatchNumber,
 ) -> Option<WitnessBlockWithLogs> {
-    let header = storage.blocks_dal().get_l1_batch_header(l1_batch_number).await.unwrap();
+    let header = storage
+        .blocks_dal()
+        .get_l1_batch_header(l1_batch_number)
+        .await
+        .unwrap();
 
     // `BTreeMap` is used because tree needs to process slots in lexicographical order.
     let mut storage_logs: BTreeMap<StorageKey, WitnessStorageLog> = BTreeMap::new();
 
     let protective_reads = storage
         .storage_logs_dedup_dal()
-        .get_protective_reads_for_l1_batch(l1_batch_number).await;
+        .get_protective_reads_for_l1_batch(l1_batch_number)
+        .await;
     let touched_slots = storage
         .storage_logs_dal()
-        .get_touched_slots_for_l1_batch(l1_batch_number).await;
+        .get_touched_slots_for_l1_batch(l1_batch_number)
+        .await;
 
     let hashed_keys: Vec<_> = protective_reads
         .iter()
@@ -195,7 +208,8 @@ pub(crate) async fn get_logs_for_l1_batch(
         .collect();
     let previous_values = storage
         .storage_logs_dal()
-        .get_previous_storage_values(&hashed_keys, l1_batch_number).await;
+        .get_previous_storage_values(&hashed_keys, l1_batch_number)
+        .await;
 
     for storage_key in protective_reads {
         let previous_value = previous_values[&storage_key.hashed_key()].unwrap();
