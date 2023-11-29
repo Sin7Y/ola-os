@@ -16,24 +16,30 @@ if ! [ -x "$(command -v sqlx)" ]; then
 fi
 
 # Check if a custom user has been set, otherwise default to 'postgres'
-DB_USER=${POSTGRES_USER:=postgres}
+DB_USER=${POSTGRES_USER:=admin}
 # Check if a custom password has been set, otherwise default to 'password'
-DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
+DB_PASSWORD="${POSTGRES_PASSWORD:=admin123}"
 # Check if a custom database name has been set, otherwise default to 'olaos'
-DB_NAME="${POSTGRES_DB:=olaos}"
+DB_NAME="${POSTGRES_DB:=olaos_main}"
 # Check if a custom port has been set, otherwise default to '5432'
 DB_PORT="${POSTGRES_PORT:=5432}"
+# Check if a custom repl password has been set, otherwise default to 'repl123'
+DB_REPL_PASSWORD="${POSTGRES_REPLICA_PASSWORD:=repl123}"
 
 if [[ -z "${SKIP_DOCKER}" ]]
 then
     docker run \
+        --mount type=bind,source="$(pwd)"/scripts/main_postgresql.conf,target=/postgresql.conf \
+        --mount type=bind,source="$(pwd)"/scripts/main_pg_hba.conf,target=/main_pg_hba.conf \
+        -v /tmp:/mnt \
+        --net olaos-db-sync \
+        --name olaos_main \
         -e POSTGRES_USER=${DB_USER} \
         -e POSTGRES_PASSWORD=${DB_PASSWORD} \
         -e POSTGRES_DB=${DB_NAME} \
         -p "${DB_PORT}":5432 \
         -d postgres \
-        postgres -N 1000
-        # ^ Increased maximum number of connections for testing purposes
+        postgres -c config_file=/postgresql.conf
 fi
 
 export PGPASSWORD="${DB_PASSWORD}"
@@ -48,4 +54,8 @@ export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${
 sqlx database create
 sqlx migrate run
 
->&2 echo "Postgres has been migrated, ready to go!"
+>&2 echo "Postgres has been migrated"
+
+psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "${DB_NAME}" -c "CREATE ROLE repl REPLICATION LOGIN ENCRYPTED PASSWORD '${DB_REPL_PASSWORD}';"
+
+>&2 echo "Replication role repl has been created, ready to go!"
