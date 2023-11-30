@@ -234,4 +234,12 @@ impl L1BatchCommitment {
     pub fn meta_parameters(&self) -> L1BatchMetaParameters {
         self.meta_parameters.clone()
     }
+
+    pub fn initial_writes_compressed(&self) -> &[u8] {
+        &self.auxiliary_output.initial_writes_compressed
+    }
+
+    pub fn repeated_writes_compressed(&self) -> &[u8] {
+        &self.auxiliary_output.repeated_writes_compressed
+    }
 }
