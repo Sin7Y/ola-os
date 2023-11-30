@@ -16,8 +16,6 @@ use olavm_core::types::merkle_tree::tree_key_to_h256;
 
 use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 
-use crate::metadata_calculator::L1BatchWithLogs;
-
 #[derive(Debug, Clone)]
 pub struct GenesisParams {
     pub base_system_contracts: BaseSystemContracts,
