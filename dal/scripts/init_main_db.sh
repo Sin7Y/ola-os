@@ -29,9 +29,10 @@ DB_REPL_PASSWORD="${POSTGRES_REPLICA_PASSWORD:=repl123}"
 if [[ -z "${SKIP_DOCKER}" ]]
 then
     docker run \
-        --mount type=bind,source="$(pwd)"/scripts/main_postgresql.conf,target=/postgresql.conf \
-        --mount type=bind,source="$(pwd)"/scripts/main_pg_hba.conf,target=/main_pg_hba.conf \
-        -v /tmp:/mnt \
+        --mount type=bind,source="$(pwd)"/scripts/main_postgresql.conf,target=/etc/postgresql/postgresql.conf \
+        --mount type=bind,source="$(pwd)"/scripts/main_pg_hba.conf,target=/etc/postgresql/pg_hba.conf \
+        -v ./scripts/archivelog:/archivelog \
+        -v ./scripts/data-backup:/tmp/postgresslave \
         --net olaos-db-sync \
         --name olaos_main \
         -e POSTGRES_USER=${DB_USER} \
@@ -39,7 +40,7 @@ then
         -e POSTGRES_DB=${DB_NAME} \
         -p "${DB_PORT}":5432 \
         -d postgres \
-        postgres -c config_file=/postgresql.conf
+        postgres -c config_file=/etc/postgresql/postgresql.conf
 fi
 
 export PGPASSWORD="${DB_PASSWORD}"
@@ -58,4 +59,8 @@ sqlx migrate run
 
 psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "${DB_NAME}" -c "CREATE ROLE repl REPLICATION LOGIN ENCRYPTED PASSWORD '${DB_REPL_PASSWORD}';"
 
->&2 echo "Replication role repl has been created, ready to go!"
+>&2 echo "Replication role repl has been created"
+
+docker exec olaos_main sh -c "pg_basebackup -h olaos_main -U repl -p 5432 -F p -X s -P -R -D /tmp/postgresslave"
+
+>&2 echo "pg_basebackup finished, ready to go!"

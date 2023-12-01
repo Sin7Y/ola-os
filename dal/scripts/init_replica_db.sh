@@ -27,7 +27,8 @@ DB_PORT="${POSTGRES_PORT:=5433}"
 if [[ -z "${SKIP_DOCKER}" ]]
 then
     docker run \
-        --mount type=bind,source="$(pwd)"/scripts/replica_postgresql.conf,target=/postgresql.conf \
+        --mount type=bind,source="$(pwd)"/scripts/replica_postgresql.conf,target=/etc/postgresql/postgresql.conf \
+        -v ./scripts/data-backup:/var/lib/postgresql/data \
         --net olaos-db-sync \
         --name olaos_replica \
         -e POSTGRES_USER=${DB_USER} \
@@ -35,8 +36,8 @@ then
         -e POSTGRES_DB=${DB_NAME} \
         -p "${DB_PORT}":5432 \
         -d postgres \
-        postgres -c config_file=/postgresql.conf
-        # postgres -c config_file=/var/lib/postgresql/data/postgresql.conf
+        postgres -c config_file=/etc/postgresql/postgresql.conf
+        # default config_file: /var/lib/postgresql/data/postgresql.conf
 fi
 
 export PGPASSWORD="${DB_PASSWORD}"
@@ -45,10 +46,4 @@ until psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "postgres" -c '\q';
     sleep 1
 done
 
->&2 echo "Postgres is up and running on port ${DB_PORT}!"
-
-export DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}
-sqlx database create
-# sqlx migrate run
-
->&2 echo "Postgres has been migrated, ready to go!"
+>&2 echo "Postgres is up and running on port ${DB_PORT}!, ready to go!"
