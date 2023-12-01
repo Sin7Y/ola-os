@@ -1,4 +1,4 @@
-use ola_basic_types::{bytes8::Bytes8, Address, H256};
+pub use ola_basic_types::{bytes8::Bytes8, Address, H256};
 
 use crate::{vm_trace::Call, Transaction};
 
