@@ -3,7 +3,7 @@ use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 use ola_utils::bytecode::{validate_bytecode, InvalidBytecodeError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use web3::types::{Bytes, U256};
+pub use web3::types::{Bytes, U256};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum SerializationTransactionError {
