@@ -39,15 +39,24 @@ pub fn get_master_database_url() -> String {
         .parse()
         .unwrap_or(false)
     {
-        "postgres://postgres:password@host.docker.internal:5432/olaos".into()
+        "postgres://admin:admin123@host.docker.internal:5432/olaos".into()
     } else {
-        "postgres://postgres:password@localhost:5432/olaos".into()
+        "postgres://admin:admin123@localhost:5432/olaos".into()
     }
 }
 
 pub fn get_replica_database_url() -> String {
     // FIXME:
-    env::var("OLAOS_DATABASE_REPLICA_URL").unwrap_or_else(|_| get_master_database_url())
+    // env::var("OLAOS_DATABASE_REPLICA_URL").unwrap_or_else(|_| get_master_database_url())
+    if env::var("OLAOS_IN_DOCKER")
+        .expect("OLAOS_IN_DOCKER must be set")
+        .parse()
+        .unwrap_or(false)
+    {
+        "postgres://admin:admin123@host.docker.internal:5433/olaos".into()
+    } else {
+        "postgres://admin:admin123@localhost:5433/olaos".into()
+    }
 }
 
 pub fn get_prover_database_url() -> String {
