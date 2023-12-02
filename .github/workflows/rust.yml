@@ -70,6 +70,8 @@ jobs:
           components: rustfmt, clippy
       - name: fmt
         run: cargo fmt --all -- --check
+      - name: Docker prepare
+        run: docker network create olaos-db-sync
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
