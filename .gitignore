@@ -15,3 +15,7 @@ Cargo.lock
 *.pdb
 
 **/.DS_Store
+
+# DB
+dal/scripts/archivelog/
+dal/scripts/data-backup/

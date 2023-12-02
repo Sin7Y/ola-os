@@ -70,11 +70,13 @@ jobs:
           components: rustfmt, clippy
       - name: fmt
         run: cargo fmt --all -- --check
+      - name: Docker prepare
+        run: docker network create olaos-db-sync
       - name: Migrate database
         run: |
           sudo apt-get install libpq-dev -y
           cargo install --version=0.7.2 sqlx-cli --no-default-features --features postgres
-          SKIP_DOCKER=true cd dal && ./scripts/init_db.sh
+          SKIP_DOCKER=true cd dal && ./scripts/init_main_db.sh
       - name: Build
         run: cargo build
       - name: Run tests
