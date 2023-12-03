@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (SELECT ARRAY[address,key] FROM storage_logs WHERE hashed_key = u.hashed_key ORDER BY miniblock_number, operation_number LIMIT 1) as \"address_and_key?\" FROM UNNEST($1::bytea[]) AS u(hashed_key)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "address_and_key?",
+        "type_info": "ByteaArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "ByteaArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "780b30e56a3ecfb3daa5310168ac6cd9e94bd5f1d871e1eaf36fbfd463a5e7e0"
+}
