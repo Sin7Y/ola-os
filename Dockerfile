@@ -12,9 +12,11 @@ RUN cargo chef prepare  --recipe-path recipe.json
 FROM rust:1.70 as cacher
 WORKDIR olaos
 RUN cargo install cargo-chef
+RUN apt-get update && apt-get install -y clang
+RUN rustup install nightly
 COPY --from=planner /olaos/recipe.json recipe.json
 # Build our project dependencies, not our application!
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo +nightly chef cook --release --recipe-path recipe.json
 
 FROM rust:1.70 as builder
 WORKDIR olaos
@@ -24,8 +26,10 @@ COPY --from=cacher /olaos/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
 ENV DATABASE_URL postgres://admin:admin123@host.docker.internal:5432/olaos
 ENV SQLX_OFFLINE true
+RUN apt-get update && apt-get install -y clang
+RUN rustup install nightly
 # Build our application, leveraging the cached deps!
-RUN cargo build --release --bin ola_node
+RUN cargo +nightly build --release --bin ola_node
 
 FROM rust:1.70-slim as runtime
 WORKDIR olaos
