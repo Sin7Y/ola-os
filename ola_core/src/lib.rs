@@ -336,8 +336,7 @@ async fn run_tree(
     let tree_health_check = metadata_calculator.tree_health_check();
     let pool = ConnectionPool::singleton(DbVariant::Master).build().await;
     let prover_pool = ConnectionPool::singleton(DbVariant::Prover).build().await;
-    // let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
-    let future = tokio::spawn(async {});
+    let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
     olaos_logs::info!("Initialized merkle tree in {:?}", started_at.elapsed());
     (future, tree_health_check)
 }
