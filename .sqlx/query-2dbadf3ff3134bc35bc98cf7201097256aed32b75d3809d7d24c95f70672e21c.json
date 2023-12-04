@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE initial_writes SET index = data_table.index FROM ( SELECT UNNEST($1::bytea[]) as hashed_key, UNNEST($2::bigint[]) as index ) as data_table WHERE initial_writes.hashed_key = data_table.hashed_key",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "ByteaArray",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2dbadf3ff3134bc35bc98cf7201097256aed32b75d3809d7d24c95f70672e21c"
+}
