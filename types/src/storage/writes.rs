@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct InitialStorageWrite {
-    pub index: u64,
     pub key: U256,
     pub value: H256,
 }
