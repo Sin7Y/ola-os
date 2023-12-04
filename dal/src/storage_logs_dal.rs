@@ -145,4 +145,53 @@ impl StorageLogsDal<'_, '_> {
         })
         .collect()
     }
+
+    async fn get_storage_values(
+        &mut self,
+        hashed_keys: &[H256],
+        miniblock_number: MiniblockNumber,
+    ) -> HashMap<H256, Option<H256>> {
+        let hashed_keys: Vec<_> = hashed_keys.iter().map(H256::as_bytes).collect();
+
+        let rows = sqlx::query!(
+            "SELECT u.hashed_key as \"hashed_key!\", \
+                (SELECT value FROM storage_logs \
+                WHERE hashed_key = u.hashed_key AND miniblock_number <= $2 \
+                ORDER BY miniblock_number DESC, operation_number DESC LIMIT 1) as \"value?\" \
+            FROM UNNEST($1::bytea[]) AS u(hashed_key)",
+            &hashed_keys as &[&[u8]],
+            miniblock_number.0 as i64
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap();
+
+        rows.into_iter()
+            .map(|row| {
+                let key = H256::from_slice(&row.hashed_key);
+                let value = row.value.map(|value| H256::from_slice(&value));
+                (key, value)
+            })
+            .collect()
+    }
+
+    pub async fn get_previous_storage_values(
+        &mut self,
+        hashed_keys: &[H256],
+        next_l1_batch: L1BatchNumber,
+    ) -> HashMap<H256, Option<H256>> {
+        let (miniblock_number, _) = self
+            .storage
+            .blocks_dal()
+            .get_miniblock_range_of_l1_batch(next_l1_batch)
+            .await
+            .unwrap();
+
+        if miniblock_number == MiniblockNumber(0) {
+            hashed_keys.iter().copied().map(|key| (key, None)).collect()
+        } else {
+            self.get_storage_values(hashed_keys, miniblock_number - 1)
+                .await
+        }
+    }
 }

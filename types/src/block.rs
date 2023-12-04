@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{protocol_version::ProtocolVersionId, Transaction};
 
+// use olavm_exe_core::merkle_tree::log::WitnessStorageLog;
+use super::storage::log::WitnessStorageLog;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeployedContract {
     pub account_id: AccountTreeId,
@@ -74,4 +77,9 @@ impl L1BatchHeader {
             protocol_version: Some(protocol_version),
         }
     }
+}
+
+pub struct WitnessBlockWithLogs {
+    pub header: L1BatchHeader,
+    pub storage_logs: Vec<WitnessStorageLog>,
 }
