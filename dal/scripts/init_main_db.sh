@@ -28,6 +28,7 @@ DB_REPL_PASSWORD="${POSTGRES_REPLICA_PASSWORD:=repl123}"
 
 if [[ -z "${SKIP_DOCKER}" ]]
 then
+    rm -rf ./scripts/data-backup
     docker run \
         --mount type=bind,source="$(pwd)"/scripts/main_postgresql.conf,target=/etc/postgresql/postgresql.conf \
         --mount type=bind,source="$(pwd)"/scripts/main_pg_hba.conf,target=/etc/postgresql/pg_hba.conf \
