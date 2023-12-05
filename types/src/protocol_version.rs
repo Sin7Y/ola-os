@@ -1,7 +1,8 @@
 use num_enum::TryFromPrimitive;
-use ola_basic_types::{Address, H256, U256};
+pub use ola_basic_types::{H256, U256};
 use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
+pub use web3::types::Address;
 
 use crate::{l2::TransactionType, tx::execute::Execute, ExecuteTransactionCommon, Transaction};
 
