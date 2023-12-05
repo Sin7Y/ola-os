@@ -302,4 +302,82 @@ impl BlocksDal<'_, '_> {
         .await
         .unwrap();
     }
+
+    pub async fn get_last_l1_batch_number_with_metadata(&mut self) -> L1BatchNumber {
+        let number =
+            sqlx::query!("SELECT MAX(number) as \"number\" FROM l1_batches WHERE hash IS NOT NULL")
+                .fetch_one(self.storage.conn())
+                .await
+                .unwrap()
+                .number
+                .expect("DAL invocation before genesis");
+
+        L1BatchNumber(number as u32)
+    }
+
+    pub async fn save_l1_batch_metadata(
+        &mut self,
+        block_number: L1BatchNumber,
+        block_metadata: L1BatchMetadata,
+        previous_root_hash: H256,
+    ) {
+        let update_result = sqlx::query!(
+            "
+                UPDATE l1_batches SET
+                    hash = $1, merkle_root_hash = $2, commitment = $3, 
+                    compressed_repeated_writes = $4, compressed_initial_writes = $5,
+                    parent_hash = $6, rollup_last_leaf_index = $7, 
+                    aux_data_hash = $8, pass_through_data_hash = $9, meta_parameters_hash = $10,
+                    updated_at = NOW()
+                WHERE number = $11 AND hash IS NULL
+            ",
+            block_metadata.root_hash.as_bytes(),
+            block_metadata.merkle_root_hash.as_bytes(),
+            block_metadata.commitment.as_bytes(),
+            block_metadata.repeated_writes_compressed,
+            block_metadata.initial_writes_compressed,
+            previous_root_hash.0.to_vec(),
+            block_metadata.rollup_last_leaf_index as i64,
+            block_metadata.aux_data_hash.as_bytes(),
+            block_metadata.pass_through_data_hash.as_bytes(),
+            block_metadata.meta_parameters_hash.as_bytes(),
+            block_number.0 as i64,
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
+
+        if update_result.rows_affected() == 0 {
+            olaos_logs::debug!(
+                "L1 batch {} info wasn't updated. Details: root_hash: {:?}, merkle_root_hash: {:?}, parent_hash: {:?}, commitment: {:?}",
+                block_number.0 as i64,
+                block_metadata.root_hash.0.to_vec(),
+                block_metadata.merkle_root_hash.0.to_vec(),
+                previous_root_hash.0.to_vec(),
+                block_metadata.commitment.0.to_vec(),
+            );
+
+            // block was already processed. Verify that existing hashes match
+            let matched: i64 = sqlx::query!(
+                r#"
+                    SELECT COUNT(*) as "count!"
+                    FROM l1_batches
+                    WHERE number = $1
+                        AND hash = $2
+                        AND merkle_root_hash = $3
+                        AND parent_hash = $4
+                "#,
+                block_number.0 as i64,
+                block_metadata.root_hash.0.to_vec(),
+                block_metadata.merkle_root_hash.0.to_vec(),
+                previous_root_hash.0.to_vec(),
+            )
+            .fetch_one(self.storage.conn())
+            .await
+            .unwrap()
+            .count;
+
+            assert_eq!(matched, 1, "Root hash verification failed. Hashes for some of previously processed blocks do not match");
+        }
+    }
 }
