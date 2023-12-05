@@ -35,7 +35,7 @@ pub fn get_master_database_url() -> String {
     // FIXME:
     // env::var("DATABASE_URL").expect("DATABASE_URL must be set")
     if env::var("OLAOS_IN_DOCKER")
-        .expect("OLAOS_IN_DOCKER must be set")
+        .unwrap_or_else(|_| "false".to_string())
         .parse()
         .unwrap_or(false)
     {
@@ -49,7 +49,7 @@ pub fn get_replica_database_url() -> String {
     // FIXME:
     // env::var("OLAOS_DATABASE_REPLICA_URL").unwrap_or_else(|_| get_master_database_url())
     if env::var("OLAOS_IN_DOCKER")
-        .expect("OLAOS_IN_DOCKER must be set")
+        .unwrap_or_else(|_| "false".to_string())
         .parse()
         .unwrap_or(false)
     {
