@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT u.hashed_key as \"hashed_key!\", (SELECT value FROM storage_logs WHERE hashed_key = u.hashed_key AND miniblock_number <= $2 ORDER BY miniblock_number DESC, operation_number DESC LIMIT 1) as \"value?\" FROM UNNEST($1::bytea[]) AS u(hashed_key)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hashed_key!",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 1,
+        "name": "value?",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "ByteaArray",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "1948ab14bafbb3ba0098563f22d958c9383877788980fe51bd217987898b1c92"
+}
