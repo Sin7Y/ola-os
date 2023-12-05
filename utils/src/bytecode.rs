@@ -16,7 +16,6 @@ pub enum InvalidBytecodeError {
 }
 
 pub fn hash_bytecode(code: &[u8]) -> H256 {
-    // FIXME: check bytecode hash
     hash_bytes(code)
 }
 
