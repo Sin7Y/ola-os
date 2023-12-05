@@ -1,4 +1,4 @@
-use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
+pub use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 
 use crate::{
     request::PaymasterParams, tx::execute::Execute, utils::unix_timestamp_ms,
