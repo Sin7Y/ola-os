@@ -1,4 +1,6 @@
-use ola_basic_types::{AccountTreeId, L1BatchNumber, MiniblockNumber, H256, U256};
+pub use ola_basic_types::{
+    AccountTreeId, L1BatchNumber, L1ChainId, MiniblockNumber, PriorityOpId, H256, U256,
+};
 use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
 
