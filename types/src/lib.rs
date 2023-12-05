@@ -1,10 +1,17 @@
 use std::fmt;
 
+pub use self::{
+    block::{AccountTreeId, L1BatchNumber, L1ChainId, MiniblockNumber, PriorityOpId},
+    l2::Nonce,
+    protocol_version::U256,
+    request::Bytes,
+};
 use l2::L2TxCommonData;
+pub use ola_basic_types::H256;
 use protocol_version::ProtocolUpgradeTxCommonData;
 use serde::{Deserialize, Serialize};
+pub use web3::types::Address;
 
-pub use ola_basic_types::*;
 pub use storage::*;
 use tx::execute::Execute;
 

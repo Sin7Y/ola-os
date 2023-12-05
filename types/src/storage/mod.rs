@@ -1,5 +1,5 @@
 use blake2::{Blake2s256, Digest};
-use ola_basic_types::{AccountTreeId, Address, L2ChainId, H160, H256, U256};
+pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H160, H256, U256};
 use ola_config::constants::{
     contracts::{
         ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
@@ -12,7 +12,7 @@ use ola_config::constants::{
     NONCE_HOLDER_ADDRESS,
 };
 use ola_utils::{convert::address_to_h256, hash::hash_bytes};
-use olavm_exe_core::{
+use olavm_core::{
     types::account::{AccountTreeId as OlavmAccountTreeId, Address as OlavmAddress},
     types::merkle_tree::{h256_to_tree_key, TreeKey as OlavmTreeKey, TreeValue as OlavmTreeValue},
     // merkle_tree::log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind},
