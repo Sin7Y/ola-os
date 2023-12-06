@@ -5,7 +5,6 @@ use std::num::ParseIntError;
 use std::ops::{Add, Deref, DerefMut, Sub};
 use std::str::FromStr;
 
-pub use blake3;
 pub use web3::types::{Address, Bytes, H160, H256, U256};
 
 #[macro_use]

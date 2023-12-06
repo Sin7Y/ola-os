@@ -3,7 +3,7 @@ use ola_utils::u256_to_h256;
 use serde::{Deserialize, Serialize};
 
 use crate::{StorageKey, StorageValue};
-use olavm_exe_core::{
+use olavm_core::{
     merkle_tree::log::{
         StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind,
         WitnessStorageLog as OlavmWitnessStorageLog,
