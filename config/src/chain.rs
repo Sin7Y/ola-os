@@ -78,7 +78,7 @@ pub struct OperationsManagerConfig {
 
 impl OperationsManagerConfig {
     pub fn from_env() -> Self {
-        envy_load("operations_manager", "CHAIN_OPERATIONS_MANAGER_")
+        envy_load("operations_manager", "OLAOS_OPERATIONS_MANAGER_")
     }
 
     pub fn delay_interval(&self) -> Duration {
