@@ -198,16 +198,10 @@ impl L1BatchCommitment {
 
         Self {
             pass_through_data: L1BatchPassThroughData {
-                shared_states: vec![
-                    RootState {
-                        last_leaf_index: rollup_last_leaf_index,
-                        root_hash: rollup_root_hash,
-                    },
-                    RootState {
-                        last_leaf_index: 0,
-                        root_hash: H256::zero(),
-                    },
-                ],
+                shared_states: vec![RootState {
+                    last_leaf_index: rollup_last_leaf_index,
+                    root_hash: rollup_root_hash,
+                }],
             },
             auxiliary_output: L1BatchAuxiliaryOutput::new(initial_writes, repeated_writes),
             meta_parameters,
