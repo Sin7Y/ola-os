@@ -1,4 +1,6 @@
-use ola_basic_types::{blake3, H256};
+use ola_basic_types::H256;
+
+use crate::hash::hash_bytes;
 
 const MAX_BYTECODE_LENGTH_IN_WORDS: usize = (1 << 16) - 1;
 const MAX_BYTECODE_LENGTH_BYTES: usize = MAX_BYTECODE_LENGTH_IN_WORDS * 32;
@@ -15,8 +17,7 @@ pub enum InvalidBytecodeError {
 
 pub fn hash_bytecode(code: &[u8]) -> H256 {
     // FIXME: check bytecode hash
-    let hash = blake3::hash(code);
-    H256::from(hash.as_bytes())
+    hash_bytes(code)
 }
 
 pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {

@@ -8,13 +8,18 @@ use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
+use olavm_core::types::account::Address;
+use olavm_core::types::{Field, GoldilocksField};
+use olavm_core::vm::transaction::init_tx_context;
+use tempfile::TempDir;
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
+use web3::signing::Key;
 
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
-
+use zk_vm::OlaVM;
 #[derive(Debug)]
 pub struct BatchExecutorHandle {
     handle: JoinHandle<()>,
@@ -193,13 +198,23 @@ impl BatchExecutor {
         //     ),
         // };
 
+        // TODO: need roscksdb path for storage merkle tree
+        let mut vm = OlaVM::new(
+            TempDir::new()
+                .expect("failed get temporary directory for RocksDB")
+                .path(),
+            TempDir::new()
+                .expect("failed get temporary directory for RocksDB")
+                .path(),
+            init_tx_context(),
+        );
         // TODO: @pierre init vm end
 
         while let Some(cmd) = self.commands.blocking_recv() {
             match cmd {
                 Command::ExecuteTx(tx, resp) => {
                     // FIXME: @pierre
-                    // let result = self.execute_tx(&tx, &mut vm);
+                    let result = self.execute_tx(&tx, &mut vm);
                     let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
                     resp.send(result).unwrap();
                 }
@@ -219,8 +234,21 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    // TODO: @Pierre
-    // fn finish_batch(&self, vm: &mut VmInstance<'_>) -> VmBlockResult {
-    //     vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
-    // }
+    fn finish_batch(&self, vm: &mut OlaVM) -> VmBlockResult {
+        // FIXME: @pierre
+        // vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
+        VmBlockResult {
+            full_result: VmExecutionResult::default(),
+            block_tip_result: VmPartialExecutionResult::default(),
+        }
+    }
+
+    fn execute_tx(&self, tx: &Transaction, vm: &mut OlaVM) {
+        let res = vm.execute_tx(
+            GoldilocksField::from_canonical_u64(5),
+            Address::default(), //tx.address(),
+            Address::default(), //tx.execute.contract_address,
+            Vec::new(),         //tx.execute.calldata.clone(),
+        );
+    }
 }
