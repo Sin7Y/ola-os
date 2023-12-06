@@ -3,13 +3,12 @@ pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H160, H256, U256};
 use ola_config::constants::{
     contracts::{
         ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
-        SYSTEM_CONTEXT_ADDRESS,
+        NONCE_HOLDER_ADDRESS, SYSTEM_CONTEXT_ADDRESS,
     },
     system_context::{
         SYSTEM_CONTEXT_CHAIN_ID_POSITION, SYSTEM_CONTEXT_COINBASE_POSITION,
         SYSTEM_CONTEXT_DIFFICULTY, SYSTEM_CONTEXT_DIFFICULTY_POSITION,
     },
-    NONCE_HOLDER_ADDRESS,
 };
 use ola_utils::{convert::address_to_h256, hash::hash_bytes};
 use olavm_core::{
