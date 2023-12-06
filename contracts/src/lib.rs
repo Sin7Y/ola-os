@@ -81,7 +81,7 @@ pub fn read_entrypoint_code(entrypoint_type: &str) -> Vec<u8> {
 }
 
 pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {
-    read_entrypoint_code("entrypoint_type")
+    read_entrypoint_code("entrypoint")
 }
 
 pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> Vec<u8> {

@@ -56,7 +56,6 @@ pub async fn ensure_genesis_state(
     .await;
     olaos_logs::info!("chain_schema_genesis is complete");
 
-    // TODO:
     let storage_logs =
         crate::metadata_calculator::get_logs_for_l1_batch(&mut transaction, L1BatchNumber(0)).await;
     let metadata = crate::metadata_calculator::AsyncTree::process_genesis_batch(

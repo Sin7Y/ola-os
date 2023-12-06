@@ -1,6 +1,6 @@
 use super::storage::writes::{InitialStorageWrite, RepeatedStorageWrite};
 use ola_basic_types::H256;
-use ola_utils::bytecode::hash_bytecode;
+use ola_utils::hash::hash_bytes;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -96,7 +96,7 @@ impl L1BatchPassThroughData {
     }
 
     pub fn hash(&self) -> H256 {
-        hash_bytecode(&self.to_bytes())
+        hash_bytes(&self.to_bytes())
     }
 }
 
@@ -120,8 +120,8 @@ impl L1BatchAuxiliaryOutput {
         let initial_writes_compressed = serialize_commitments(&initial_writes);
         let repeated_writes_compressed = serialize_commitments(&repeated_writes);
 
-        let initial_writes_hash = hash_bytecode(&initial_writes_compressed);
-        let repeated_writes_hash = hash_bytecode(&repeated_writes_compressed);
+        let initial_writes_hash = hash_bytes(&initial_writes_compressed);
+        let repeated_writes_hash = hash_bytes(&repeated_writes_compressed);
 
         Self {
             initial_writes_compressed,
@@ -143,7 +143,7 @@ impl L1BatchAuxiliaryOutput {
     }
 
     pub fn hash(&self) -> H256 {
-        hash_bytecode(&self.to_bytes())
+        hash_bytes(&self.to_bytes())
     }
 }
 
@@ -163,7 +163,7 @@ impl L1BatchMetaParameters {
     }
 
     pub fn hash(&self) -> H256 {
-        hash_bytecode(&self.to_bytes())
+        hash_bytes(&self.to_bytes())
     }
 }
 
@@ -216,7 +216,7 @@ impl L1BatchCommitment {
         result.extend_from_slice(metadata_hash.as_bytes());
         let auxiliary_output_hash = self.auxiliary_output.hash();
         result.extend_from_slice(auxiliary_output_hash.as_bytes());
-        let commitment = hash_bytecode(&result);
+        let commitment = hash_bytes(&result);
         L1BatchCommitmentHash {
             pass_through_data: pass_through_data_hash,
             aux_output: auxiliary_output_hash,
