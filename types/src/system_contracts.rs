@@ -1,10 +1,7 @@
 use ola_basic_types::{AccountTreeId, Address, U256};
-use ola_config::constants::{
-    contracts::{
-        ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, CONTRACT_DEPLOYER_ADDRESS,
-        KNOWN_CODES_STORAGE_ADDRESS,
-    },
-    NONCE_HOLDER_ADDRESS,
+use ola_config::constants::contracts::{
+    ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, CONTRACT_DEPLOYER_ADDRESS,
+    KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
 };
 use ola_contracts::read_sys_contract_bytecode;
 use once_cell::sync::Lazy;

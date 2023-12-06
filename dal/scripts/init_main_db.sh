@@ -32,6 +32,7 @@ then
     docker run \
         --mount type=bind,source="$(pwd)"/scripts/main_postgresql.conf,target=/etc/postgresql/postgresql.conf \
         --mount type=bind,source="$(pwd)"/scripts/main_pg_hba.conf,target=/etc/postgresql/pg_hba.conf \
+        -v ./scripts/olsoa_pgdata:/var/lib/postgresql/data \
         -v ./scripts/archivelog:/archivelog \
         -v ./scripts/data-backup:/tmp/postgresslave \
         --net olaos-db-sync \
@@ -58,6 +59,7 @@ sqlx migrate run
 
 >&2 echo "Postgres has been migrated"
 
+psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "${DB_NAME}" -c "DROP ROLE IF EXISTS repl;"
 psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "${DB_NAME}" -c "CREATE ROLE repl REPLICATION LOGIN ENCRYPTED PASSWORD '${DB_REPL_PASSWORD}';"
 
 >&2 echo "Replication role repl has been created"

@@ -19,3 +19,5 @@ Cargo.lock
 # DB
 dal/scripts/archivelog/
 dal/scripts/data-backup/
+db/
+dal/scripts/olsoa_pgdata/

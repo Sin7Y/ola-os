@@ -10,6 +10,7 @@ use std::{
 use tempfile::TempDir;
 #[cfg(test)]
 use tokio::sync::mpsc;
+use tracing::debug;
 
 use ola_dal::StorageProcessor;
 use ola_types::{
@@ -233,7 +234,7 @@ pub(crate) async fn get_logs_for_l1_batch(
     }
 
     for (storage_key, value) in touched_slots {
-        let previous_value = previous_values[&storage_key.hashed_key()].unwrap();
+        let previous_value = previous_values[&storage_key.hashed_key()].unwrap_or_default();
         if previous_value != value {
             storage_logs.insert(
                 storage_key,
