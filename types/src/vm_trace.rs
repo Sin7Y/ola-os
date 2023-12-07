@@ -32,9 +32,9 @@ pub struct Call {
     /// Address of the callee.
     pub to: Address,
     /// Input data.
-    pub input: Bytes8,
+    pub input: Vec<u8>,
     /// Output data.
-    pub output: Bytes8,
+    pub output: Vec<u8>,
     /// Error message provided by vm or some unexpected errors.
     pub error: Option<String>,
     /// Revert reason.
@@ -62,8 +62,8 @@ impl Default for Call {
             r#type: CallType::Call(FarCallOpcode::Normal),
             from: Default::default(),
             to: Default::default(),
-            input: Bytes8(vec![]),
-            output: Bytes8(vec![]),
+            input: vec![],
+            output: vec![],
             error: None,
             revert_reason: None,
             calls: vec![],
@@ -88,8 +88,8 @@ impl fmt::Debug for Call {
 
 impl Call {
     pub fn new_high_level(
-        input: Bytes8,
-        output: Bytes8,
+        input: Vec<u8>,
+        output: Vec<u8>,
         revert_reason: Option<String>,
         calls: Vec<Call>,
     ) -> Self {
