@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct Execute {
     pub contract_address: Address,
-    pub calldata: Bytes8,
+    pub calldata: Vec<u8>,
     pub factory_deps: Option<Vec<Vec<u8>>>,
 }
 

@@ -94,7 +94,6 @@ pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> Vec<u8> {
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct BaseSystemContractsHashes {
-    // TODO: replace hash type
     pub entrypoint: H256,
     pub default_aa: H256,
 }
