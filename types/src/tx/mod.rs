@@ -5,6 +5,7 @@ use crate::{vm_trace::Call, Transaction};
 use self::tx_execution_info::{ExecutionMetrics, TxExecutionStatus};
 
 pub mod execute;
+pub mod primitives;
 pub mod tx_execution_info;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,7 +25,7 @@ impl TransactionExecutionResult {
         } else {
             Some(Call::new_high_level(
                 self.transaction.execute.calldata.clone(),
-                Bytes8(vec![]),
+                vec![],
                 self.revert_reason.clone(),
                 self.call_traces.clone(),
             ))
