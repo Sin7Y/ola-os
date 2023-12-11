@@ -452,7 +452,7 @@ mod tests {
         let address = PackedEthSignature::address_from_private_key(&private_key).unwrap();
 
         let mut tx = TransactionRequest {
-            nonce: U256::from(1u32),
+            nonce: U256::from(0u32),
             to: Some(Address::random()),
             from: Some(address),
             input: Bytes::from(vec![1, 2, 3]),
