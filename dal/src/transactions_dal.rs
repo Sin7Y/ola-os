@@ -572,6 +572,7 @@ impl TransactionsDal<'_, '_> {
         .unwrap();
 
         // Note, that transactions are updated in order of their hashes to avoid deadlocks with other UPDATE queries.
+        // TODO: if gas is added, update where condition to filter valid txs
         let transactions = sqlx::query_as!(
             StorageTransaction,
             "UPDATE transactions
@@ -581,7 +582,7 @@ impl TransactionsDal<'_, '_> {
                         SELECT hash
                         FROM transactions
                         WHERE miniblock_number IS NULL AND in_mempool = FALSE AND error IS NULL
-                            AND is_priority = TRUE AND tx_format != $2
+                        AND tx_format != $2
                         ORDER BY is_priority DESC, priority_op_id, received_at
                         LIMIT $1
                     ) as subquery1
