@@ -481,6 +481,7 @@ mod tests {
         tx.v = Some(U64::from(signature.v()));
         tx.r = Some(U256::from_big_endian(signature.r()));
         tx.s = Some(U256::from_big_endian(signature.s()));
+        dbg!(hex::encode(data.clone()));
 
         let (tx2, _) = TransactionRequest::from_bytes(&data, 270).unwrap();
 
