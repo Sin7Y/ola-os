@@ -254,8 +254,6 @@ impl TransactionsDal<'_, '_> {
             let mut upgrade_indices_in_block = Vec::new();
             let mut upgrade_errors = Vec::new();
             let mut upgrade_execution_infos = Vec::new();
-            let mut upgrade_refunded_gas = Vec::new();
-            let mut upgrade_effective_gas_prices = Vec::new();
 
             let mut l2_hashes = Vec::with_capacity(transactions.len());
             let mut l2_contract_addresses = Vec::with_capacity(transactions.len());
@@ -275,7 +273,6 @@ impl TransactionsDal<'_, '_> {
                 .iter()
                 .enumerate()
                 .for_each(|(index_in_block, tx_res)| {
-                    // TODO: replace with real execution result
                     let TransactionExecutionResult {
                         hash,
                         execution_info,
@@ -294,7 +291,6 @@ impl TransactionsDal<'_, '_> {
                     };
 
                     if let Some(call_trace) = tx_res.call_trace() {
-                        let _started_at = Instant::now();
                         bytea_call_traces.push(bincode::serialize(&call_trace).unwrap());
                         call_traces_tx_hashes.push(hash.0.to_vec());
                     }
@@ -322,8 +318,6 @@ impl TransactionsDal<'_, '_> {
                             upgrade_errors.push(error.unwrap_or_default());
                             upgrade_execution_infos
                                 .push(serde_json::to_value(execution_info).unwrap());
-                            upgrade_refunded_gas.push(0_i64);
-                            upgrade_effective_gas_prices.push(u256_to_big_decimal(U256::from(0)));
                         }
                     }
                 });
