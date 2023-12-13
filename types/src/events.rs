@@ -1,6 +1,7 @@
+use ethabi::param_type::Writer;
 use ola_basic_types::{Address, L1BatchNumber, H256};
 use ola_config::constants::contracts::{CONTRACT_DEPLOYER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS};
-use ola_utils::h256_to_account_address;
+use ola_utils::{h256_to_account_address, hash::hash_bytes};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -120,8 +121,12 @@ static BRIDGE_INITIALIZATION_SIGNATURE_NEW: Lazy<H256> = Lazy::new(|| {
 });
 
 static PUBLISHED_BYTECODE_SIGNATURE: Lazy<H256> = Lazy::new(|| {
-    ethabi::long_signature(
-        "MarkedAsKnown",
-        &[ethabi::ParamType::FixedBytes(32), ethabi::ParamType::Bool],
-    )
+    let params = [ethabi::ParamType::FixedBytes(32), ethabi::ParamType::Bool];
+    let types = params.iter().map(Writer::write).collect::<Vec<String>>().join(",");
+    let data: Vec<u8> = From::from(format!("MarkedAsKnown({types})").as_str());
+    hash_bytes(&data)
+    // ethabi::long_signature(
+    //     "MarkedAsKnown",
+    //     &[ethabi::ParamType::FixedBytes(32), ethabi::ParamType::Bool],
+    // )
 });
