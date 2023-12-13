@@ -6,5 +6,7 @@ edition = "2021"
 [dependencies]
 ola_types = { path = "../types"}
 olaos_logs = { path = "../logs" }
+ola_utils ={ path = "../utils"}
+ola-lang-abi = { git = "https://github.com/Sin7Y/ola-lang-abi.git" }
 thiserror = "1.0"
 hex = "0.4"
