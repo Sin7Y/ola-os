@@ -1,0 +1,96 @@
+use ethereum_types::{H256, U256};
+
+use crate::errors::NumberConvertError;
+
+pub const OLA_FIELD_ORDER: u64 = 18446744069414584321; // 2^64-2^32+1
+
+pub fn h256_to_u64_array(h: H256) -> Result<[u64; 4], NumberConvertError> {
+    let bytes = h.0;
+    Ok([
+        u64::from_be_bytes(
+            bytes[0..8]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[8..16]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[16..24]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[24..32]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+    ])
+}
+
+pub fn u256_to_u64_array_be(num: U256) -> [u64; 4] {
+    return [num.0[3], num.0[2], num.0[1], num.0[0]];
+}
+
+pub fn is_u64_under_felt_order(num: u64) -> bool {
+    num < OLA_FIELD_ORDER
+}
+
+pub fn is_h256_a_valid_ola_hash(h: H256) -> bool {
+    match h256_to_u64_array(h) {
+        Ok(arr) => arr.iter().all(|&num| is_u64_under_felt_order(num)),
+        Err(_) => false,
+    }
+}
+
+pub fn is_u256_a_valid_ola_hash(n: U256) -> bool {
+    u256_to_u64_array_be(n)
+        .iter()
+        .all(|&num| is_u64_under_felt_order(num))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+    use ethereum_types::H256;
+
+    #[test]
+    fn test_h256_to_u64_array() {
+        let h =
+            H256::from_str("0xAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD")
+                .unwrap();
+        let arr = h256_to_u64_array(h).unwrap();
+        assert_eq!(arr[0], 0xAAAAAAAAAAAAAAAA);
+        assert_eq!(arr[1], 0xBBBBBBBBBBBBBBBB);
+        assert_eq!(arr[2], 0xCCCCCCCCCCCCCCCC);
+        assert_eq!(arr[3], 0xDDDDDDDDDDDDDDDD)
+    }
+
+    #[test]
+    fn test_is_h256_a_valid_ola_hash() {
+        let h =
+            H256::from_str("0xAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD")
+                .unwrap();
+        assert!(is_h256_a_valid_ola_hash(h));
+        let h =
+            H256::from_str("0xFFFFFFFFFFFFFFFFBBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDE")
+                .unwrap();
+        assert!(!is_h256_a_valid_ola_hash(h));
+    }
+
+    #[test]
+    fn test_u256_to_u64_array() {
+        let num =
+            U256::from_str("0x11AAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCFFCCDDDDDDDDDDDDDDDD")
+                .unwrap();
+        let arr = u256_to_u64_array_be(num);
+        assert_eq!(arr[0], 0x11AAAAAAAAAAAAAA);
+        assert_eq!(arr[1], 0xBBBBBBBBBBBBBBBB);
+        assert_eq!(arr[2], 0xCCCCCCCCCCCCFFCC);
+        assert_eq!(arr[3], 0xDDDDDDDDDDDDDDDD)
+    }
+}
