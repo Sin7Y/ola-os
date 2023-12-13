@@ -49,7 +49,6 @@ impl MempoolFetcher {
                 olaos_logs::info!("Stop signal received, mempool is shutting down");
                 break;
             }
-            let started_at = Instant::now();
             let mut storage = pool.access_storage_tagged("sequencer").await;
             let mempool_info = self.mempool.get_mempool_info();
 
