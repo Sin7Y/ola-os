@@ -122,7 +122,11 @@ static BRIDGE_INITIALIZATION_SIGNATURE_NEW: Lazy<H256> = Lazy::new(|| {
 
 static PUBLISHED_BYTECODE_SIGNATURE: Lazy<H256> = Lazy::new(|| {
     let params = [ethabi::ParamType::FixedBytes(32), ethabi::ParamType::Bool];
-    let types = params.iter().map(Writer::write).collect::<Vec<String>>().join(",");
+    let types = params
+        .iter()
+        .map(Writer::write)
+        .collect::<Vec<String>>()
+        .join(",");
     let data: Vec<u8> = From::from(format!("MarkedAsKnown({types})").as_str());
     hash_bytes(&data)
     // ethabi::long_signature(
