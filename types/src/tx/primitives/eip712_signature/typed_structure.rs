@@ -123,7 +123,7 @@ pub trait EIP712TypedStructure: Serialize {
     }
 
     fn hash_struct(&self) -> H256 {
-        // hashStruct(s : 𝕊) = keccak256(keccak256(encodeType(typeOf(s))) ‖ encodeData(s)).
+        // hashStruct(s : 𝕊) = hash(hash(encodeType(typeOf(s))) ‖ encodeData(s)).
         let type_hash = {
             let encode_type = self.encode_type();
             hash_bytes(encode_type.as_bytes())

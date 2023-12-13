@@ -97,7 +97,7 @@ ALTER TABLE transactions ADD CONSTRAINT transactions_miniblock_number_fkey
 
 CREATE INDEX transactions_received_at_idx ON transactions(received_at);
 CREATE UNIQUE INDEX transactions_initiator_address_nonce ON transactions (initiator_address, nonce);
-CREATE INDEX ON "transactions" (priority_op_id) WHERE priority_op_id IS NOT NULL;
+CREATE INDEX transactions_priority_op_id_idx ON transactions (priority_op_id) WHERE priority_op_id IS NOT NULL;
 CREATE INDEX transactions_contract_address_idx ON transactions (contract_address);
 CREATE INDEX transactions_in_mempool_idx ON transactions (in_mempool) WHERE in_mempool = TRUE;
 CREATE INDEX transactions_l1_batch_number_idx ON transactions (l1_batch_number);

@@ -9,9 +9,10 @@ use ola_utils::{
     bytecode::{hash_bytecode, validate_bytecode, InvalidBytecodeError},
     hash::hash_bytes,
 };
-use rlp::{DecoderError, Rlp};
+use rlp::{DecoderError, Rlp, RlpStream};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use web3::types::AccessList;
 pub use web3::types::{Bytes, U256};
 
 #[derive(Debug, Error, PartialEq)]
@@ -169,7 +170,6 @@ impl TransactionRequest {
         chain_id: u16,
     ) -> Result<(Self, H256), SerializationTransactionError> {
         // TODO:
-        let tx = Self::default();
         let rlp;
         let mut tx = match bytes.first() {
             Some(&EIP_1559_TX_TYPE) => {
@@ -200,24 +200,24 @@ impl TransactionRequest {
             }
             Some(&EIP_712_TX_TYPE) => {
                 rlp = Rlp::new(&bytes[1..]);
-                if rlp.item_count()? != 16 {
+                if rlp.item_count()? != 11 {
                     return Err(SerializationTransactionError::DecodeRlpError(
                         DecoderError::RlpIncorrectListLen,
                     ));
                 }
-                let tx_chain_id = rlp.val_at(10).ok();
+                let tx_chain_id = rlp.val_at(6).ok();
                 if tx_chain_id.is_some() && tx_chain_id != Some(chain_id) {
                     return Err(SerializationTransactionError::WrongChainId(tx_chain_id));
                 }
 
                 Self {
-                    v: Some(rlp.val_at(7)?),
-                    r: Some(rlp.val_at(8)?),
-                    s: Some(rlp.val_at(9)?),
+                    v: Some(rlp.val_at(3)?),
+                    r: Some(rlp.val_at(4)?),
+                    s: Some(rlp.val_at(5)?),
                     eip712_meta: Some(Eip712Meta {
-                        factory_deps: rlp.list_at(13).ok(),
-                        custom_signature: rlp.val_at(14).ok(),
-                        paymaster_params: if let Ok(params) = rlp.list_at(15) {
+                        factory_deps: rlp.list_at(8).ok(),
+                        custom_signature: rlp.val_at(9).ok(),
+                        paymaster_params: if let Ok(params) = rlp.list_at(10) {
                             PaymasterParams::from_vector(params)?
                         } else {
                             None
@@ -225,7 +225,7 @@ impl TransactionRequest {
                     }),
                     chain_id: tx_chain_id,
                     transaction_type: Some(EIP_712_TX_TYPE.into()),
-                    from: Some(rlp.val_at(11)?),
+                    from: Some(rlp.val_at(7)?),
                     ..Self::decode_eip1559_fields(&rlp, 0)?
                 }
             }
@@ -267,31 +267,67 @@ impl TransactionRequest {
         }
     }
 
+    pub fn rlp(&self, rlp: &mut RlpStream, chain_id: u16, signature: Option<&PackedEthSignature>) {
+        rlp.begin_unbounded_list();
+
+        match self.transaction_type {
+            // EIP-1559 (0x02)
+            Some(x) if x == EIP_1559_TX_TYPE.into() => {
+                rlp.append(&chain_id);
+                rlp.append(&self.nonce);
+                rlp_opt(rlp, &self.to);
+                rlp.append(&self.input.0);
+                // access_list_rlp(rlp, &self.access_list);
+            }
+            // EIP-712
+            Some(x) if x == EIP_712_TX_TYPE.into() => {
+                rlp.append(&self.nonce);
+                rlp_opt(rlp, &self.to);
+                rlp.append(&self.input.0);
+            }
+            _ => unreachable!("Unknown tx type"),
+        }
+
+        if let Some(signature) = signature {
+            rlp.append(&signature.v());
+            rlp.append(&U256::from_big_endian(signature.r()));
+            rlp.append(&U256::from_big_endian(signature.s()));
+        }
+
+        if self.is_eip712_tx() {
+            rlp.append(&chain_id);
+            rlp_opt(rlp, &self.from);
+            if let Some(meta) = &self.eip712_meta {
+                meta.rlp_append(rlp);
+            }
+        }
+
+        rlp.finalize_unbounded_list();
+    }
+
     fn decode_eip1559_fields(rlp: &Rlp, offset: usize) -> Result<Self, DecoderError> {
         Ok(Self {
             nonce: rlp.val_at(offset)?,
-            to: rlp.val_at(offset + 4).ok(),
-            input: Bytes(rlp.val_at(offset + 6)?),
+            to: rlp.val_at(offset + 1).ok(),
+            input: Bytes(rlp.val_at(offset + 2)?),
             ..Default::default()
         })
     }
 
     fn get_default_signed_message(&self, chain_id: u16) -> H256 {
-        // TODO:
         if self.is_eip712_tx() {
             PackedEthSignature::typed_data_to_signed_bytes(
                 &Eip712Domain::new(L2ChainId(chain_id)),
                 self,
             )
         } else {
-            // let mut rlp_stream = RlpStream::new();
-            // self.rlp(&mut rlp_stream, chain_id, None);
-            // let mut data = rlp_stream.out().to_vec();
-            // if let Some(tx_type) = self.transaction_type {
-            //     data.insert(0, tx_type.as_u64() as u8);
-            // }
-            // PackedEthSignature::message_to_signed_bytes(&data)
-            panic!("other tx type is not supported!");
+            let mut rlp_stream = RlpStream::new();
+            self.rlp(&mut rlp_stream, chain_id, None);
+            let mut data = rlp_stream.out().to_vec();
+            if let Some(tx_type) = self.transaction_type {
+                data.insert(0, tx_type.as_u64() as u8);
+            }
+            PackedEthSignature::message_to_signed_bytes(&data)
         }
     }
 
@@ -315,6 +351,29 @@ pub struct Eip712Meta {
     pub factory_deps: Option<Vec<Vec<u8>>>,
     pub custom_signature: Option<Vec<u8>>,
     pub paymaster_params: Option<PaymasterParams>,
+}
+
+impl Eip712Meta {
+    pub fn rlp_append(&self, rlp: &mut RlpStream) {
+        if let Some(factory_deps) = &self.factory_deps {
+            rlp.begin_list(factory_deps.len());
+            for dep in factory_deps.iter() {
+                rlp.append(&dep.as_slice());
+            }
+        } else {
+            rlp.begin_list(0);
+        }
+
+        rlp_opt(rlp, &self.custom_signature);
+
+        if let Some(paymaster_params) = &self.paymaster_params {
+            rlp.begin_list(2);
+            rlp.append(&paymaster_params.paymaster.as_bytes());
+            rlp.append(&paymaster_params.paymaster_input);
+        } else {
+            rlp.begin_list(0);
+        }
+    }
 }
 
 impl L2Tx {
@@ -351,4 +410,81 @@ pub fn validate_factory_deps(
     }
 
     Ok(())
+}
+
+fn rlp_opt<T: rlp::Encodable>(rlp: &mut RlpStream, opt: &Option<T>) {
+    if let Some(inner) = opt {
+        rlp.append(inner);
+    } else {
+        rlp.append(&"");
+    }
+}
+
+fn access_list_rlp(rlp: &mut RlpStream, access_list: &Option<AccessList>) {
+    if let Some(access_list) = access_list {
+        rlp.begin_list(access_list.len());
+        for item in access_list {
+            rlp.begin_list(2);
+            rlp.append(&item.address);
+            rlp.append_list(&item.storage_keys);
+        }
+    } else {
+        rlp.begin_list(0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ethabi::ethereum_types::U64;
+    use ola_basic_types::{Address, Bytes, L2ChainId, H256, U256};
+    use rlp::RlpStream;
+
+    use crate::{
+        api::TransactionRequest,
+        request::{Eip712Meta, PaymasterParams},
+        tx::primitives::{Eip712Domain, PackedEthSignature},
+        EIP_712_TX_TYPE,
+    };
+
+    #[test]
+    fn decode_eip712_with_meta() {
+        let private_key = H256::random();
+        let address = PackedEthSignature::address_from_private_key(&private_key).unwrap();
+
+        let mut tx = TransactionRequest {
+            nonce: U256::from(0u32),
+            to: Some(Address::random()),
+            from: Some(address),
+            input: Bytes::from(vec![1, 2, 3]),
+            transaction_type: Some(U64::from(EIP_712_TX_TYPE)),
+            eip712_meta: Some(Eip712Meta {
+                factory_deps: Some(vec![vec![2; 32]]),
+                custom_signature: Some(vec![1, 2, 3]),
+                paymaster_params: Some(PaymasterParams {
+                    paymaster: Default::default(),
+                    paymaster_input: vec![],
+                }),
+            }),
+            chain_id: Some(270),
+            ..Default::default()
+        };
+
+        let msg =
+            PackedEthSignature::typed_data_to_signed_bytes(&Eip712Domain::new(L2ChainId(270)), &tx);
+        let signature = PackedEthSignature::sign_raw(&private_key, &msg).unwrap();
+
+        let mut rlp = RlpStream::new();
+        tx.rlp(&mut rlp, 270, Some(&signature));
+        let mut data = rlp.out().to_vec();
+        data.insert(0, EIP_712_TX_TYPE);
+        tx.raw = Some(Bytes(data.clone()));
+        tx.v = Some(U64::from(signature.v()));
+        tx.r = Some(U256::from_big_endian(signature.r()));
+        tx.s = Some(U256::from_big_endian(signature.s()));
+        dbg!(hex::encode(data.clone()));
+
+        let (tx2, _) = TransactionRequest::from_bytes(&data, 270).unwrap();
+
+        assert_eq!(tx, tx2);
+    }
 }

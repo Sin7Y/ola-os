@@ -31,7 +31,7 @@ impl MempoolStore {
     }
 
     pub fn has_next(&self) -> bool {
-        // TODO: add filter
+        // TODO: add filter latter
         self.l2_priority_queue.iter().rfind(|_| true).is_some()
     }
 
