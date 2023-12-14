@@ -1,4 +1,5 @@
 use ethereum_types::{H256, U256};
+use sha2::{Digest, Sha256};
 
 use crate::errors::NumberConvertError;
 
@@ -49,6 +50,15 @@ pub fn is_u256_a_valid_ola_hash(n: U256) -> bool {
     u256_to_u64_array_be(n)
         .iter()
         .all(|&num| is_u64_under_felt_order(num))
+}
+
+pub fn concat_h256_u32_and_sha256(h: H256, n: u32) -> H256 {
+    let n_bytes = n.to_be_bytes();
+    let mut hasher = Sha256::new();
+    hasher.update(&h.0);
+    hasher.update(&n_bytes);
+    let result = hasher.finalize();
+    H256::from_slice(&result)
 }
 
 #[cfg(test)]

@@ -1,6 +1,9 @@
 use std::fmt::Error;
 
-use crate::{errors::NumberConvertError, utils::is_h256_a_valid_ola_hash};
+use crate::{
+    errors::{NumberConvertError, SignerError},
+    utils::{concat_h256_u32_and_sha256, is_h256_a_valid_ola_hash},
+};
 use ethereum_types::{Public, Secret, H256};
 use parity_crypto::Keccak256;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
@@ -12,11 +15,11 @@ struct OlaKeyPair {
 }
 
 impl OlaKeyPair {
-    fn new(private_key: Secret) -> Result<Self, NumberConvertError> {
-        if !is_h256_a_valid_ola_hash(private_key) {
-            return Err(NumberConvertError::InvalidOlaHash(private_key.to_string()));
+    fn new(secret: Secret) -> Result<Self, NumberConvertError> {
+        if !is_h256_a_valid_ola_hash(secret) {
+            return Err(NumberConvertError::InvalidOlaHash(secret.to_string()));
         }
-        let s = match SecretKey::from_slice(&private_key[..]) {
+        let s = match SecretKey::from_slice(&secret[..]) {
             Ok(it) => it,
             Err(err) => return Err(NumberConvertError::SecpError(err)),
         };
@@ -40,10 +43,28 @@ impl OlaKeyPair {
             return Err(NumberConvertError::InvalidOlaHash(address.to_string()));
         }
         Ok(OlaKeyPair {
-            secret: private_key,
+            secret,
             public,
             address,
         })
+    }
+
+    fn from_etherum_private_key(private_key: Secret) -> Result<Self, SignerError> {
+        let mut i: u32 = 0;
+        loop {
+            let secret = concat_h256_u32_and_sha256(private_key, i);
+            let key_pair = OlaKeyPair::new(secret);
+            match key_pair {
+                Ok(it) => return Ok(it),
+                Err(_) => {
+                    if i < 10000 {
+                        i += 1
+                    } else {
+                        return Err(SignerError::InvalidPrivateKey(private_key));
+                    }
+                }
+            }
+        }
     }
 }
 

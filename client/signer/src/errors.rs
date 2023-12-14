@@ -1,9 +1,10 @@
+use ethereum_types::Secret;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum SignerError {
-    #[error("Missing private key")]
-    MissingPrivateKey,
+    #[error("Invalid private key: {0}")]
+    InvalidPrivateKey(Secret),
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
