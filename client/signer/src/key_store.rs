@@ -1,17 +1,15 @@
-use std::fmt::Error;
-
 use crate::{
     errors::{NumberConvertError, SignerError},
     utils::{concat_h256_u32_and_sha256, is_h256_a_valid_ola_hash},
 };
-use ethereum_types::{Public, Secret, H256};
+use ethereum_types::{Address, Public, Secret, H256};
 use parity_crypto::Keccak256;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
-
-struct OlaKeyPair {
-    secret: Secret,
-    public: Public,
-    address: H256,
+#[derive(Clone)]
+pub struct OlaKeyPair {
+    pub secret: Secret,
+    pub public: Public,
+    pub address: Address,
 }
 
 impl OlaKeyPair {
@@ -38,10 +36,12 @@ impl OlaKeyPair {
             return Err(NumberConvertError::InvalidOlaHash(pub_y.to_string()));
         }
 
-        let address = H256::from_slice(&public.keccak256());
-        if !is_h256_a_valid_ola_hash(address) {
-            return Err(NumberConvertError::InvalidOlaHash(address.to_string()));
+        let pub_hash = H256::from_slice(&public.keccak256());
+        if !is_h256_a_valid_ola_hash(pub_hash) {
+            return Err(NumberConvertError::InvalidOlaHash(pub_hash.to_string()));
         }
+        let mut address = Address::zero();
+        address.as_bytes_mut().copy_from_slice(&pub_hash[12..]);
         Ok(OlaKeyPair {
             secret,
             public,
@@ -71,7 +71,7 @@ impl OlaKeyPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethereum_types::{H256, H512};
+    use ethereum_types::{H160, H256, H512};
     use std::str::FromStr;
 
     #[test]
@@ -92,8 +92,7 @@ mod tests {
         );
         assert_eq!(
             key_pair.address,
-            H256::from_str("b665f9be1919998d337476305b073e9233944b5e729e46d618f0d8edf3d9c34a")
-                .unwrap()
+            H160::from_str("5b073e9233944b5e729e46d618f0d8edf3d9c34a").unwrap()
         );
     }
 }
