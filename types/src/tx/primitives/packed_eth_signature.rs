@@ -53,6 +53,11 @@ impl PackedEthSignature {
         hash_bytes(msg)
     }
 
+    pub fn sign(private_key: &H256, msg: &[u8]) -> Result<PackedEthSignature, ParityCryptoError> {
+        let signed_bytes = Self::message_to_signed_bytes(msg);
+        Self::sign_raw(private_key, &signed_bytes)
+    }
+
     pub fn sign_raw(
         private_key: &H256,
         signed_bytes: &H256,
@@ -63,6 +68,15 @@ impl PackedEthSignature {
         let secret_key = private_key.into();
         let signature = sign(&secret_key, &signed_bytes)?;
         Ok(PackedEthSignature(signature))
+    }
+
+    pub fn sign_typed_data(
+        private_key: &H256,
+        domain: &Eip712Domain,
+        typed_struct: &impl EIP712TypedStructure,
+    ) -> Result<PackedEthSignature, ParityCryptoError> {
+        let signed_bytes = PackedEthSignature::typed_data_to_signed_bytes(domain, typed_struct);
+        PackedEthSignature::sign_raw(private_key, &signed_bytes)
     }
 
     pub fn address_from_private_key(private_key: &H256) -> Result<Address, ParityCryptoError> {

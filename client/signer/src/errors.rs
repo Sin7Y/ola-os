@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum SignerError {
     #[error("Invalid private key: {0}")]
     InvalidPrivateKey(Secret),
+    #[error("Signing failed: {0}")]
+    SigningFailed(String),
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
