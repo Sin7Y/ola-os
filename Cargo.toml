@@ -13,6 +13,8 @@ members = [
     "logs",
     "vm",
     "mempool",
-    "storage", "client/signer", "client/cli", "client/sdk",
+    "storage",
+    "client/cli",
+    "client/sdk",
 ]
 resolver = "2"
