@@ -141,7 +141,6 @@ impl SequencerIO for MempoolIO {
 
     async fn wait_for_next_tx(&mut self, max_wait: Duration) -> Option<Transaction> {
         for _ in 0..poll_iters(self.delay_interval, max_wait) {
-            let started_at = Instant::now();
             let res = self.mempool.next_transaction();
             if let Some(res) = res {
                 return Some(res);
