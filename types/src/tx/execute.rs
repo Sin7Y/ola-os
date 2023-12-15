@@ -1,5 +1,6 @@
 use ola_basic_types::{bytes8::Bytes8, Address};
 use serde::{Deserialize, Serialize};
+use web3::types::H256;
 
 // TODO: @Pierre
 #[derive(Debug, Clone, Serialize, Deserialize)]

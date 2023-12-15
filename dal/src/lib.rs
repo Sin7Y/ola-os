@@ -146,7 +146,7 @@ impl<'a> StorageProcessor<'a> {
         ProtocolVersionsDal { storage: self }
     }
 
-    fn conn(&mut self) -> &mut PgConnection {
+    pub fn conn(&mut self) -> &mut PgConnection {
         match &mut self.conn {
             ConnectionHolder::Pooled(conn) => conn,
             ConnectionHolder::Direct(conn) => conn,

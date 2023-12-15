@@ -16,7 +16,7 @@ fn deserialize_block_number(bytes: &[u8]) -> u32 {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum SequencerColumnFamily {
+pub enum SequencerColumnFamily {
     State,
     Contracts,
     FactoryDeps,
