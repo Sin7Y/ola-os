@@ -224,8 +224,7 @@ impl BatchExecutor {
                     resp.send(()).unwrap();
                 }
                 Command::FinishBatch(resp) => {
-                    // FIXME: initial vm
-                    // resp.send(self.finish_batch(&mut vm)).unwrap();
+                    resp.send(self.finish_batch(&mut vm)).unwrap();
                     return;
                 }
             }

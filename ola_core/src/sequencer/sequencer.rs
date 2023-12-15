@@ -320,8 +320,6 @@ impl OlaSequencer {
                 updates_manager.push_miniblock(new_timestamp);
             }
 
-            let started_waiting = Instant::now();
-
             let Some(tx) = self.io.wait_for_next_tx(POLL_WAIT_DURATION).await else {
                 olaos_logs::trace!("No new transactions. Waiting!");
                 continue;
@@ -452,7 +450,7 @@ impl OlaSequencer {
                 tx_result,
                 tx_metrics,
                 entrypoint_dry_run_metrics,
-                // TODO: no use?
+                // TODO: useless?
                 entrypoint_dry_run_result,
                 ..
             } => {
