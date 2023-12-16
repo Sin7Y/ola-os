@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use derivative::Derivative;
 use ola_types::{
     log::{LogQuery, Timestamp},
-    H160, U256,
+    H256, U256,
 };
 use rayon::prelude::*;
 
@@ -19,7 +19,7 @@ pub struct StorageSlotHistoryKeeper<L: LogQueryLike> {
 // Proxy, as we just need read-only
 pub trait LogQueryLike: 'static + Clone + Send + Sync + std::fmt::Debug {
     fn shard_id(&self) -> u8;
-    fn address(&self) -> H160;
+    fn address(&self) -> H256;
     fn key(&self) -> U256;
     fn rw_flag(&self) -> bool;
     fn rollback(&self) -> bool;
@@ -27,7 +27,7 @@ pub trait LogQueryLike: 'static + Clone + Send + Sync + std::fmt::Debug {
     fn written_value(&self) -> U256;
     fn create_partially_filled_from_fields(
         shard_id: u8,
-        address: H160,
+        address: H256,
         key: U256,
         read_value: U256,
         written_value: U256,
@@ -39,7 +39,7 @@ impl LogQueryLike for LogQuery {
     fn shard_id(&self) -> u8 {
         self.shard_id
     }
-    fn address(&self) -> H160 {
+    fn address(&self) -> H256 {
         self.address
     }
     fn key(&self) -> U256 {
@@ -59,7 +59,7 @@ impl LogQueryLike for LogQuery {
     }
     fn create_partially_filled_from_fields(
         shard_id: u8,
-        address: H160,
+        address: H256,
         key: U256,
         read_value: U256,
         written_value: U256,

@@ -10,7 +10,6 @@ use l2::L2TxCommonData;
 pub use ola_basic_types::H256;
 use protocol_version::ProtocolUpgradeTxCommonData;
 use serde::{Deserialize, Serialize};
-pub use web3::types::Address;
 
 pub use storage::*;
 use tx::execute::Execute;
