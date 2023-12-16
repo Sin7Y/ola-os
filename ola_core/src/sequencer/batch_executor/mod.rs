@@ -2,21 +2,18 @@ use std::{fmt, time::Instant};
 
 use async_trait::async_trait;
 use ola_dal::connection::ConnectionPool;
-use ola_state::{rocksdb::RocksdbStorage, storage_view::StorageView};
-use ola_types::{L1BatchNumber, Transaction, U256};
+use ola_state::rocksdb::RocksdbStorage;
+use ola_types::Transaction;
 use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
-use olavm_core::types::account::Address;
-use olavm_core::types::{Field, GoldilocksField};
-use olavm_core::vm::transaction::init_tx_context;
+// use olavm_core::vm::transaction::init_tx_context;
 use tempfile::TempDir;
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
-use web3::signing::Key;
 
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
 use zk_vm::OlaVM;
@@ -206,7 +203,7 @@ impl BatchExecutor {
             TempDir::new()
                 .expect("failed get temporary directory for RocksDB")
                 .path(),
-            init_tx_context(),
+            Default::default(), // FIXME: @Pierre
         );
         // TODO: @pierre init vm end
 
@@ -243,11 +240,12 @@ impl BatchExecutor {
     }
 
     fn execute_tx(&self, tx: &Transaction, vm: &mut OlaVM) {
-        let res = vm.execute_tx(
-            GoldilocksField::from_canonical_u64(5),
-            Address::default(), //tx.address(),
-            Address::default(), //tx.execute.contract_address,
-            Vec::new(),         //tx.execute.calldata.clone(),
-        );
+        // FIXME: @Pierre
+        // let res = vm.execute_tx(
+        //     GoldilocksField::from_canonical_u64(5),
+        //     Address::default(), //tx.address(),
+        //     Address::default(), //tx.execute.contract_address,
+        //     Vec::new(),         //tx.execute.calldata.clone(),
+        // );
     }
 }
