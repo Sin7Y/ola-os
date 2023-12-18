@@ -5,6 +5,7 @@ use parity_crypto::publickey::{
     public_to_address, recover, sign, Error as ParityCryptoError, KeyPair,
     Signature as ETHSignature,
 };
+use thiserror::Error;
 
 use super::{EIP712TypedStructure, Eip712Domain};
 /// Struct used for working with ethereum signatures created using eth_sign (using geth, ethers.js, etc)
@@ -36,6 +37,28 @@ impl PackedEthSignature {
     }
     pub fn v(&self) -> u8 {
         self.0.v()
+    }
+
+    pub fn serialize_packed_without_v(&self) -> [u8; 64] {
+        let array: [u8; 64] = self.0.clone()[0..64].try_into().unwrap();
+        array
+    }
+
+    fn deserialize_signature_without_v(bytes: &[u8]) -> Result<[u8; 64], DeserializeError> {
+        if bytes.len() != 64 {
+            return Err(DeserializeError::IncorrectSignatureLength);
+        }
+
+        let mut bytes_array = [0u8; 64];
+        bytes_array.copy_from_slice(bytes);
+        Ok(bytes_array)
+    }
+
+    pub fn deserialize_packed(bytes: &[u8]) -> Result<Self, DeserializeError> {
+        let signature_without_v = Self::deserialize_signature_without_v(bytes)?;
+        let mut signature = [0u8; 65];
+        signature.copy_from_slice(&signature_without_v);
+        Ok(PackedEthSignature(ETHSignature::from(signature)))
     }
 
     pub fn typed_data_to_signed_bytes(
@@ -84,4 +107,10 @@ impl PackedEthSignature {
         let address = KeyPair::from_secret(private_key.into())?.address();
         Ok(Address::from(address.0))
     }
+}
+
+#[derive(Debug, Error, PartialEq)]
+pub enum DeserializeError {
+    #[error("Eth signature length should be 65 bytes")]
+    IncorrectSignatureLength,
 }

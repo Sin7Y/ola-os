@@ -1,5 +1,5 @@
-use ethereum_types::{H256, Address};
-use ola_types::tx::primitives::{EIP712TypedStructure, PackedEthSignature, Eip712Domain};
+use ethereum_types::Address;
+use ola_types::tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature};
 
 use crate::{errors::SignerError, key_store::OlaKeyPair, EthereumSigner};
 
@@ -39,7 +39,7 @@ impl EthereumSigner for PrivateKeySigner {
         Ok(signature)
     }
 
-    async fn get_address(&self) -> Address {
-        self.key_pair.address
+    async fn get_address(&self) -> Result<Address, SignerError> {
+        Ok(self.key_pair.address)
     }
 }
