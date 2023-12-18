@@ -6,8 +6,11 @@ use ola_types::{tx::primitives::PackedEthSignature, Address};
 
 pub mod errors;
 pub mod key_store;
+pub mod operation;
 pub mod private_key_signer;
 pub mod utils;
+pub mod wallet;
+pub mod signer;
 
 #[async_trait]
 pub trait EthereumSigner: Send + Sync + Clone {
@@ -17,5 +20,5 @@ pub trait EthereumSigner: Send + Sync + Clone {
         domain: &Eip712Domain,
         typed_struct: &S,
     ) -> Result<PackedEthSignature, SignerError>;
-    async fn get_address(&self) -> Address;
+    async fn get_address(&self) -> Result<Address, SignerError>;
 }
