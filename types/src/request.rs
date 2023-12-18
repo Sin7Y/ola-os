@@ -267,6 +267,16 @@ impl TransactionRequest {
         }
     }
 
+    pub fn get_signed_bytes(&self, signature: &PackedEthSignature, chain_id: u16) -> Vec<u8> {
+        let mut rlp = RlpStream::new();
+        self.rlp(&mut rlp, chain_id, Some(signature));
+        let mut data = rlp.out().to_vec();
+        if let Some(tx_type) = self.transaction_type {
+            data.insert(0, tx_type.as_u64() as u8);
+        }
+        data
+    }
+
     pub fn rlp(&self, rlp: &mut RlpStream, chain_id: u16, signature: Option<&PackedEthSignature>) {
         rlp.begin_unbounded_list();
 
