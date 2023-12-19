@@ -2,7 +2,7 @@ use itertools::Itertools;
 use ola_config::constants::contracts::ACCOUNT_CODE_STORAGE_ADDRESS;
 use ola_vm::{
     vm::VmBlockResult,
-    vm_with_bootloader::{BlockContextMode, DerivedBlockContext, TxExecutionMode},
+    vm_with_bootloader::{BlockContextMode, DerivedBlockContext},
 };
 
 use std::{
@@ -236,11 +236,8 @@ impl MiniblockSealCommand {
             } else {
                 self.transaction(tx_index as usize).hash()
             };
-            let logs = logs.filter_map(|log| {
-                log.log_query
-                    .rw_flag
-                    .then(|| StorageLog::from_log_query(log))
-            });
+            let logs = logs.filter(|&log| log.log_query
+                    .rw_flag).map(StorageLog::from_log_query);
             (tx_hash, logs.collect())
         });
         grouped_logs.collect()
@@ -311,7 +308,7 @@ impl UpdatesManager {
         block_result: VmBlockResult,
         block_context: DerivedBlockContext,
     ) {
-        let started_at = Instant::now();
+        let _started_at = Instant::now();
         let mut progress = SealProgress::for_l1_batch();
         let mut transaction = storage.start_transaction().await;
 
@@ -462,11 +459,11 @@ impl UpdatesManager {
     }
 
     fn initial_bootloader_memory(
-        updates_accumulator: &L1BatchUpdates,
-        block_context: BlockContextMode,
+        _updates_accumulator: &L1BatchUpdates,
+        _block_context: BlockContextMode,
     ) -> Vec<(usize, U256)> {
         // TODO: @Pierre return tape
-        return vec![(0, U256::default())];
+        vec![(0, U256::default())]
         // let transactions_data = updates_accumulator
         //     .executed_transactions
         //     .iter()
@@ -496,10 +493,10 @@ impl UpdatesManager {
 }
 
 fn l1_l2_tx_count(executed_transactions: &[TransactionExecutionResult]) -> (usize, usize) {
-    let mut l1_tx_count = 0;
+    let l1_tx_count = 0;
     let mut l2_tx_count = 0;
 
-    for tx in executed_transactions {
+    for _tx in executed_transactions {
         // TODO: add l1_tx_count
         l2_tx_count += 1;
     }

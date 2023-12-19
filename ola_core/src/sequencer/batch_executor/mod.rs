@@ -52,9 +52,9 @@ impl BatchExecutorHandle {
             .await
             .unwrap();
 
-        let res = response_receiver.await.unwrap();
+        
 
-        res
+        response_receiver.await.unwrap()
     }
 
     pub(super) async fn finish_batch(self) -> VmBlockResult {
@@ -63,7 +63,7 @@ impl BatchExecutorHandle {
             .send(Command::FinishBatch(response_sender))
             .await
             .unwrap();
-        let start = Instant::now();
+        let _start = Instant::now();
         let resp = response_receiver.await.unwrap();
         self.handle.await.unwrap();
         resp
@@ -122,7 +122,7 @@ pub struct MainBatchExecutorBuilder {
 impl MainBatchExecutorBuilder {
     pub fn new(sequencer_db_path: String, pool: ConnectionPool, save_call_traces: bool) -> Self {
         Self {
-            sequencer_db_path: sequencer_db_path,
+            sequencer_db_path,
             pool,
             save_call_traces,
         }
@@ -158,7 +158,7 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
-    pub(super) fn run(mut self, secondary_storage: RocksdbStorage, l1_batch_params: L1BatchParams) {
+    pub(super) fn run(mut self, _secondary_storage: RocksdbStorage, l1_batch_params: L1BatchParams) {
         olaos_logs::info!(
             "Starting executing batch #{}",
             l1_batch_params
@@ -211,7 +211,7 @@ impl BatchExecutor {
             match cmd {
                 Command::ExecuteTx(tx, resp) => {
                     // FIXME: @pierre
-                    let result = self.execute_tx(&tx, &mut vm);
+                    self.execute_tx(&tx, &mut vm);
                     let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
                     resp.send(result).unwrap();
                 }
@@ -230,7 +230,7 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self, vm: &mut OlaVM) -> VmBlockResult {
+    fn finish_batch(&self, _vm: &mut OlaVM) -> VmBlockResult {
         // FIXME: @pierre
         // vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
         VmBlockResult {
@@ -239,7 +239,7 @@ impl BatchExecutor {
         }
     }
 
-    fn execute_tx(&self, tx: &Transaction, vm: &mut OlaVM) {
+    fn execute_tx(&self, _tx: &Transaction, _vm: &mut OlaVM) {
         // FIXME: @Pierre
         // let res = vm.execute_tx(
         //     GoldilocksField::from_canonical_u64(5),

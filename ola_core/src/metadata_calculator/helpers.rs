@@ -1,6 +1,5 @@
 use serde::Serialize;
 use std::{
-    borrow::{Borrow, BorrowMut},
     collections::BTreeMap,
     future::Future,
     mem,
@@ -10,11 +9,11 @@ use std::{
 use tempfile::TempDir;
 #[cfg(test)]
 use tokio::sync::mpsc;
-use tracing::debug;
+
 
 use ola_dal::StorageProcessor;
 use ola_types::{
-    block::{L1BatchHeader, WitnessBlockWithLogs},
+    block::{WitnessBlockWithLogs},
     log::{StorageLog, WitnessStorageLog},
     storage::{log::StorageLogKind, StorageKey},
     L1BatchNumber, H256,
@@ -22,7 +21,7 @@ use ola_types::{
 use olaos_health_check::{Health, HealthStatus};
 use olavm_core::{
     merkle_tree::{
-        log::{StorageLog as OlavmStorageLog, WitnessStorageLog as OlavmWitnessStorageLog},
+        log::{WitnessStorageLog as OlavmWitnessStorageLog},
         tree::AccountTree,
     },
     storage::db::{Database, RocksDB},
@@ -49,10 +48,10 @@ impl AsyncTree {
 
     pub async fn new(
         db_path: PathBuf,
-        multi_get_chunk_size: usize,
-        block_cache_capacity: usize,
+        _multi_get_chunk_size: usize,
+        _block_cache_capacity: usize,
     ) -> Self {
-        let mut tree = tokio::task::spawn_blocking(move || {
+        let tree = tokio::task::spawn_blocking(move || {
             let db = Self::create_db(&db_path);
             AccountTree::new(db)
         })
@@ -97,7 +96,7 @@ impl AsyncTree {
         &mut self,
         blocks: impl Iterator<Item = &'a [WitnessStorageLog]>,
     ) -> Vec<TreeMetadata> {
-        let blocks = blocks.map(|logs| Self::filter_block_logs(logs));
+        let blocks = blocks.map(Self::filter_block_logs);
         let storage_logs: Vec<Vec<OlavmWitnessStorageLog>> = blocks
             .map(|sl| sl.map(|l| l.to_olavm_type()).collect())
             .collect();
