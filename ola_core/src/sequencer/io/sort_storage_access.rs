@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use derivative::Derivative;
 use ola_types::{
     log::{LogQuery, Timestamp},
-    H160, U256,
+    H256, U256,
 };
 use rayon::prelude::*;
 
@@ -19,7 +19,7 @@ pub struct StorageSlotHistoryKeeper<L: LogQueryLike> {
 // Proxy, as we just need read-only
 pub trait LogQueryLike: 'static + Clone + Send + Sync + std::fmt::Debug {
     fn shard_id(&self) -> u8;
-    fn address(&self) -> H160;
+    fn address(&self) -> H256;
     fn key(&self) -> U256;
     fn rw_flag(&self) -> bool;
     fn rollback(&self) -> bool;
@@ -27,7 +27,7 @@ pub trait LogQueryLike: 'static + Clone + Send + Sync + std::fmt::Debug {
     fn written_value(&self) -> U256;
     fn create_partially_filled_from_fields(
         shard_id: u8,
-        address: H160,
+        address: H256,
         key: U256,
         read_value: U256,
         written_value: U256,
@@ -39,7 +39,7 @@ impl LogQueryLike for LogQuery {
     fn shard_id(&self) -> u8 {
         self.shard_id
     }
-    fn address(&self) -> H160 {
+    fn address(&self) -> H256 {
         self.address
     }
     fn key(&self) -> U256 {
@@ -59,7 +59,7 @@ impl LogQueryLike for LogQuery {
     }
     fn create_partially_filled_from_fields(
         shard_id: u8,
-        address: H160,
+        address: H256,
         key: U256,
         read_value: U256,
         written_value: U256,
@@ -105,11 +105,11 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
             Ordering::Equal => match a.raw_query.address().cmp(&b.raw_query.address()) {
                 Ordering::Equal => match a.raw_query.key().cmp(&b.raw_query.key()) {
                     Ordering::Equal => a.extended_timestamp.cmp(&b.extended_timestamp),
-                    r @ _ => r,
+                    r => r,
                 },
-                r @ _ => r,
+                r => r,
             },
-            r @ _ => r,
+            r => r,
         }
     });
 
@@ -145,14 +145,12 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
                     el
                 );
                 // first read potentially
-                if el.raw_query.rw_flag() == false {
+                if !el.raw_query.rw_flag() {
                     current_element_history.did_read_at_depth_zero = true;
                 }
             } else {
                 // explicit read at zero
-                if el.raw_query.rw_flag() == false
-                    && current_element_history.changes_stack.is_empty()
-                {
+                if !el.raw_query.rw_flag() && current_element_history.changes_stack.is_empty() {
                     current_element_history.did_read_at_depth_zero = true;
                 }
             }
@@ -163,18 +161,18 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
                     "invalid for query {:?}",
                     el
                 );
-                if el.raw_query.rw_flag() == false {
+                if !el.raw_query.rw_flag() {
                     current_element_history.initial_value = Some(el.raw_query.read_value());
                     current_element_history.current_value = Some(el.raw_query.read_value());
                 } else {
-                    assert!(el.raw_query.rollback() == false);
+                    assert!(!el.raw_query.rollback());
                     current_element_history.initial_value = Some(el.raw_query.read_value());
                     current_element_history.current_value = Some(el.raw_query.read_value());
                     // note: We apply updates few lines later
                 }
             }
 
-            if el.raw_query.rw_flag() == false {
+            if !el.raw_query.rw_flag() {
                 assert_eq!(
                     &el.raw_query.read_value(),
                     current_element_history.current_value.as_ref().unwrap(),
@@ -184,7 +182,7 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
                 // and do not place reads into the stack
             } else {
                 // write-like things manipulate the stack
-                if el.raw_query.rollback() == false {
+                if !el.raw_query.rollback() {
                     // write and push to the stack
                     assert_eq!(
                         &el.raw_query.read_value(),
@@ -242,7 +240,7 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
             }
         }
 
-        if current_element_history.did_read_at_depth_zero == false
+        if !current_element_history.did_read_at_depth_zero
             && current_element_history.changes_stack.is_empty()
         {
             // whatever happened there didn't produce any final changes
@@ -253,13 +251,41 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
             // here we know that last write was a rollback, and there we no reads after it (otherwise "did_read_at_depth_zero" == true),
             // so whatever was an initial value in storage slot it's not ever observed, and we do not need to issue even read here
             continue;
-        } else {
-            if current_element_history.initial_value.unwrap()
-                == current_element_history.current_value.unwrap()
-            {
-                // no change, but we may need protective read
-                if current_element_history.did_read_at_depth_zero {
-                    // protective read
+        } else if current_element_history.initial_value.unwrap()
+            == current_element_history.current_value.unwrap()
+        {
+            // no change, but we may need protective read
+            if current_element_history.did_read_at_depth_zero {
+                // protective read
+                let sorted_log_query = L::create_partially_filled_from_fields(
+                    candidate.raw_query.shard_id(),
+                    candidate.raw_query.address(),
+                    candidate.raw_query.key(),
+                    current_element_history.initial_value.unwrap(),
+                    current_element_history.current_value.unwrap(),
+                    false,
+                );
+
+                deduplicated_storage_queries.push(sorted_log_query);
+            } else {
+                // we didn't read at depth zero, so it's something like
+                // - write cell from a into b
+                // ....
+                // - write cell from b into a
+
+                // There is a catch here:
+                // - if it's two "normal" writes, then operator can claim that initial value
+                // was "a", but it could have been some other, and in this case we want to
+                // "read" that it was indeed "a"
+                // - but if the latest "write" was just a rollback,
+                // then we know that it's basically NOP. We already had a branch above that
+                // protects us in case of write - rollback - read, so we only need to degrade write into
+                // read here if the latest write wasn't a rollback
+
+                if !current_element_history.changes_stack.is_empty() {
+                    // it means that we did accumlate some changes, even though in NET result
+                    // it CLAIMS that it didn't change a value
+                    // degrade to protective read
                     let sorted_log_query = L::create_partially_filled_from_fields(
                         candidate.raw_query.shard_id(),
                         candidate.raw_query.address(),
@@ -271,55 +297,25 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
 
                     deduplicated_storage_queries.push(sorted_log_query);
                 } else {
-                    // we didn't read at depth zero, so it's something like
-                    // - write cell from a into b
-                    // ....
-                    // - write cell from b into a
+                    // Whatever has happened we rolled it back completely, so unless
+                    // there was a need for protective read at depth 0, we do not need
+                    // to go into storage and check or change any value
 
-                    // There is a catch here:
-                    // - if it's two "normal" writes, then operator can claim that initial value
-                    // was "a", but it could have been some other, and in this case we want to
-                    // "read" that it was indeed "a"
-                    // - but if the latest "write" was just a rollback,
-                    // then we know that it's basically NOP. We already had a branch above that
-                    // protects us in case of write - rollback - read, so we only need to degrade write into
-                    // read here if the latest write wasn't a rollback
-
-                    if current_element_history.changes_stack.is_empty() == false {
-                        // it means that we did accumlate some changes, even though in NET result
-                        // it CLAIMS that it didn't change a value
-                        // degrade to protective read
-                        let sorted_log_query = L::create_partially_filled_from_fields(
-                            candidate.raw_query.shard_id(),
-                            candidate.raw_query.address(),
-                            candidate.raw_query.key(),
-                            current_element_history.initial_value.unwrap(),
-                            current_element_history.current_value.unwrap(),
-                            false,
-                        );
-
-                        deduplicated_storage_queries.push(sorted_log_query);
-                    } else {
-                        // Whatever has happened we rolled it back completely, so unless
-                        // there was a need for protective read at depth 0, we do not need
-                        // to go into storage and check or change any value
-
-                        // we just do nothing!
-                    }
+                    // we just do nothing!
                 }
-            } else {
-                // it's final net write
-                let sorted_log_query = L::create_partially_filled_from_fields(
-                    candidate.raw_query.shard_id(),
-                    candidate.raw_query.address(),
-                    candidate.raw_query.key(),
-                    current_element_history.initial_value.unwrap(),
-                    current_element_history.current_value.unwrap(),
-                    true,
-                );
-
-                deduplicated_storage_queries.push(sorted_log_query);
             }
+        } else {
+            // it's final net write
+            let sorted_log_query = L::create_partially_filled_from_fields(
+                candidate.raw_query.shard_id(),
+                candidate.raw_query.address(),
+                candidate.raw_query.key(),
+                current_element_history.initial_value.unwrap(),
+                current_element_history.current_value.unwrap(),
+                true,
+            );
+
+            deduplicated_storage_queries.push(sorted_log_query);
         }
     }
 

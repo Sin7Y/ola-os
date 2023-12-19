@@ -1,5 +1,8 @@
 use ola_types::{Address, U256};
 
+// TODO: change value
+pub const BOOTLOADER_TX_ENCODING_SPACE: u32 = 1024;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TxExecutionMode {
     VerifyExecute,

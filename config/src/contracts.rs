@@ -54,8 +54,10 @@ mod tests {
 
     fn default_contracts_config() -> ContractsConfig {
         ContractsConfig {
-            l2_erc20_bridge_addr: Address::from_str("0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCF")
-                .expect("failed to initial l2_erc20_bridge_addr"),
+            l2_erc20_bridge_addr: Address::from_str(
+                "0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCFFC073319977e314F251EAAAA",
+            )
+            .expect("failed to initial l2_erc20_bridge_addr"),
         }
     }
 
@@ -63,7 +65,7 @@ mod tests {
     fn test_load_contracts_config() {
         let mut lock = MUTEX.lock();
         let config = r#"
-            OLAOS_CONTRACTS_L2_ERC20_BRIDGE_ADDR=0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCF
+            OLAOS_CONTRACTS_L2_ERC20_BRIDGE_ADDR=0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCFFC073319977e314F251EAAAA
         "#;
         lock.set_env(config);
 

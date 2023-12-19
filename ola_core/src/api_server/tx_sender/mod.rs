@@ -22,7 +22,7 @@ use self::{error::SubmitTxError, proxy::TxProxy};
 
 use super::execution_sandbox::{
     execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs,
-    VmConcurrencyBarrier, VmConcurrencyLimiter,
+    VmConcurrencyLimiter,
 };
 
 pub mod error;
@@ -158,7 +158,7 @@ impl TxSender {
             .insert_transaction_l2(tx, tx_metrics)
             .await;
 
-        let submission_result = match submission_res_handle {
+        match submission_res_handle {
             L2TxSubmissionResult::AlreadyExecuted => Err(SubmitTxError::NonceIsTooLow(
                 expected_nonce.0,
                 expected_nonce.0 + self.0.sender_config.max_nonce_ahead,
@@ -168,9 +168,7 @@ impl TxSender {
                 ola_types::l2::error::TxCheckError::TxDuplication(hash),
             )),
             _ => Ok(submission_res_handle),
-        };
-
-        submission_result
+        }
     }
 
     // TODO: add more check
@@ -315,7 +313,7 @@ impl TxSenderBuilder {
     pub fn with_rate_limiter(self, limit: u32) -> Self {
         let rate_limiter = RateLimiter::direct_with_clock(
             Quota::per_second(NonZeroU32::new(limit).unwrap()),
-            &MonotonicClock::default(),
+            &MonotonicClock,
         );
         Self {
             rate_limiter: Some(rate_limiter),

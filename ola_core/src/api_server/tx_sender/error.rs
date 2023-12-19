@@ -1,5 +1,5 @@
 use ola_types::l2::error::TxCheckError;
-use ola_types::U256;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
