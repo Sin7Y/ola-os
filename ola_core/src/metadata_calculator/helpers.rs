@@ -10,20 +10,16 @@ use tempfile::TempDir;
 #[cfg(test)]
 use tokio::sync::mpsc;
 
-
 use ola_dal::StorageProcessor;
 use ola_types::{
-    block::{WitnessBlockWithLogs},
+    block::WitnessBlockWithLogs,
     log::{StorageLog, WitnessStorageLog},
     storage::{log::StorageLogKind, StorageKey},
     L1BatchNumber, H256,
 };
 use olaos_health_check::{Health, HealthStatus};
 use olavm_core::{
-    merkle_tree::{
-        log::{WitnessStorageLog as OlavmWitnessStorageLog},
-        tree::AccountTree,
-    },
+    merkle_tree::{log::WitnessStorageLog as OlavmWitnessStorageLog, tree::AccountTree},
     storage::db::{Database, RocksDB},
     types::merkle_tree::{tree_key_to_h256, TreeMetadata},
 };

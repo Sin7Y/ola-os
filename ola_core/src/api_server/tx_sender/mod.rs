@@ -21,7 +21,8 @@ use crate::sequencer::{seal_criteria::conditional_sealer::ConditionalSealer, Sea
 use self::{error::SubmitTxError, proxy::TxProxy};
 
 use super::execution_sandbox::{
-    execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs, VmConcurrencyLimiter,
+    execute::execute_tx_with_pending_state, execute::TxExecutionArgs, TxSharedArgs,
+    VmConcurrencyLimiter,
 };
 
 pub mod error;
@@ -156,8 +157,6 @@ impl TxSender {
             .transactions_dal()
             .insert_transaction_l2(tx, tx_metrics)
             .await;
-
-        
 
         match submission_res_handle {
             L2TxSubmissionResult::AlreadyExecuted => Err(SubmitTxError::NonceIsTooLow(

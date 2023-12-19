@@ -52,8 +52,6 @@ impl BatchExecutorHandle {
             .await
             .unwrap();
 
-        
-
         response_receiver.await.unwrap()
     }
 
@@ -158,7 +156,11 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
-    pub(super) fn run(mut self, _secondary_storage: RocksdbStorage, l1_batch_params: L1BatchParams) {
+    pub(super) fn run(
+        mut self,
+        _secondary_storage: RocksdbStorage,
+        l1_batch_params: L1BatchParams,
+    ) {
         olaos_logs::info!(
             "Starting executing batch #{}",
             l1_batch_params

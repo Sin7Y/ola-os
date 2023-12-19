@@ -236,8 +236,9 @@ impl MiniblockSealCommand {
             } else {
                 self.transaction(tx_index as usize).hash()
             };
-            let logs = logs.filter(|&log| log.log_query
-                    .rw_flag).map(StorageLog::from_log_query);
+            let logs = logs
+                .filter(|&log| log.log_query.rw_flag)
+                .map(StorageLog::from_log_query);
             (tx_hash, logs.collect())
         });
         grouped_logs.collect()
