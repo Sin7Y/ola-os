@@ -37,6 +37,7 @@ impl BatchExecutorHandle {
     pub(super) fn new(
         save_call_traces: bool,
         secondary_storage_path: &Path,
+        merkle_tree_path: &Path,
         l1_batch_params: L1BatchParams,
     ) -> Self {
         // Since we process `BatchExecutor` commands one-by-one (the next command is never enqueued
@@ -48,7 +49,10 @@ impl BatchExecutorHandle {
         };
 
         let db_path = secondary_storage_path.to_str().unwrap().to_string();
-        let handle = tokio::task::spawn_blocking(move || executor.run(db_path, l1_batch_params));
+        let merkle_tree_path = merkle_tree_path.to_str().unwrap().to_string();
+        let handle = tokio::task::spawn_blocking(move || {
+            executor.run(db_path, merkle_tree_path, l1_batch_params)
+        });
         Self {
             handle,
             commands: commands_sender,
@@ -127,14 +131,21 @@ pub trait L1BatchExecutorBuilder: 'static + Send + Sync + fmt::Debug {
 #[derive(Debug, Clone)]
 pub struct MainBatchExecutorBuilder {
     sequencer_db_path: String,
+    merkle_db_path: String,
     pool: ConnectionPool,
     save_call_traces: bool,
 }
 
 impl MainBatchExecutorBuilder {
-    pub fn new(sequencer_db_path: String, pool: ConnectionPool, save_call_traces: bool) -> Self {
+    pub fn new(
+        sequencer_db_path: String,
+        merkle_db_path: String,
+        pool: ConnectionPool,
+        save_call_traces: bool,
+    ) -> Self {
         Self {
             sequencer_db_path,
+            merkle_db_path,
             pool,
             save_call_traces,
         }
@@ -156,6 +167,7 @@ impl MainBatchExecutorBuilder {
         BatchExecutorHandle::new(
             self.save_call_traces,
             self.sequencer_db_path.as_ref(),
+            self.merkle_db_path.as_ref(),
             l1_batch_params,
         )
     }
@@ -182,6 +194,7 @@ impl L1BatchExecutorBuilder for MainBatchExecutorBuilder {
         BatchExecutorHandle::new(
             self.save_call_traces,
             self.sequencer_db_path.as_ref(),
+            self.merkle_db_path.as_ref(),
             l1_batch_params,
         )
     }
@@ -194,7 +207,12 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
-    pub(super) fn run(mut self, secondary_storage_path: String, l1_batch_params: L1BatchParams) {
+    pub(super) fn run(
+        mut self,
+        secondary_storage_path: String,
+        merkle_tree_path: String,
+        l1_batch_params: L1BatchParams,
+    ) {
         olaos_logs::info!(
             "Starting executing batch #{}",
             l1_batch_params
@@ -230,7 +248,6 @@ impl BatchExecutor {
         //         &l1_batch_params.base_system_contracts,
         //     ),
         // };
-        let db_config = DBConfig::from_env();
         // TODO: need roscksdb path for storage merkle tree
 
         // TODO: @pierre init vm end
@@ -274,7 +291,7 @@ impl BatchExecutor {
                         _ => panic!("not support now"),
                     }
                     let mut vm = OlaVM::new(
-                        db_config.merkle_tree.path.as_ref(),
+                        merkle_tree_path.as_ref(),
                         secondary_storage_path.as_ref(),
                         tx_ctx_info,
                     );
@@ -468,13 +485,16 @@ mod tests {
         binary_files: Vec<&str>,
         contract_addresses: Vec<H256>,
         calldata: Vec<u8>,
+        sequencer_db_path: String,
+        merkle_tree_path: String,
+        backup_path: String,
     ) {
         let db_config = DBConfig {
             statement_timeout_sec: Some(300),
-            sequencer_db_path: "./db/main/sequencer".to_string(),
+            sequencer_db_path,
             merkle_tree: MerkleTreeConfig {
-                path: "./db/main/tree".to_string(),
-                backup_path: "./db/main/backups".to_string(),
+                path: merkle_tree_path,
+                backup_path,
                 mode: Default::default(),
                 multi_get_chunk_size: 1000,
                 block_cache_size_mb: 128,
@@ -561,6 +581,7 @@ mod tests {
 
         let batch_executor_base = MainBatchExecutorBuilder::new(
             db_config.sequencer_db_path.clone(),
+            db_config.merkle_tree.path.clone(),
             sequencer_pool.clone(),
             sequencer_config.save_call_traces,
         );
@@ -633,35 +654,41 @@ mod tests {
             vec!["call_ret.json"],
             vec![addr],
             field_arr_to_u8_arr(&calldata),
+            "./db/call_ret/tree".to_string(),
+            "./db/call_ret/merkle_tree".to_string(),
+            "./db/call_ret/backups".to_string(),
         )
         .await;
     }
 
-    //     #[tokio::test]
-    //     async fn sccall_test() {
-    //         let addr_caller = tree_key_to_h256(&[
-    //             GoldilocksField::ONE,
-    //             GoldilocksField::ONE,
-    //             GoldilocksField::ZERO,
-    //             GoldilocksField::ONE,
-    //         ]);
-    //
-    //         let addr_callee = tree_key_to_h256(&[
-    //             GoldilocksField::ONE,
-    //             GoldilocksField::ZERO,
-    //             GoldilocksField::ONE,
-    //             GoldilocksField::ZERO,
-    //         ]);
-    //         let call_data = [1, 0, 1, 0, 4, 645225708];
-    //         let calldata = call_data
-    //             .iter()
-    //             .map(|e| GoldilocksField::from_canonical_u64(*e))
-    //             .collect();
-    //         batch_execute_tx(
-    //             vec!["sccall_caller.json", "sccall_callee.json"],
-    //             vec![addr_caller, addr_callee],
-    //             field_arr_to_u8_arr(&calldata),
-    //         )
-    //         .await;
-    //     }
+    #[tokio::test]
+    async fn sccall_test() {
+        let addr_caller = tree_key_to_h256(&[
+            GoldilocksField::ONE,
+            GoldilocksField::ONE,
+            GoldilocksField::ZERO,
+            GoldilocksField::ONE,
+        ]);
+
+        let addr_callee = tree_key_to_h256(&[
+            GoldilocksField::ONE,
+            GoldilocksField::ZERO,
+            GoldilocksField::ONE,
+            GoldilocksField::ZERO,
+        ]);
+        let call_data = [1, 0, 1, 0, 4, 645225708];
+        let calldata = call_data
+            .iter()
+            .map(|e| GoldilocksField::from_canonical_u64(*e))
+            .collect();
+        batch_execute_tx(
+            vec!["sccall_caller.json", "sccall_callee.json"],
+            vec![addr_caller, addr_callee],
+            field_arr_to_u8_arr(&calldata),
+            "./db/sccall/tree".to_string(),
+            "./db/sccall/merkle_tree".to_string(),
+            "./db/sccall/backups".to_string(),
+        )
+        .await;
+    }
 }
