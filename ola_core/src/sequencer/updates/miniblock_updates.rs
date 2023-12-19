@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ola_types::{
-    events::{extract_bytecodes_marked_as_known, VmEvent},
+    events::extract_bytecodes_marked_as_known,
     log::StorageLogQuery,
     tx::{
         tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
@@ -81,10 +81,7 @@ impl MiniblockUpdates {
             execution_info: execution_metrics,
             execution_status: tx_execution_result.status,
             call_traces: tx_execution_result.call_traces,
-            revert_reason: tx_execution_result
-                .result
-                .revert_reason
-                .map(|reason| reason),
+            revert_reason: tx_execution_result.result.revert_reason,
         });
     }
 

@@ -1,5 +1,5 @@
 use blake2::{Blake2s256, Digest};
-pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H160, H256, U256};
+pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H256, U256};
 use ola_config::constants::{
     contracts::{
         ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
@@ -48,9 +48,9 @@ impl StorageKey {
         self.account.address()
     }
 
-    pub fn raw_hashed_key(address: &H160, key: &H256) -> [u8; 32] {
+    pub fn raw_hashed_key(address: &H256, key: &H256) -> [u8; 32] {
         let mut bytes = [0_u8; 64];
-        bytes[12..32].copy_from_slice(&address.0);
+        bytes[0..32].copy_from_slice(&address.0);
         U256::from(key.to_fixed_bytes()).to_big_endian(&mut bytes[32..64]);
         Blake2s256::digest(bytes).into()
     }
