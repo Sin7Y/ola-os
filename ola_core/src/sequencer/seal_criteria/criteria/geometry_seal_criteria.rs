@@ -1,5 +1,8 @@
 use ola_config::sequencer::SequencerConfig;
-use ola_types::{tx::tx_execution_info::{DeduplicatedWritesMetrics, ExecutionMetrics}, circuit::GEOMETRY_CONFIG};
+use ola_types::{
+    circuit::GEOMETRY_CONFIG,
+    tx::tx_execution_info::{DeduplicatedWritesMetrics, ExecutionMetrics},
+};
 
 use crate::sequencer::{
     seal_criteria::{SealCriterion, SealResolution},

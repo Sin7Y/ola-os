@@ -54,8 +54,10 @@ mod tests {
 
     fn default_contracts_config() -> ContractsConfig {
         ContractsConfig {
-            l2_erc20_bridge_addr: Address::from_str("0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCFFC073319977e314F251EAAAA")
-                .expect("failed to initial l2_erc20_bridge_addr"),
+            l2_erc20_bridge_addr: Address::from_str(
+                "0xFC073319977e314F251EAE6ae6bE76B0B3BAeeCFFC073319977e314F251EAAAA",
+            )
+            .expect("failed to initial l2_erc20_bridge_addr"),
         }
     }
 

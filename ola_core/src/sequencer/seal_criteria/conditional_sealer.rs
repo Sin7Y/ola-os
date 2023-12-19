@@ -85,7 +85,7 @@ impl ConditionalSealer {
             Box::new(criteria::InitialWritesCriterion),
             Box::new(criteria::RepeatedWritesCriterion),
             // Box::new(criteria::MaxCyclesCriterion),
-            // Box::new(criteria::TxEncodingSizeCriterion),
+            Box::new(criteria::TxEncodingSizeCriterion),
         ]
     }
 }
