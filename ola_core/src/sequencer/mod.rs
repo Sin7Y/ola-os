@@ -67,6 +67,7 @@ pub(crate) async fn create_sequencer(
 
     let batch_executor_base = MainBatchExecutorBuilder::new(
         db_config.sequencer_db_path.clone(),
+        db_config.merkle_tree.path.clone(),
         pool.clone(),
         sequencer_config.save_call_traces,
     );
