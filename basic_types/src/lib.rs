@@ -5,7 +5,9 @@ use std::num::ParseIntError;
 use std::ops::{Add, Deref, DerefMut, Sub};
 use std::str::FromStr;
 
-pub use web3::types::{Address, Bytes, H160, H256, U256};
+pub use web3::types::{Bytes, H160, H256, U256};
+
+pub type Address = H256;
 
 #[macro_use]
 mod macros;
@@ -27,13 +29,13 @@ impl AccountTreeId {
         &self.address
     }
 
-    pub fn to_fixed_bytes(&self) -> [u8; 20] {
-        let mut result = [0_u8; 20];
+    pub fn to_fixed_bytes(&self) -> [u8; 32] {
+        let mut result = [0_u8; 32];
         result.copy_from_slice(&self.address.to_fixed_bytes());
         result
     }
 
-    pub fn from_fixed_bytes(value: [u8; 20]) -> Self {
+    pub fn from_fixed_bytes(value: [u8; 32]) -> Self {
         let address = Address::from_slice(&value);
         Self { address }
     }
@@ -50,7 +52,7 @@ impl Default for AccountTreeId {
 impl From<AccountTreeId> for U256 {
     fn from(val: AccountTreeId) -> Self {
         let mut be_data = [0_u8; 32];
-        be_data[12..].copy_from_slice(&val.to_fixed_bytes());
+        be_data.copy_from_slice(&val.to_fixed_bytes());
         U256::from_big_endian(&be_data)
     }
 }
@@ -61,7 +63,7 @@ impl TryFrom<U256> for AccountTreeId {
     fn try_from(value: U256) -> Result<Self, Infallible> {
         let mut be_data = vec![0; 32];
         value.to_big_endian(&mut be_data);
-        Ok(Self::from_fixed_bytes(be_data[12..].try_into().unwrap()))
+        Ok(Self::from_fixed_bytes(be_data.try_into().unwrap()))
     }
 }
 

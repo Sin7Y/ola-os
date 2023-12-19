@@ -2,21 +2,18 @@ use std::{fmt, time::Instant};
 
 use async_trait::async_trait;
 use ola_dal::connection::ConnectionPool;
-use ola_state::{rocksdb::RocksdbStorage, storage_view::StorageView};
-use ola_types::{L1BatchNumber, Transaction, U256};
+use ola_state::rocksdb::RocksdbStorage;
+use ola_types::Transaction;
 use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
-use olavm_core::types::account::Address;
-use olavm_core::types::{Field, GoldilocksField};
-use olavm_core::vm::transaction::init_tx_context;
+// use olavm_core::vm::transaction::init_tx_context;
 use tempfile::TempDir;
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
-use web3::signing::Key;
 
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
 use zk_vm::OlaVM;
@@ -55,9 +52,7 @@ impl BatchExecutorHandle {
             .await
             .unwrap();
 
-        let res = response_receiver.await.unwrap();
-
-        res
+        response_receiver.await.unwrap()
     }
 
     pub(super) async fn finish_batch(self) -> VmBlockResult {
@@ -66,7 +61,7 @@ impl BatchExecutorHandle {
             .send(Command::FinishBatch(response_sender))
             .await
             .unwrap();
-        let start = Instant::now();
+        let _start = Instant::now();
         let resp = response_receiver.await.unwrap();
         self.handle.await.unwrap();
         resp
@@ -125,7 +120,7 @@ pub struct MainBatchExecutorBuilder {
 impl MainBatchExecutorBuilder {
     pub fn new(sequencer_db_path: String, pool: ConnectionPool, save_call_traces: bool) -> Self {
         Self {
-            sequencer_db_path: sequencer_db_path,
+            sequencer_db_path,
             pool,
             save_call_traces,
         }
@@ -161,7 +156,11 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
-    pub(super) fn run(mut self, secondary_storage: RocksdbStorage, l1_batch_params: L1BatchParams) {
+    pub(super) fn run(
+        mut self,
+        _secondary_storage: RocksdbStorage,
+        l1_batch_params: L1BatchParams,
+    ) {
         olaos_logs::info!(
             "Starting executing batch #{}",
             l1_batch_params
@@ -206,7 +205,7 @@ impl BatchExecutor {
             TempDir::new()
                 .expect("failed get temporary directory for RocksDB")
                 .path(),
-            init_tx_context(),
+            Default::default(), // FIXME: @Pierre
         );
         // TODO: @pierre init vm end
 
@@ -214,7 +213,7 @@ impl BatchExecutor {
             match cmd {
                 Command::ExecuteTx(tx, resp) => {
                     // FIXME: @pierre
-                    let result = self.execute_tx(&tx, &mut vm);
+                    self.execute_tx(&tx, &mut vm);
                     let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
                     resp.send(result).unwrap();
                 }
@@ -224,8 +223,7 @@ impl BatchExecutor {
                     resp.send(()).unwrap();
                 }
                 Command::FinishBatch(resp) => {
-                    // FIXME: initial vm
-                    // resp.send(self.finish_batch(&mut vm)).unwrap();
+                    resp.send(self.finish_batch(&mut vm)).unwrap();
                     return;
                 }
             }
@@ -234,7 +232,7 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self, vm: &mut OlaVM) -> VmBlockResult {
+    fn finish_batch(&self, _vm: &mut OlaVM) -> VmBlockResult {
         // FIXME: @pierre
         // vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
         VmBlockResult {
@@ -243,12 +241,13 @@ impl BatchExecutor {
         }
     }
 
-    fn execute_tx(&self, tx: &Transaction, vm: &mut OlaVM) {
-        let res = vm.execute_tx(
-            GoldilocksField::from_canonical_u64(5),
-            Address::default(), //tx.address(),
-            Address::default(), //tx.execute.contract_address,
-            Vec::new(),         //tx.execute.calldata.clone(),
-        );
+    fn execute_tx(&self, _tx: &Transaction, _vm: &mut OlaVM) {
+        // FIXME: @Pierre
+        // let res = vm.execute_tx(
+        //     GoldilocksField::from_canonical_u64(5),
+        //     Address::default(), //tx.address(),
+        //     Address::default(), //tx.execute.contract_address,
+        //     Vec::new(),         //tx.execute.calldata.clone(),
+        // );
     }
 }

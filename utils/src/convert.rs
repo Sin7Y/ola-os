@@ -42,7 +42,13 @@ pub fn bytes_to_be_words(bytes: Vec<u8>) -> Vec<U256> {
 
 pub fn address_to_h256(address: &Address) -> H256 {
     let mut buffer = [0u8; 32];
-    buffer[12..].copy_from_slice(address.as_bytes());
+    buffer.copy_from_slice(address.as_bytes());
+    H256(buffer)
+}
+
+pub fn h160_bytes_to_h256(data: &[u8; 20]) -> H256 {
+    let mut buffer = [0u8; 32];
+    buffer[12..].copy_from_slice(data);
     H256(buffer)
 }
 
@@ -63,7 +69,7 @@ pub fn u256_to_h256(num: U256) -> H256 {
 }
 
 pub fn h256_to_account_address(value: &H256) -> Address {
-    Address::from_slice(&value.as_bytes()[12..])
+    Address::from_slice(&value.as_bytes())
 }
 
 pub fn h256_to_u32(value: H256) -> u32 {

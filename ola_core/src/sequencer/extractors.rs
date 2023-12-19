@@ -1,6 +1,7 @@
 use ola_dal::StorageProcessor;
 use ola_types::{L1BatchNumber, Transaction, U256};
 use ola_utils::h256_to_u256;
+use ola_vm::transaction_data::TransactionData;
 use std::{
     fmt,
     time::{Duration, Instant},
@@ -9,8 +10,8 @@ use std::{
 use chrono::{DateTime, TimeZone, Utc};
 
 pub(super) fn encoded_transaction_size(tx: Transaction) -> usize {
-    // TODO:
-    0
+    let tx_data: TransactionData = tx.into();
+    tx_data.into_tokens().len()
 }
 
 pub(super) fn display_timestamp(timestamp: u64) -> impl fmt::Display {
