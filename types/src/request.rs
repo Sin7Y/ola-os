@@ -47,7 +47,7 @@ impl PaymasterParams {
         if value.is_empty() {
             return Ok(None);
         }
-        if value.len() != 2 || value[0].len() != 20 {
+        if value.len() != 2 || value[0].len() != 32 {
             return Err(SerializationTransactionError::InvalidPaymasterParams);
         }
         let result = Some(Self {

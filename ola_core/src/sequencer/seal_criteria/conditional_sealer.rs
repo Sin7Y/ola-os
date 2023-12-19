@@ -78,14 +78,14 @@ impl ConditionalSealer {
     }
 
     fn default_sealers() -> Vec<Box<dyn SealCriterion>> {
-        // TODO: add more sealers
+        // TODO: MaxCyclesCriterion? limit_cpu_cycle_per_block(main trace table size)
         vec![
             Box::new(criteria::SlotsCriterion),
             // Box::new(criteria::PubDataBytesCriterion),
-            // Box::new(criteria::InitialWritesCriterion),
-            // Box::new(criteria::RepeatedWritesCriterion),
+            Box::new(criteria::InitialWritesCriterion),
+            Box::new(criteria::RepeatedWritesCriterion),
             // Box::new(criteria::MaxCyclesCriterion),
-            // Box::new(criteria::TxEncodingSizeCriterion),
+            Box::new(criteria::TxEncodingSizeCriterion),
         ]
     }
 }

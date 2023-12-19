@@ -16,18 +16,18 @@ impl StructMember for String {
     }
 }
 
-impl StructMember for Address {
-    const MEMBER_TYPE: &'static str = "address";
-    const IS_REFERENCE_TYPE: bool = false;
+// impl StructMember for Address {
+//     const MEMBER_TYPE: &'static str = "address";
+//     const IS_REFERENCE_TYPE: bool = false;
 
-    fn get_inner_members(&self) -> Vec<EncodedStructureMember> {
-        Vec::new()
-    }
+//     fn get_inner_members(&self) -> Vec<EncodedStructureMember> {
+//         Vec::new()
+//     }
 
-    fn encode_member_data(&self) -> H256 {
-        H256::from(*self)
-    }
-}
+//     fn encode_member_data(&self) -> H256 {
+//         H256::from(*self)
+//     }
+// }
 
 impl StructMember for &[u8] {
     const MEMBER_TYPE: &'static str = "bytes";

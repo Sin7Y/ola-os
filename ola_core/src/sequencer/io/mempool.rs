@@ -141,7 +141,6 @@ impl SequencerIO for MempoolIO {
 
     async fn wait_for_next_tx(&mut self, max_wait: Duration) -> Option<Transaction> {
         for _ in 0..poll_iters(self.delay_interval, max_wait) {
-            let started_at = Instant::now();
             let res = self.mempool.next_transaction();
             if let Some(res) = res {
                 return Some(res);
@@ -247,7 +246,7 @@ impl MempoolIO {
             "Getting previous L1 batch hash for L1 batch #{}",
             self.current_l1_batch_number
         );
-        let stage_started_at: Instant = Instant::now();
+        let _stage_started_at: Instant = Instant::now();
 
         let mut storage = self.pool.access_storage_tagged("sequencer").await;
         let (batch_hash, _) =
@@ -263,13 +262,12 @@ impl MempoolIO {
 
     async fn load_previous_miniblock_timestamp(&self) -> u64 {
         let mut storage = self.pool.access_storage_tagged("sequencer").await;
-        let miniblock_timestamp = storage
+
+        storage
             .blocks_dal()
             .get_miniblock_timestamp(self.current_miniblock_number - 1)
             .await
-            .expect("Previous miniblock must be sealed and header saved to DB");
-
-        miniblock_timestamp
+            .expect("Previous miniblock must be sealed and header saved to DB")
     }
 }
 

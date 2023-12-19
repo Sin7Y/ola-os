@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::Duration;
 
 use ola_config::chain::MempoolConfig;
 use ola_dal::connection::ConnectionPool;

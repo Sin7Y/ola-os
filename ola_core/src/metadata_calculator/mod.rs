@@ -3,7 +3,6 @@ use ola_dal::connection::ConnectionPool;
 use ola_types::{
     block::L1BatchHeader,
     commitment::{L1BatchCommitment, L1BatchMetadata},
-    log::StorageLog,
     storage::writes::{InitialStorageWrite, RepeatedStorageWrite},
 };
 use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};

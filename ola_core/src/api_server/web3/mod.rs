@@ -275,7 +275,7 @@ impl ApiBuilder {
     }
 
     async fn build_rpc_module(&self) -> RpcModule<()> {
-        let ola_network_id = self.config.l2_chain_id;
+        let _ola_network_id = self.config.l2_chain_id;
         let rpc_app = self.build_rpc_state();
         let namespaces = self.namespaces.as_ref().unwrap();
         let mut rpc = RpcModule::new(());
@@ -294,7 +294,7 @@ impl ApiBuilder {
         }
     }
 
-    async fn wait_for_vm(vm_barrier: VmConcurrencyBarrier, transport: &str) {
+    async fn wait_for_vm(vm_barrier: VmConcurrencyBarrier, _transport: &str) {
         let wait_for_vm =
             tokio::time::timeout(SERVER_SHUTDOWN_TIMEOUT, vm_barrier.wait_until_stopped());
         wait_for_vm.await;
