@@ -3,7 +3,7 @@ pub use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 use crate::{
     request::PaymasterParams, tx::execute::Execute, utils::unix_timestamp_ms,
     ExecuteTransactionCommon, InputData, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE,
-    PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
+    PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256,
 };
 use serde::{Deserialize, Serialize};
 

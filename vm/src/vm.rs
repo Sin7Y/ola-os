@@ -4,6 +4,7 @@ use ola_types::{
     vm_trace::Call,
     U256,
 };
+use olavm_core::trace::trace::Trace;
 
 use crate::{errors::VmRevertReasonParsingResult, Word};
 
@@ -33,10 +34,12 @@ pub struct VmPartialExecutionResult {
     pub cycles_used: u32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct VmTxExecutionResult {
     pub status: TxExecutionStatus,
     pub result: VmPartialExecutionResult,
+    pub ret: Vec<u8>,
+    pub trace: Trace,
     pub call_traces: Vec<Call>,
     // Gas refunded to the user at the end of the transaction
     pub gas_refunded: u32,

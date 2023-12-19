@@ -459,7 +459,7 @@ impl UpdatesManager {
         );
     }
 
-    fn initial_bootloader_memory(
+    pub(crate) fn initial_bootloader_memory(
         _updates_accumulator: &L1BatchUpdates,
         _block_context: BlockContextMode,
     ) -> Vec<(usize, U256)> {
