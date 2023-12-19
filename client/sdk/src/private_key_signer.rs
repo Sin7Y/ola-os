@@ -1,5 +1,7 @@
-use ethereum_types::Address;
-use ola_types::tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature};
+use ola_types::{
+    tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature},
+    Address,
+};
 
 use crate::{errors::SignerError, key_store::OlaKeyPair, EthereumSigner};
 
