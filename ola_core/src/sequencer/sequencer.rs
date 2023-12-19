@@ -1,4 +1,4 @@
-use std::time::{Duration};
+use std::time::Duration;
 
 use ola_types::{
     block::MiniblockReexecuteData, protocol_version::ProtocolUpgradeTx,

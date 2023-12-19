@@ -1,5 +1,3 @@
-
-
 use ola_types::H256;
 use ola_web3_decl::error::Web3Error;
 use web3::types::Bytes;
@@ -31,7 +29,6 @@ impl OlaNamespace {
         tx.set_input(tx_bytes.0, hash);
 
         let submit_result = self.state.tx_sender.submit_tx(tx).await;
-        
 
         submit_result.map(|_| hash).map_err(|err| {
             olaos_logs::debug!("Send raw transaction error: {err}");

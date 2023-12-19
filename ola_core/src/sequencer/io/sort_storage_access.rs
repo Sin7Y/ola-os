@@ -150,9 +150,7 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
                 }
             } else {
                 // explicit read at zero
-                if !el.raw_query.rw_flag()
-                    && current_element_history.changes_stack.is_empty()
-                {
+                if !el.raw_query.rw_flag() && current_element_history.changes_stack.is_empty() {
                     current_element_history.did_read_at_depth_zero = true;
                 }
             }

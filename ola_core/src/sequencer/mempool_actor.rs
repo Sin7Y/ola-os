@@ -1,6 +1,4 @@
-use std::{
-    time::{Duration},
-};
+use std::time::Duration;
 
 use ola_config::chain::MempoolConfig;
 use ola_dal::connection::ConnectionPool;

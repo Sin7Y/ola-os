@@ -262,7 +262,6 @@ impl MempoolIO {
 
     async fn load_previous_miniblock_timestamp(&self) -> u64 {
         let mut storage = self.pool.access_storage_tagged("sequencer").await;
-        
 
         storage
             .blocks_dal()
