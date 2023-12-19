@@ -1,6 +1,6 @@
 miniblock_seal_queue_capacity: 10
 miniblock_commit_deadline_ms: 1000
-reject_tx_at_geometry_percentage: 0.3
+reject_tx_at_geometry_percentage: 0.95
 close_block_at_geometry_percentage: 0.95
 block_commit_deadline_ms: 2500
 fee_account_addr: "0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7de03a0B5963f75f1C8485B35"

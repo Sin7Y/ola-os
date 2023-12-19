@@ -65,8 +65,10 @@ mod tests {
             block_commit_deadline_ms: 2500,
             reject_tx_at_geometry_percentage: 0.3,
             close_block_at_geometry_percentage: 0.5,
-            fee_account_addr: Address::from_str("0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7C8485B355fF6D30f3093BDE7")
-                .unwrap(),
+            fee_account_addr: Address::from_str(
+                "0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7C8485B355fF6D30f3093BDE7",
+            )
+            .unwrap(),
             entrypoint_hash: H256::from_str(
                 "0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b594c",
             )
@@ -94,6 +96,7 @@ mod tests {
             OLAOS_SEQUENCER_FEE_ACCOUNT_ADDR=0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7C8485B355fF6D30f3093BDE7
             OLAOS_SEQUENCER_ENTRYPOINT_HASH=0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b594c
             OLAOS_SEQUENCER_DEFAULT_AA_HASH=0x0100038dc66b69be75ec31653c64cb931678299b9b659472772b2550b703f41c
+            OLAOS_SEQUENCER_REJECT_TX_AT_GEOMETRY_PERCENTAGE=0.3
             OLAOS_SEQUENCER_CLOSE_BLOCK_AT_GEOMETRY_PERCENTAGE=0.5
         "#;
         lock.set_env(config);
