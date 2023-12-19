@@ -16,6 +16,7 @@ use tx::execute::Execute;
 
 pub mod api;
 pub mod block;
+pub mod circuit;
 pub mod commitment;
 pub mod events;
 pub mod fee;

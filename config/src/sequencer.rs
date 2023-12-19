@@ -7,6 +7,8 @@ pub struct SequencerConfig {
     pub miniblock_seal_queue_capacity: usize,
     pub miniblock_commit_deadline_ms: u64,
     pub block_commit_deadline_ms: u64,
+    pub reject_tx_at_geometry_percentage: f64,
+    pub close_block_at_geometry_percentage: f64,
     pub fee_account_addr: Address,
     pub entrypoint_hash: H256,
     pub default_aa_hash: H256,
@@ -61,6 +63,8 @@ mod tests {
             miniblock_seal_queue_capacity: 10,
             miniblock_commit_deadline_ms: 1000,
             block_commit_deadline_ms: 2500,
+            reject_tx_at_geometry_percentage: 0.3,
+            close_block_at_geometry_percentage: 0.5,
             fee_account_addr: Address::from_str("0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7")
                 .unwrap(),
             entrypoint_hash: H256::from_str(
