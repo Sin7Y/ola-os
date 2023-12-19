@@ -1,4 +1,4 @@
-use std::time::Instant;
+
 
 use ola_types::H256;
 use ola_web3_decl::error::Web3Error;
@@ -31,11 +31,11 @@ impl OlaNamespace {
         tx.set_input(tx_bytes.0, hash);
 
         let submit_result = self.state.tx_sender.submit_tx(tx).await;
-        let submit_result = submit_result.map(|_| hash).map_err(|err| {
+        
+
+        submit_result.map(|_| hash).map_err(|err| {
             olaos_logs::debug!("Send raw transaction error: {err}");
             Web3Error::SubmitTransactionError(err.to_string(), err.data())
-        });
-
-        submit_result
+        })
     }
 }

@@ -1,6 +1,5 @@
 use std::{
-    sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration},
 };
 
 use ola_config::chain::MempoolConfig;

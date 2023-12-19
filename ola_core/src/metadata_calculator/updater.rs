@@ -3,15 +3,15 @@ use super::{
     MetadataCalculator, MetadataCalculatorConfig,
 };
 use futures::{
-    future::{join_all, ready as future_ready},
-    stream::{self, StreamExt},
+    future::{ready as future_ready},
+    stream::{StreamExt},
     FutureExt,
 };
 
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{block::WitnessBlockWithLogs, L1BatchNumber};
 use olaos_health_check::HealthUpdater;
-use olavm_core::types::merkle_tree::{tree_key_to_h256, tree_key_to_u256, TreeMetadata};
+use olavm_core::types::merkle_tree::{tree_key_to_h256};
 use tokio::sync::watch;
 
 #[derive(Debug)]

@@ -9,7 +9,7 @@ use ola_types::{
     AccountTreeId, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
 };
 use ola_utils::{
-    be_words_to_bytes, bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
+    bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256,
 };
 
 use olavm_core::types::merkle_tree::tree_key_to_h256;

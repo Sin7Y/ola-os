@@ -292,7 +292,7 @@ async fn add_sequencer_to_task_futures(
     task_futures.push(mempool_fetcher_handle);
 }
 
-pub async fn genesis_init(network_config: &NetworkConfig, contracts_config: &ContractsConfig) {
+pub async fn genesis_init(network_config: &NetworkConfig, _contracts_config: &ContractsConfig) {
     let mut storage = StorageProcessor::establish_connection(true).await;
 
     genesis::ensure_genesis_state(
@@ -314,7 +314,7 @@ pub async fn is_genesis_needed() -> bool {
 async fn add_trees_to_task_futures(
     task_futures: &mut Vec<JoinHandle<()>>,
     healthchecks: &mut Vec<Box<dyn CheckHealth>>,
-    components: &[Component],
+    _components: &[Component],
     stop_receiver: watch::Receiver<bool>,
 ) {
     let db_config = DBConfig::from_env();
