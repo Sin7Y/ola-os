@@ -12,13 +12,15 @@ use super::storage::log::WitnessStorageLog;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DeployedContract {
     pub account_id: AccountTreeId,
+    pub raw: Vec<u8>,
     pub bytecode: Vec<u8>,
 }
 
 impl DeployedContract {
-    pub fn new(account_id: AccountTreeId, bytecode: Vec<u8>) -> Self {
+    pub fn new(account_id: AccountTreeId, raw: Vec<u8>, bytecode: Vec<u8>) -> Self {
         Self {
             account_id,
+            raw,
             bytecode,
         }
     }
