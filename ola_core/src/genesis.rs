@@ -3,7 +3,7 @@ use ola_dal::StorageProcessor;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
     commitment::{L1BatchCommitment, L1BatchMetadata},
-    get_code_key, get_system_context_init_logs,
+    get_full_code_key, get_system_context_init_logs,
     log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
     protocol_version::{ProtocolVersion, ProtocolVersionId},
     AccountTreeId, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
@@ -212,12 +212,17 @@ async fn insert_system_contracts(
     let storage_logs: Vec<(H256, Vec<StorageLog>)> = contracts
         .iter()
         .map(|contract| {
-            let hash = hash_bytecode(&contract.bytecode);
-            let code_key = get_code_key(contract.account_id.address());
+            let hash = hash_bytecode(&contract.raw);
+            let bytecode_hash = hash_bytecode(&contract.bytecode);
+            let full_code_key = get_full_code_key(contract.account_id.address());
+            let bytecode_key = full_code_key.add(1);
 
             (
                 Default::default(),
-                vec![StorageLog::new_write_log(code_key, hash)],
+                vec![
+                    StorageLog::new_write_log(full_code_key, hash),
+                    StorageLog::new_write_log(bytecode_key, bytecode_hash),
+                ],
             )
         })
         .chain(Some(system_context_init_logs))
@@ -286,7 +291,7 @@ async fn insert_system_contracts(
 
     let factory_deps = contracts
         .iter()
-        .map(|c| (hash_bytecode(&c.bytecode), c.bytecode.clone()))
+        .map(|c| (hash_bytecode(&c.raw), c.raw.clone()))
         .collect();
     transaction
         .storage_dal()
