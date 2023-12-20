@@ -67,7 +67,8 @@ pub fn read_json_program(json_path: impl AsRef<Path>) -> (Vec<u8>, Vec<u8>) {
     let reader = BufReader::new(file);
     let program: BinaryProgram = serde_json::from_reader(reader).unwrap();
     let json_bytes = bincode::serialize(&program).expect("failed to read system contracts");
-    let bytecode_bytes = program_bytecode_to_bytes(&program.bytecode).expect("failed to load contract: {json_path}");
+    let bytecode_bytes =
+        program_bytecode_to_bytes(&program.bytecode).expect("failed to load contract: {json_path}");
     (json_bytes, bytecode_bytes)
 }
 
