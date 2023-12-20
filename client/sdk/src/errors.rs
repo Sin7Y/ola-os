@@ -30,4 +30,6 @@ pub enum ClientError {
     SigningError(#[from] SignerError),
     #[error("RPC error: {0:?}")]
     RpcError(#[from] RpcError),
+    #[error("Invalid ABI File")]
+    AbiParseError,
 }

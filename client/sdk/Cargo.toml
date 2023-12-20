@@ -10,6 +10,7 @@ ola_types = { path = "../../types" }
 ola_web3_decl = { path = "../../web3_decl", default-features = false, features = [
     "client",
 ] }
+ola_utils = { path = "../../utils" }
 parity-crypto = { version = "0.9", features = ["publickey"] }
 ethereum-types = "0.14.1"
 thiserror = "1.0"
@@ -17,3 +18,8 @@ secp256k1 = "0.28.0"
 sha2 = "0.10.0"
 async-trait = "0.1"
 tokio = { version = "1", features = ["full"] }
+ola-lang-abi = { git = "https://github.com/Sin7Y/ola-lang-abi.git", branch = "main" }
+serde = { version = "1.0.193", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.108", default-features = false, features = [
+    "std",
+] }

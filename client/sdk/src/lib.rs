@@ -4,14 +4,14 @@ use ola_types::tx::primitives::EIP712TypedStructure;
 use ola_types::tx::primitives::Eip712Domain;
 use ola_types::{tx::primitives::PackedEthSignature, Address};
 
+pub mod abi;
 pub mod errors;
 pub mod key_store;
 pub mod operation;
 pub mod private_key_signer;
+pub mod signer;
 pub mod utils;
 pub mod wallet;
-pub mod signer;
-
 #[async_trait]
 pub trait EthereumSigner: Send + Sync + Clone {
     async fn sign_message(&self, message: &[u8]) -> Result<PackedEthSignature, SignerError>;

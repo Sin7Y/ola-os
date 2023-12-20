@@ -81,10 +81,14 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+
     use ethereum_types::H256;
+    use ola_lang_abi::Value;
     use ola_types::{Address, L2ChainId, Nonce};
     use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
+    use crate::abi::get_calldata;
     use crate::signer::Signer;
     use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
     use ola_web3_decl::namespaces::eth::EthNamespaceClient;
@@ -106,7 +110,12 @@ mod tests {
         let nonce = wallet.get_nonce().await.unwrap();
 
         let contract_address = Address::zero();
-        let calldata = vec![];
+        let abi_file =
+            File::open("examples/vote_simple_abi.json").expect("failed to open ABI file");
+        let function_sig = "vote_proposal(u32)";
+        let params = vec![Value::U32(1)];
+        let calldata = get_calldata(abi_file, function_sig, params).unwrap();
+        println!("{:?}", calldata);
 
         let handle = wallet
             .start_execute_contract(None)
