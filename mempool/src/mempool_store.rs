@@ -130,6 +130,28 @@ impl MempoolStore {
         }
     }
 
+    /// When a sequencer starts the block over after a rejected transaction,
+    /// we have to rollback the nonces/ids in the mempool and
+    /// reinsert the transactions from the block back into mempool.
+    pub fn rollback(&mut self, tx: &Transaction) {
+        // rolling back the nonces and priority ids
+        match &tx.common_data {
+            ExecuteTransactionCommon::L2(_) => {
+                if let Some(score) = self
+                    .l2_transactions_per_account
+                    .get_mut(&tx.initiator_account())
+                    .expect("account is not available in mempool")
+                    .reset(tx)
+                {
+                    self.l2_priority_queue.remove(&score);
+                }
+            }
+            ExecuteTransactionCommon::ProtocolUpgrade(_) => {
+                panic!("Protocol upgrade tx is not supposed to be in mempool");
+            }
+        }
+    }
+
     pub fn get_mempool_info(&mut self) -> MempoolInfo {
         MempoolInfo {
             stashed_accounts: std::mem::take(&mut self.stashed_accounts),

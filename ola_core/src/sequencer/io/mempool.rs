@@ -4,6 +4,7 @@ use ola_vm::{vm::VmBlockResult, vm_with_bootloader::DerivedBlockContext};
 
 use std::{
     cmp,
+    collections::HashMap,
     time::{Duration, Instant},
 };
 
@@ -152,12 +153,12 @@ impl SequencerIO for MempoolIO {
         None
     }
 
-    // async fn rollback(&mut self, tx: Transaction) {
-    //     // Reset nonces in the mempool.
-    //     self.mempool.rollback(&tx);
-    //     // Insert the transaction back.
-    //     self.mempool.insert(vec![tx], HashMap::new());
-    // }
+    async fn rollback(&mut self, tx: Transaction) {
+        // Reset nonces in the mempool.
+        self.mempool.rollback(&tx);
+        // Insert the transaction back.
+        self.mempool.insert(vec![tx], HashMap::new());
+    }
 
     // async fn reject(&mut self, rejected: &Transaction, error: &str) {
     //     assert!(

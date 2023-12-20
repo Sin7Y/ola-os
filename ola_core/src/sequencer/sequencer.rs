@@ -352,16 +352,10 @@ impl OlaSequencer {
                     );
                 }
                 SealResolution::ExcludeAndSeal => {
-                    // TODO:
-                    // batch_executor.rollback_last_tx().await;
-                    // self.io.rollback(tx).await;
-                    panic!("SealResolution::ExcludeAndSeal not supported!")
+                    self.io.rollback(tx).await;
                 }
                 SealResolution::Unexecutable(_reason) => {
-                    // TODO:
-                    // batch_executor.rollback_last_tx().await;
                     // self.io.reject(&tx, reason).await;
-                    panic!("SealResolution::Unexecutable not supported!")
                 }
             };
 
