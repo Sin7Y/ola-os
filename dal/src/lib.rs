@@ -12,6 +12,7 @@ use storage_logs_dal::StorageLogsDal;
 use storage_logs_dedup_dal::StorageLogsDedupDal;
 use storage_web3_dal::StorageWeb3Dal;
 use token_dal::TokensDal;
+use transaction_web3_dal::TransactionsWeb3Dal;
 use transactions_dal::TransactionsDal;
 
 #[macro_use]
@@ -30,6 +31,7 @@ pub mod storage_web3_dal;
 pub mod time_utils;
 pub mod token_dal;
 pub mod transactions_dal;
+pub mod transaction_web3_dal;
 
 pub fn get_master_database_url() -> String {
     // FIXME:
@@ -124,6 +126,10 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn transactions_dal(&mut self) -> TransactionsDal<'_, 'a> {
         TransactionsDal { storage: self }
+    }
+
+    pub fn transactions_web3_dal(&mut self) -> TransactionsWeb3Dal<'_, 'a> {
+        TransactionsWeb3Dal { storage: self }
     }
 
     pub fn storage_dal(&mut self) -> StorageDal<'_, 'a> {

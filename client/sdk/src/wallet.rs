@@ -4,10 +4,15 @@ use crate::{
     signer::Signer,
     EthereumSigner,
 };
-use ola_types::{l2::L2Tx, tx::primitives::PackedEthSignature, Address};
+use ola_types::{
+    api::{BlockIdVariant, BlockNumber},
+    l2::L2Tx,
+    tx::primitives::PackedEthSignature,
+    Address,
+};
 use ola_web3_decl::{
     jsonrpsee::http_client::{HttpClient, HttpClientBuilder},
-    namespaces::ola::OlaNamespaceClient,
+    namespaces::{eth::EthNamespaceClient, ola::OlaNamespaceClient},
 };
 
 #[derive(Debug)]
@@ -36,7 +41,7 @@ where
 impl<S, P> Wallet<S, P>
 where
     S: EthereumSigner,
-    P: OlaNamespaceClient + Sync,
+    P: EthNamespaceClient + OlaNamespaceClient + Sync,
 {
     pub fn new(provider: P, signer: Signer<S>) -> Self {
         Self { provider, signer }
@@ -47,8 +52,15 @@ where
     }
 
     pub async fn get_nonce(&self) -> Result<u32, ClientError> {
-        // todo use provider to get nonce
-        Ok(0)
+        let nonce = self
+            .provider
+            .get_transaction_count(
+                self.address(),
+                Some(BlockIdVariant::BlockNumber(BlockNumber::Committed)),
+            )
+            .await?;
+
+        Ok(nonce)
     }
 
     pub fn start_execute_contract(
