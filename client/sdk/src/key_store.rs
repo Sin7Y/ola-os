@@ -14,7 +14,7 @@ pub struct OlaKeyPair {
 }
 
 impl OlaKeyPair {
-    fn new(secret: Secret) -> Result<Self, NumberConvertError> {
+    pub fn new(secret: Secret) -> Result<Self, NumberConvertError> {
         if !is_h256_a_valid_ola_hash(secret) {
             return Err(NumberConvertError::InvalidOlaHash(secret.to_string()));
         }
@@ -48,7 +48,7 @@ impl OlaKeyPair {
         })
     }
 
-    fn from_etherum_private_key(private_key: Secret) -> Result<Self, SignerError> {
+    pub fn from_etherum_private_key(private_key: Secret) -> Result<Self, SignerError> {
         let mut i: u32 = 0;
         loop {
             let secret = concat_h256_u32_and_sha256(private_key, i);

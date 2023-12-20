@@ -78,3 +78,46 @@ where
         Err(ClientError::MissingRequiredField("todo".to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ethereum_types::H256;
+    use ola_types::{Address, L2ChainId, Nonce};
+    use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
+
+    use crate::signer::Signer;
+    use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
+    use ola_web3_decl::namespaces::eth::EthNamespaceClient;
+    use ola_web3_decl::namespaces::ola::OlaNamespaceClient;
+
+    use super::Wallet;
+
+    #[tokio::test]
+    async fn test_send_transaction() {
+        let eth_private_key = H256::random();
+        let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
+        let pk_signer = PrivateKeySigner::new(key_pair.clone());
+        let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(0));
+        let client = HttpClientBuilder::default()
+            .build("http://localhost:13000")
+            .unwrap();
+
+        let wallet = Wallet::new(client, signer);
+        let nonce = wallet.get_nonce().await.unwrap();
+
+        let contract_address = Address::zero();
+        let calldata = vec![];
+
+        let handle = wallet
+            .start_execute_contract(None)
+            .calldata(calldata)
+            .contract_address(contract_address)
+            .nonce(Nonce(nonce))
+            .send()
+            .await;
+        match handle {
+            Ok(_) => println!("ok"),
+            Err(e) => println!("err: {:?}", e),
+        }
+    }
+}
