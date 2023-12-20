@@ -478,6 +478,24 @@ impl TransactionsDal<'_, '_> {
         }
     }
 
+    pub async fn mark_tx_as_rejected(&mut self, transaction_hash: H256, error: &str) {
+        
+            // If the rejected tx has been replaced, it means that this tx hash does not exist in the database
+            // and we will update nothing.
+            // These txs don't affect the state, so we can just easily skip this update.
+            sqlx::query!(
+                "UPDATE transactions
+                    SET error = $1, updated_at = now()
+                    WHERE hash = $2",
+                error,
+                transaction_hash.0.to_vec()
+            )
+            .execute(self.storage.conn())
+            .await
+            .unwrap();
+        
+    }
+
     pub async fn mark_txs_as_executed_in_l1_batch(
         &mut self,
         block_number: L1BatchNumber,

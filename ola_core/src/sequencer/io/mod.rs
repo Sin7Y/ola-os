@@ -189,11 +189,7 @@ pub trait SequencerIO: 'static + Send {
     /// Marks the transaction as "not executed", so it can be retrieved from the IO again.
     async fn rollback(&mut self, tx: Transaction);
     /// Marks the transaction as "rejected", e.g. one that is not correct and can't be executed.
-    // async fn reject(&mut self, tx: &Transaction, error: &str);
-    // /// Marks the transaction as "not executed", so it can be retrieved from the IO again.
-    // async fn rollback(&mut self, tx: Transaction);
-    // /// Marks the transaction as "rejected", e.g. one that is not correct and can't be executed.
-    // async fn reject(&mut self, tx: &Transaction, error: &str);
+    async fn reject(&mut self, tx: &Transaction, error: &str);
     /// Marks the miniblock (aka L2 block) as sealed.
     /// Returns the timestamp for the next miniblock.
     async fn seal_miniblock(&mut self, updates_manager: &UpdatesManager);
