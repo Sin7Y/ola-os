@@ -13,6 +13,16 @@ pub enum BlockId {
     Number(BlockNumber),
 }
 
+impl BlockId {
+    /// Extract block's id variant name.
+    pub fn extract_block_tag(&self) -> String {
+        match self {
+            BlockId::Number(block_number) => block_number.to_string(),
+            BlockId::Hash(_) => "hash".to_string(),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Display)]
 pub enum BlockNumber {
     /// Alias for BlockNumber::Latest.
@@ -80,5 +90,41 @@ impl<'de> Deserialize<'de> for BlockNumber {
             }
         }
         deserializer.deserialize_str(V)
+    }
+}
+
+/// Helper struct for EIP-1898.
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockNumberObject {
+    pub block_number: BlockNumber,
+}
+
+/// Helper struct for EIP-1898.
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockHashObject {
+    pub block_hash: H256,
+}
+
+/// Helper enum for EIP-1898.
+/// Should be used for `block` parameters in web3 JSON RPC methods that implement EIP-1898.
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum BlockIdVariant {
+    BlockNumber(BlockNumber),
+    BlockNumberObject(BlockNumberObject),
+    BlockHashObject(BlockHashObject),
+}
+
+impl From<BlockIdVariant> for BlockId {
+    fn from(value: BlockIdVariant) -> BlockId {
+        match value {
+            BlockIdVariant::BlockNumber(number) => BlockId::Number(number),
+            BlockIdVariant::BlockNumberObject(number_object) => {
+                BlockId::Number(number_object.block_number)
+            }
+            BlockIdVariant::BlockHashObject(hash_object) => BlockId::Hash(hash_object.block_hash),
+        }
     }
 }
