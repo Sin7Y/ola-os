@@ -354,8 +354,8 @@ impl OlaSequencer {
                 SealResolution::ExcludeAndSeal => {
                     self.io.rollback(tx).await;
                 }
-                SealResolution::Unexecutable(_reason) => {
-                    // self.io.reject(&tx, reason).await;
+                SealResolution::Unexecutable(reason) => {
+                    self.io.reject(&tx, reason).await;
                 }
             };
 

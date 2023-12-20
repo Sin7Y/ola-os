@@ -160,28 +160,29 @@ impl SequencerIO for MempoolIO {
         self.mempool.insert(vec![tx], HashMap::new());
     }
 
-    // async fn reject(&mut self, rejected: &Transaction, error: &str) {
-    //     assert!(
-    //         !rejected.is_l1(),
-    //         "L1 transactions should not be rejected: {}",
-    //         error
-    //     );
+    async fn reject(&mut self, rejected: &Transaction, error: &str) {
+        // TODO: uncomment when add L1 transaction
+        // assert!(
+        //     !rejected.is_l1(),
+        //     "L1 transactions should not be rejected: {}",
+        //     error
+        // );
 
-    //     // Reset the nonces in the mempool, but don't insert the transaction back.
-    //     self.mempool.rollback(rejected);
+        // Reset the nonces in the mempool, but don't insert the transaction back.
+        self.mempool.rollback(rejected);
 
-    //     // Mark tx as rejected in the storage.
-    //     let mut storage = self.pool.access_storage_tagged("sequencer").await;
-    //     vlog::warn!(
-    //         "transaction {} is rejected with error {}",
-    //         rejected.hash(),
-    //         error
-    //     );
-    //     storage
-    //         .transactions_dal()
-    //         .mark_tx_as_rejected(rejected.hash(), &format!("rejected: {}", error))
-    //         .await;
-    // }
+        // Mark tx as rejected in the storage.
+        let mut storage = self.pool.access_storage_tagged("sequencer").await;
+        olaos_logs::warn!(
+            "transaction {} is rejected with error {}",
+            rejected.hash(),
+            error
+        );
+        storage
+            .transactions_dal()
+            .mark_tx_as_rejected(rejected.hash(), &format!("rejected: {}", error))
+            .await;
+    }
 
     async fn seal_miniblock(&mut self, updates_manager: &UpdatesManager) {
         let command = updates_manager
