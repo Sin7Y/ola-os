@@ -50,7 +50,7 @@ impl L2Tx {
                 nonce,
                 initiator_address,
                 signature: Default::default(),
-                transaction_type: TransactionType::EIP1559Transaction,
+                transaction_type: TransactionType::EIP712Transaction,
                 input: None,
             },
             received_timestamp_ms: unix_timestamp_ms(),
