@@ -38,6 +38,13 @@ impl MempoolGuard {
             .next_transaction()
     }
 
+    pub fn rollback(&mut self, rejected: &Transaction) {
+        self.0
+            .lock()
+            .expect("failed to acquire mempool lock")
+            .rollback(rejected);
+    }
+
     pub fn get_mempool_info(&mut self) -> MempoolInfo {
         self.0
             .lock()

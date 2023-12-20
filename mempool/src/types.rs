@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap};
 
-use ola_types::{l2::L2Tx, Address, Nonce};
+use ola_types::{l2::L2Tx, Address, Nonce, Transaction};
 
 #[derive(Debug)]
 pub(crate) struct AccountTransactions {
@@ -44,6 +44,18 @@ impl AccountTransactions {
             account: transaction.initiator_account(),
             received_at_ms: transaction.received_timestamp_ms,
         }
+    }
+
+    // Handles transaction rejection. Returns optional score of its successor
+    pub fn reset(&mut self, transaction: &Transaction) -> Option<MempoolScore> {
+        // current nonce for the group needs to be reset
+        let tx_nonce = transaction
+            .nonce()
+            .expect("nonce is not set for L2 transaction");
+        self.nonce = self.nonce.min(tx_nonce);
+        self.transactions
+            .get(&(tx_nonce + 1))
+            .map(Self::score_for_transaction)
     }
 
     pub fn len(&self) -> usize {
