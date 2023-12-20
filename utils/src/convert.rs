@@ -108,3 +108,37 @@ pub fn bytes_to_u64s(bytes: Vec<u8>) -> Vec<u64> {
         })
         .collect()
 }
+
+pub fn program_bytecode_to_bytes(bytecode: &str) -> Option<Vec<u8>> {
+    let felt_str_vec: Vec<_> = bytecode.split("\n").collect();
+    let mut bytes = vec![];
+    for felt_str in felt_str_vec {
+        let mut hex_str = felt_str.trim_start_matches("0x").to_string();
+        if hex_str.len() % 2 == 1 {
+            hex_str = format!("0{}", hex_str);
+        }
+        let mut value = [0; 8];
+        if let Ok(felt) = hex::decode(hex_str) {
+            for (idx, &el) in felt.iter().rev().enumerate() {
+                value[7 - idx] = el;
+            }
+            bytes.extend(value);
+        } else {
+            return None;
+        }
+    }
+    Some(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::program_bytecode_to_bytes;
+
+    #[test]
+    fn test_program_bytecode_to_bytes() {
+        let bytecode = "0x6000020080000000\n0xc\n0x6000020000200000";
+        let expect = vec![0x60, 0x00, 0x02, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x60, 0x00, 0x02, 0x00, 0x00, 0x20, 0x00, 0x00];
+        let real = program_bytecode_to_bytes(bytecode).unwrap();
+        assert_eq!(expect, real);
+    }
+}

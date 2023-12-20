@@ -18,6 +18,7 @@ use olavm_core::{
     // types::merkle_tree::{TreeKey, TreeValue},
     types::storage::StorageKey as OlavmStorageKey,
 };
+use olavm_plonky2::hash::utils::h256_add_offset;
 use serde::{Deserialize, Serialize};
 
 use crate::log::StorageLog;
@@ -62,6 +63,13 @@ impl StorageKey {
     pub fn hashed_key_u256(&self) -> U256 {
         U256::from_little_endian(&Self::raw_hashed_key(self.address(), self.key()))
     }
+
+    pub fn add(&self, val: u64) -> Self {
+        let bytes = self.key().as_bytes().to_vec();
+        let bytes: [u8; 32] = bytes.try_into().unwrap();
+        let key = h256_add_offset(bytes, val);
+        Self::new(self.account, H256(key))
+    }
 }
 
 pub type StorageValue = H256;
@@ -80,9 +88,10 @@ pub fn get_nonce_key(account: &Address) -> StorageKey {
     StorageKey::new(nonce_manager, key)
 }
 
-pub fn get_code_key(account: &Address) -> StorageKey {
+pub fn get_full_code_key(account: &Address) -> StorageKey {
     let account_code_storage = AccountTreeId::new(ACCOUNT_CODE_STORAGE_ADDRESS);
-    StorageKey::new(account_code_storage, address_to_h256(account))
+    let key = [[0; 32], account.to_fixed_bytes()].concat();
+    StorageKey::new(account_code_storage, hash_bytes(&key))
 }
 
 pub fn get_known_code_key(hash: &H256) -> StorageKey {
