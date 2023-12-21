@@ -69,8 +69,12 @@ impl TransactionData {
     }
 
     pub fn into_tokens(self) -> Vec<U256> {
-        let bytes = self.abi_encode();
-        assert!(bytes.len() % 32 == 0);
+        let mut bytes = self.abi_encode();
+        let padding_count = 32 - bytes.len() % 32;
+        if padding_count > 0 {
+            let padding_zeros = vec![0 as u8; padding_count];
+            bytes.extend_from_slice(&padding_zeros);
+        }
 
         bytes_to_be_words(bytes)
     }

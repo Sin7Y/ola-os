@@ -1,5 +1,5 @@
 use crate::{
-    l2::L2Tx,
+    l2::{L2Tx, TransactionType},
     tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature, StructBuilder},
     EIP_1559_TX_TYPE, EIP_712_TX_TYPE,
 };
@@ -392,13 +392,21 @@ impl L2Tx {
         _max_tx_size: usize,
     ) -> Result<Self, SerializationTransactionError> {
         let nonce = request.get_nonce_checked()?;
+
+        let raw_signature = request.get_signature().unwrap_or_else(|_| [0; 32].to_vec());
         let (factory_deps, paymaster_params) = request
             .eip712_meta
             .map(|eip712_meta| (eip712_meta.factory_deps, eip712_meta.paymaster_params))
             .unwrap_or_default();
 
-        let contrace_address = H256::from(request.to.unwrap_or_default());
-        let tx = L2Tx::new(
+        if let Some(deps) = factory_deps.as_ref() {
+            validate_factory_deps(deps)?;
+        }
+
+        let contrace_address = request
+            .to
+            .ok_or(SerializationTransactionError::ToAddressIsNull)?;
+        let mut tx = L2Tx::new(
             contrace_address,
             request.input.0.clone(),
             nonce,
@@ -406,6 +414,12 @@ impl L2Tx {
             factory_deps,
             paymaster_params.unwrap_or_default(),
         );
+        tx.common_data.transaction_type = match request.transaction_type.map(|t| t.as_u64() as u8) {
+            Some(EIP_712_TX_TYPE) => TransactionType::EIP712Transaction,
+            Some(EIP_1559_TX_TYPE) => TransactionType::EIP1559Transaction,
+            _ => TransactionType::EIP712Transaction,
+        };
+        tx.set_raw_signature(raw_signature);
         Ok(tx)
     }
 }
@@ -464,11 +478,11 @@ mod tests {
             nonce: U256::from(0u32),
             to: Some(Address::random()),
             from: Some(address),
-            input: Bytes::from(vec![1, 2, 3]),
+            input: Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8]),
             transaction_type: Some(U64::from(EIP_712_TX_TYPE)),
             eip712_meta: Some(Eip712Meta {
                 factory_deps: Some(vec![vec![2; 32]]),
-                custom_signature: Some(vec![1, 2, 3]),
+                custom_signature: Some(vec![1; 32]),
                 paymaster_params: Some(PaymasterParams {
                     paymaster: Default::default(),
                     paymaster_input: vec![],

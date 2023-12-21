@@ -157,7 +157,7 @@ impl Default for L2TxCommonData {
             nonce: Nonce(0),
             initiator_address: Address::zero(),
             signature: Default::default(),
-            transaction_type: TransactionType::EIP1559Transaction,
+            transaction_type: TransactionType::EIP712Transaction,
             input: Default::default(),
         }
     }

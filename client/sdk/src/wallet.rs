@@ -76,7 +76,7 @@ where
         tx: L2Tx,
     ) -> Result<SyncTransactionHandle<'_, P>, ClientError> {
         let transaction_request: TransactionRequest = {
-            let mut req: TransactionRequest = tx.into();
+            let mut req: TransactionRequest = tx.clone().into();
             if let Some(meta) = req.eip712_meta.as_mut() {
                 meta.custom_signature = Some(tx.common_data.signature);
             }
