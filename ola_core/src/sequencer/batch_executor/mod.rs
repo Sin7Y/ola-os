@@ -89,7 +89,6 @@ impl BatchExecutorHandle {
 #[derive(Debug)]
 pub(super) enum Command {
     ExecuteTx(Box<Transaction>, oneshot::Sender<TxExecutionResult>),
-    RollbackLastTx(oneshot::Sender<()>),
     FinishBatch(oneshot::Sender<VmBlockResult>),
 }
 
@@ -326,11 +325,6 @@ impl BatchExecutor {
                         let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
                         resp.send(result).unwrap();
                     }
-                }
-                Command::RollbackLastTx(resp) => {
-                    // FIXME: @pierre
-                    // self.rollback_last_tx(&mut vm);
-                    resp.send(()).unwrap();
                 }
                 Command::FinishBatch(resp) => {
                     // resp.send(self.finish_batch(&mut vm)).unwrap();
