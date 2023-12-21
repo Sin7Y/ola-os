@@ -315,19 +315,18 @@ impl UpdatesManager {
 
         // The vm execution was paused right after the last transaction was executed.
         // There is some post-processing work that the VM needs to do before the block is fully processed.
-        // TODO: @Pierre
-        let VmBlockResult {
-            full_result,
-            block_tip_result,
-        } = block_result;
-        assert!(
-            full_result.revert_reason.is_none(),
-            "VM must not revert when finalizing block. Revert reason: {:?}",
-            full_result.revert_reason
-        );
-        progress.end_stage("vm_finalization", None);
+        // let VmBlockResult {
+        //     full_result,
+        //     block_tip_result,
+        // } = block_result;
+        // assert!(
+        //     full_result.revert_reason.is_none(),
+        //     "VM must not revert when finalizing block. Revert reason: {:?}",
+        //     full_result.revert_reason
+        // );
+        // progress.end_stage("vm_finalization", None);
 
-        self.extend_from_fictive_transaction(block_tip_result.logs);
+        // self.extend_from_fictive_transaction(block_tip_result.logs);
         // Seal fictive miniblock with last events and storage logs.
         let miniblock_command =
             self.seal_miniblock_command(current_l1_batch_number, current_miniblock_number);
@@ -335,8 +334,7 @@ impl UpdatesManager {
         progress.end_stage("fictive_miniblock", None);
 
         let (_, deduped_log_queries) = sort_storage_access_queries(
-            full_result
-                .storage_log_queries
+            self.l1_batch.block_storage_logs
                 .iter()
                 .map(|log| &log.log_query),
         );
@@ -344,7 +342,7 @@ impl UpdatesManager {
 
         let (l1_tx_count, l2_tx_count) = l1_l2_tx_count(&self.l1_batch.executed_transactions);
         let (writes_count, reads_count) =
-            storage_log_query_write_read_counts(&full_result.storage_log_queries);
+            storage_log_query_write_read_counts(&self.l1_batch.block_storage_logs);
         let (dedup_writes_count, dedup_reads_count) =
             log_query_write_read_counts(deduped_log_queries.iter());
 
@@ -375,7 +373,7 @@ impl UpdatesManager {
             timestamp,
             l1_tx_count: l1_tx_count as u16,
             l2_tx_count: l2_tx_count as u16,
-            used_contract_hashes: full_result.used_contract_hashes,
+            used_contract_hashes: vec![],
             base_system_contracts_hashes: self.base_system_contract_hashes(),
             protocol_version: Some(self.protocol_version()),
         };
