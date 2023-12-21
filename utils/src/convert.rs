@@ -132,7 +132,7 @@ pub fn program_bytecode_to_bytes(bytecode: &str) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::program_bytecode_to_bytes;
+    use crate::{program_bytecode_to_bytes, u64s_to_bytes};
 
     #[test]
     fn test_program_bytecode_to_bytes() {
@@ -143,5 +143,15 @@ mod tests {
         ];
         let real = program_bytecode_to_bytes(bytecode).unwrap();
         assert_eq!(expect, real);
+    }
+
+    #[test]
+    fn test_u64s_to_u8s() {
+        let u64s: Vec<u64> = vec![0, 1, 2];
+        let result = u64s_to_bytes(&u64s);
+        let expect: [u8; 24] = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2,
+        ];
+        assert_eq!(result.as_slice(), expect);
     }
 }
