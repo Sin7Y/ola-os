@@ -394,8 +394,8 @@ impl L2Tx {
         }
 
         let contrace_address = request
-        .to
-        .ok_or(SerializationTransactionError::ToAddressIsNull)?;
+            .to
+            .ok_or(SerializationTransactionError::ToAddressIsNull)?;
         let mut tx = L2Tx::new(
             contrace_address,
             request.input.0.clone(),
