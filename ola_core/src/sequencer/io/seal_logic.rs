@@ -334,7 +334,8 @@ impl UpdatesManager {
         progress.end_stage("fictive_miniblock", None);
 
         let (_, deduped_log_queries) = sort_storage_access_queries(
-            self.l1_batch.block_storage_logs
+            self.l1_batch
+                .block_storage_logs
                 .iter()
                 .map(|log| &log.log_query),
         );

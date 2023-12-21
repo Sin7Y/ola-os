@@ -1,6 +1,7 @@
 use ola_types::{
+    log::StorageLogQuery,
     priority_op_onchain_data::PriorityOpOnchainData,
-    tx::{tx_execution_info::ExecutionMetrics, TransactionExecutionResult}, log::StorageLogQuery,
+    tx::{tx_execution_info::ExecutionMetrics, TransactionExecutionResult},
 };
 
 use super::miniblock_updates::MiniblockUpdates;
@@ -28,7 +29,8 @@ impl L1BatchUpdates {
     pub(crate) fn extend_from_sealed_miniblock(&mut self, miniblock_updates: MiniblockUpdates) {
         self.executed_transactions
             .extend(miniblock_updates.executed_transactions);
-        self.block_storage_logs.extend(miniblock_updates.storage_logs);
+        self.block_storage_logs
+            .extend(miniblock_updates.storage_logs);
         self.block_execution_metrics += miniblock_updates.block_execution_metrics;
         self.txs_encoding_size += miniblock_updates.txs_encoding_size;
     }
