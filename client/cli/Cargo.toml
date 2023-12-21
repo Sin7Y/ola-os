@@ -11,7 +11,7 @@ description = "Ola cli tools"
 clap = "4.4.7"
 thiserror = "1.0"
 ola_assembler = { git = "https://github.com/Sin7Y/olavm.git", branch = "main", package = "assembler" }
-ola-lang = { git = "https://github.com/Sin7Y/ola-lang.git", branch = "main" }
+ola-lang = { git = "https://github.com/Sin7Y/ola-lang.git", branch = "develop" }
 ola-lang-abi = { git = "https://github.com/Sin7Y/ola-lang-abi.git", branch = "main" }
 num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
