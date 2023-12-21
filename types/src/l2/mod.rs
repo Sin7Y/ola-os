@@ -32,6 +32,7 @@ impl L2Tx {
         nonce: Nonce,
         initiator_address: Address,
         factory_deps: Option<Vec<Vec<u8>>>,
+        signature: Vec<u8>,
         _paymaster_params: PaymasterParams,
     ) -> Self {
         Self {
@@ -43,7 +44,7 @@ impl L2Tx {
             common_data: L2TxCommonData {
                 nonce,
                 initiator_address,
-                signature: Default::default(),
+                signature,
                 transaction_type: TransactionType::EIP1559Transaction,
                 input: None,
             },

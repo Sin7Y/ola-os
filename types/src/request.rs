@@ -382,9 +382,9 @@ impl L2Tx {
         _max_tx_size: usize,
     ) -> Result<Self, SerializationTransactionError> {
         let nonce = request.get_nonce_checked()?;
-        let (factory_deps, paymaster_params) = request
+        let (factory_deps, signature, paymaster_params) = request
             .eip712_meta
-            .map(|eip712_meta| (eip712_meta.factory_deps, eip712_meta.paymaster_params))
+            .map(|eip712_meta| (eip712_meta.factory_deps, eip712_meta.custom_signature, eip712_meta.paymaster_params))
             .unwrap_or_default();
 
         let contrace_address = H256::from(request.to.unwrap_or_default());
@@ -394,6 +394,7 @@ impl L2Tx {
             nonce,
             request.from.unwrap_or_default(),
             factory_deps,
+            signature.unwrap_or_else(|| [0_u8; 32].to_vec()),
             paymaster_params.unwrap_or_default(),
         );
         Ok(tx)
@@ -454,11 +455,11 @@ mod tests {
             nonce: U256::from(0u32),
             to: Some(Address::random()),
             from: Some(address),
-            input: Bytes::from(vec![1, 2, 3]),
+            input: Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8]),
             transaction_type: Some(U64::from(EIP_712_TX_TYPE)),
             eip712_meta: Some(Eip712Meta {
                 factory_deps: Some(vec![vec![2; 32]]),
-                custom_signature: Some(vec![1, 2, 3]),
+                custom_signature: Some(vec![1; 32]),
                 paymaster_params: Some(PaymasterParams {
                     paymaster: Default::default(),
                     paymaster_input: vec![],

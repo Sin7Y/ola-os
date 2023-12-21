@@ -41,11 +41,13 @@ impl BaseSystemContracts {
         }
     }
 
+    // used for eth_calls, the same as execute txs in Ola
     pub fn playground() -> Self {
         let (entrypoint, _) = read_proved_block_entrypoint_bytecode();
         BaseSystemContracts::load_with_entrypoint(entrypoint)
     }
 
+    // used for execute txs in Ola
     pub fn load_from_disk() -> Self {
         let (entrypoint, _) = read_proved_block_entrypoint_bytecode();
         BaseSystemContracts::load_with_entrypoint(entrypoint)
@@ -73,7 +75,6 @@ pub fn read_json_program(json_path: impl AsRef<Path>) -> (Vec<u8>, Vec<u8>) {
 }
 
 pub fn read_entrypoint_code(entrypoint_type: &str) -> (Vec<u8>, Vec<u8>) {
-    // FIXME:
     read_json_program(format!(
         "etc/system-contracts/contracts/{}.json",
         entrypoint_type
@@ -81,7 +82,7 @@ pub fn read_entrypoint_code(entrypoint_type: &str) -> (Vec<u8>, Vec<u8>) {
 }
 
 pub fn read_proved_block_entrypoint_bytecode() -> (Vec<u8>, Vec<u8>) {
-    read_entrypoint_code("entrypoint")
+    read_entrypoint_code("Entrypoint")
 }
 
 pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> (Vec<u8>, Vec<u8>) {
