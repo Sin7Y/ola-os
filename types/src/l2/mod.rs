@@ -44,7 +44,7 @@ impl L2Tx {
                 nonce,
                 initiator_address,
                 signature: Default::default(),
-                transaction_type: TransactionType::EIP1559Transaction,
+                transaction_type: TransactionType::EIP712Transaction,
                 input: None,
             },
             received_timestamp_ms: unix_timestamp_ms(),
@@ -53,6 +53,10 @@ impl L2Tx {
 
     pub fn set_input(&mut self, data: Vec<u8>, hash: H256) {
         self.common_data.set_input(data, hash)
+    }
+
+    pub fn set_raw_signature(&mut self, signature: Vec<u8>) {
+        self.common_data.signature = signature;
     }
 
     pub fn initiator_account(&self) -> Address {
@@ -118,7 +122,7 @@ impl Default for L2TxCommonData {
             nonce: Nonce(0),
             initiator_address: Address::zero(),
             signature: Default::default(),
-            transaction_type: TransactionType::EIP1559Transaction,
+            transaction_type: TransactionType::EIP712Transaction,
             input: Default::default(),
         }
     }
