@@ -85,7 +85,6 @@ pub fn read_proved_block_entrypoint_bytecode() -> (Vec<u8>, Vec<u8>) {
 }
 
 pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> (Vec<u8>, Vec<u8>) {
-    // FIXME: repace zbin_path
     read_json_program(format!(
         "etc/system-contracts/contracts/{0}{1}.json",
         directory, name
