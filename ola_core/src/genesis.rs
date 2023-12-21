@@ -3,7 +3,7 @@ use ola_dal::StorageProcessor;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
     commitment::{L1BatchCommitment, L1BatchMetadata},
-    get_full_code_key, get_system_context_init_logs,
+    get_full_code_key,
     log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
     protocol_version::{ProtocolVersion, ProtocolVersionId},
     AccountTreeId, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
@@ -205,10 +205,8 @@ async fn insert_base_system_contracts_to_factory_deps(
 async fn insert_system_contracts(
     storage: &mut StorageProcessor<'_>,
     contracts: &[DeployedContract],
-    chain_id: L2ChainId,
+    _chain_id: L2ChainId,
 ) {
-    let system_context_init_logs = (H256::default(), get_system_context_init_logs(chain_id));
-
     let storage_logs: Vec<(H256, Vec<StorageLog>)> = contracts
         .iter()
         .map(|contract| {
@@ -225,7 +223,6 @@ async fn insert_system_contracts(
                 ],
             )
         })
-        .chain(Some(system_context_init_logs))
         .collect();
 
     let mut transaction = storage.start_transaction().await;
