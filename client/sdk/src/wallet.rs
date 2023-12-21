@@ -78,7 +78,7 @@ where
         let transaction_request: TransactionRequest = {
             let mut req: TransactionRequest = tx.into();
             if let Some(meta) = req.eip712_meta.as_mut() {
-                meta.custom_signature = None;
+                meta.custom_signature = Some(tx.common_data.signature);
             }
             req.from = Some(self.address());
             req
@@ -92,8 +92,10 @@ where
 
         let encoded_tx = transaction_request.get_signed_bytes(&signature, self.signer.chain_id.0);
         let bytes = Bytes(encoded_tx);
+        println!("tx_bytes: {:?}", bytes);
 
         let tx_hash = self.provider.send_raw_transaction(bytes).await?;
+        println!("tx_hash: {:?}", tx_hash);
 
         Ok(SyncTransactionHandle::new(tx_hash, &self.provider))
     }
@@ -127,7 +129,7 @@ mod tests {
             .unwrap();
 
         let wallet = Wallet::new(client, signer);
-        let nonce = wallet.get_nonce().await.unwrap();
+        let nonce = 0;
 
         let contract_address = Address::zero();
         let abi_file =
