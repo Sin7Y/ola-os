@@ -302,11 +302,11 @@ impl UpdatesManager {
     /// This action includes a creation of an empty "fictive" miniblock that contains
     /// the events generated during the bootloader "tip phase".
     pub(crate) async fn seal_l1_batch(
-        mut self,
+        self,
         storage: &mut StorageProcessor<'_>,
         current_miniblock_number: MiniblockNumber,
         current_l1_batch_number: L1BatchNumber,
-        block_result: VmBlockResult,
+        _block_result: VmBlockResult,
         block_context: DerivedBlockContext,
     ) {
         let _started_at = Instant::now();
