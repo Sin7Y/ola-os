@@ -63,6 +63,13 @@ impl PartialEq for Transaction {
 impl Eq for Transaction {}
 
 impl Transaction {
+    pub fn nonce(&self) -> Option<Nonce> {
+        match &self.common_data {
+            ExecuteTransactionCommon::L2(tx) => Some(tx.nonce),
+            ExecuteTransactionCommon::ProtocolUpgrade(_) => None,
+        }
+    }
+
     pub fn hash(&self) -> H256 {
         match &self.common_data {
             ExecuteTransactionCommon::L2(data) => data.hash(),
