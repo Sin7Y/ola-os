@@ -27,6 +27,7 @@ CREATE TABLE l1_batches
     
     merkle_root_hash BYTEA,
     initial_bootloader_heap_content JSONB NOT NULL,
+    used_contract_hashes JSONB NOT NULL,
     compressed_initial_writes BYTEA,
     compressed_repeated_writes BYTEA,
     rollup_last_leaf_index BIGINT,
