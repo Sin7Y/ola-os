@@ -99,23 +99,6 @@ pub fn get_known_code_key(hash: &H256) -> StorageKey {
     StorageKey::new(known_codes_storage, *hash)
 }
 
-pub fn get_system_context_init_logs(chain_id: L2ChainId) -> Vec<StorageLog> {
-    vec![
-        StorageLog::new_write_log(
-            get_system_context_key(SYSTEM_CONTEXT_CHAIN_ID_POSITION),
-            H256::from_low_u64_be(chain_id.0 as u64),
-        ),
-        StorageLog::new_write_log(
-            get_system_context_key(SYSTEM_CONTEXT_COINBASE_POSITION),
-            address_to_h256(&BOOTLOADER_ADDRESS),
-        ),
-        StorageLog::new_write_log(
-            get_system_context_key(SYSTEM_CONTEXT_DIFFICULTY_POSITION),
-            SYSTEM_CONTEXT_DIFFICULTY,
-        ),
-    ]
-}
-
 pub fn get_system_context_key(key: H256) -> StorageKey {
     let system_context = AccountTreeId::new(SYSTEM_CONTEXT_ADDRESS);
     StorageKey::new(system_context, key)
