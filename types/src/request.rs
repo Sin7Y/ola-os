@@ -397,10 +397,9 @@ impl L2Tx {
             .map(|eip712_meta| (eip712_meta.factory_deps, eip712_meta.paymaster_params))
             .unwrap_or_default();
 
+        let contrace_address = H256::from(request.to.unwrap_or_default());
         let tx = L2Tx::new(
-            request
-                .to
-                .ok_or(SerializationTransactionError::ToAddressIsNull)?,
+            contrace_address,
             request.input.0.clone(),
             nonce,
             request.from.unwrap_or_default(),

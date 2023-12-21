@@ -9,7 +9,7 @@ use crate::{
     tx::{execute::Execute, primitives::PackedEthSignature},
     utils::unix_timestamp_ms,
     ExecuteTransactionCommon, InputData, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE,
-    PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
+    PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256,
 };
 use serde::{Deserialize, Serialize};
 
