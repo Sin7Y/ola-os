@@ -3,16 +3,14 @@ use std::{fmt, time::Instant};
 
 use async_trait::async_trait;
 use ola_dal::connection::ConnectionPool;
-use ola_state::{rocksdb::RocksdbStorage, storage_view::StorageView};
-use ola_types::{ExecuteTransactionCommon, L1BatchNumber, Transaction, U256};
+use ola_state::rocksdb::RocksdbStorage;
+use ola_types::{ExecuteTransactionCommon, Transaction};
 use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
 use olavm_core::state::error::StateError;
-use olavm_core::types::merkle_tree::{
-    h160_to_tree_key, h256_to_tree_key, u256_to_tree_key, u8_arr_to_tree_key, TreeValue,
-};
+use olavm_core::types::merkle_tree::{h256_to_tree_key, u8_arr_to_tree_key, TreeValue};
 use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
 use olavm_core::types::{Field, GoldilocksField};
 use olavm_core::vm::transaction::TxCtxInfo;
@@ -20,10 +18,9 @@ use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
 };
-use web3::signing::Key;
 
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
-use ola_config::database::DBConfig;
+
 use ola_types::tx::tx_execution_info::TxExecutionStatus;
 use zk_vm::OlaVM;
 
@@ -151,7 +148,7 @@ impl MainBatchExecutorBuilder {
     }
 
     async fn init_batch_mock(&self, l1_batch_params: L1BatchParams) -> BatchExecutorHandle {
-        let mut secondary_storage = RocksdbStorage::new(self.sequencer_db_path.as_ref());
+        let secondary_storage = RocksdbStorage::new(self.sequencer_db_path.as_ref());
 
         let batch_number = l1_batch_params
             .context_mode
@@ -317,7 +314,7 @@ impl BatchExecutor {
                             entrypoint_dry_run_metrics: ExecutionMetricsForCriteria {
                                 execution_metrics: Default::default(),
                             },
-                            entrypoint_dry_run_result: Box::new(Default::default()),
+                            entrypoint_dry_run_result: Box::default(),
                         };
                         resp.send(result).unwrap();
                     } else {
@@ -326,7 +323,7 @@ impl BatchExecutor {
                         resp.send(result).unwrap();
                     }
                 }
-                Command::FinishBatch(resp) => {
+                Command::FinishBatch(_resp) => {
                     // resp.send(self.finish_batch(&mut vm)).unwrap();
                     return;
                 }
