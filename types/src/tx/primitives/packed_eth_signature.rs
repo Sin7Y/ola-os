@@ -56,7 +56,7 @@ impl PackedEthSignature {
     pub fn deserialize_packed(bytes: &[u8]) -> Result<Self, DeserializeError> {
         let signature_without_v = Self::deserialize_signature_without_v(bytes)?;
         let mut signature = [0u8; 65];
-        signature.copy_from_slice(&signature_without_v);
+        signature[..64].copy_from_slice(&signature_without_v);
         Ok(PackedEthSignature(ETHSignature::from(signature)))
     }
 

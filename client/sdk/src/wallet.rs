@@ -7,8 +7,9 @@ use crate::{
 use ola_types::{
     api::{BlockIdVariant, BlockNumber},
     l2::L2Tx,
-    tx::primitives::PackedEthSignature,
-    Address,
+    request::TransactionRequest,
+    tx::primitives::{Eip712Domain, PackedEthSignature},
+    Address, Bytes,
 };
 use ola_web3_decl::{
     jsonrpsee::http_client::{HttpClient, HttpClientBuilder},
@@ -74,8 +75,27 @@ where
         &self,
         tx: L2Tx,
     ) -> Result<SyncTransactionHandle<'_, P>, ClientError> {
-        // todo
-        Err(ClientError::MissingRequiredField("todo".to_string()))
+        let transaction_request: TransactionRequest = {
+            let mut req: TransactionRequest = tx.into();
+            if let Some(meta) = req.eip712_meta.as_mut() {
+                meta.custom_signature = None;
+            }
+            req.from = Some(self.address());
+            req
+        };
+        let domain = Eip712Domain::new(self.signer.chain_id);
+        let signature = self
+            .signer
+            .eth_signer
+            .sign_typed_data(&domain, &transaction_request)
+            .await?;
+
+        let encoded_tx = transaction_request.get_signed_bytes(&signature, self.signer.chain_id.0);
+        let bytes = Bytes(encoded_tx);
+
+        let tx_hash = self.provider.send_raw_transaction(bytes).await?;
+
+        Ok(SyncTransactionHandle::new(tx_hash, &self.provider))
     }
 }
 
@@ -101,7 +121,7 @@ mod tests {
         let eth_private_key = H256::random();
         let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
         let pk_signer = PrivateKeySigner::new(key_pair.clone());
-        let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(0));
+        let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(270));
         let client = HttpClientBuilder::default()
             .build("http://localhost:13000")
             .unwrap();
