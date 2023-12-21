@@ -205,7 +205,7 @@ async fn insert_base_system_contracts_to_factory_deps(
 async fn insert_system_contracts(
     storage: &mut StorageProcessor<'_>,
     contracts: &[DeployedContract],
-    chain_id: L2ChainId,
+    _chain_id: L2ChainId,
 ) {
     let storage_logs: Vec<(H256, Vec<StorageLog>)> = contracts
         .iter()
