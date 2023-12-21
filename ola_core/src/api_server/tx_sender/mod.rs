@@ -117,9 +117,7 @@ impl TxSender {
             .await;
 
         if let Err(err) = validation_result {
-            // FIXME:
             return Err(SubmitTxError::ValidationFailed(err));
-            // return Err(err.into());
         }
 
         self.ensure_tx_executable(tx.clone().into(), &tx_metrics, true)?;

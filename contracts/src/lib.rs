@@ -1,5 +1,5 @@
 use ola_basic_types::H256;
-use ola_utils::bytecode::hash_bytecode;
+use ola_utils::{bytecode::hash_bytecode, program_bytecode_to_bytes};
 use olavm_core::program::binary_program::BinaryProgram;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufReader, path::Path};
@@ -31,12 +31,9 @@ impl BaseSystemContracts {
             hash,
         };
 
-        let bytecode = read_sys_contract_bytecode("", "DefaultAccount");
-        let hash = hash_bytecode(&bytecode);
-        let default_aa = SystemContractCode {
-            code: bytecode,
-            hash,
-        };
+        let (raw, _) = read_sys_contract_bytecode("", "DefaultAccount");
+        let hash = hash_bytecode(&raw);
+        let default_aa = SystemContractCode { code: raw, hash };
 
         BaseSystemContracts {
             entrypoint,
@@ -45,12 +42,12 @@ impl BaseSystemContracts {
     }
 
     pub fn playground() -> Self {
-        let entrypoint = read_proved_block_entrypoint_bytecode();
+        let (entrypoint, _) = read_proved_block_entrypoint_bytecode();
         BaseSystemContracts::load_with_entrypoint(entrypoint)
     }
 
     pub fn load_from_disk() -> Self {
-        let entrypoint = read_proved_block_entrypoint_bytecode();
+        let (entrypoint, _) = read_proved_block_entrypoint_bytecode();
         BaseSystemContracts::load_with_entrypoint(entrypoint)
     }
 
@@ -62,17 +59,20 @@ impl BaseSystemContracts {
     }
 }
 
-pub fn read_json_program(json_path: impl AsRef<Path>) -> Vec<u8> {
+pub fn read_json_program(json_path: impl AsRef<Path>) -> (Vec<u8>, Vec<u8>) {
     // dbg!(json_path.as_ref().to_str());
     let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
     let bytecode_path = Path::new(&ola_home).join(json_path);
     let file = File::open(bytecode_path).unwrap();
     let reader = BufReader::new(file);
     let program: BinaryProgram = serde_json::from_reader(reader).unwrap();
-    bincode::serialize(&program).expect("failed to read system contracts")
+    let json_bytes = bincode::serialize(&program).expect("failed to read system contracts");
+    let bytecode_bytes =
+        program_bytecode_to_bytes(&program.bytecode).expect("failed to load contract: {json_path}");
+    (json_bytes, bytecode_bytes)
 }
 
-pub fn read_entrypoint_code(entrypoint_type: &str) -> Vec<u8> {
+pub fn read_entrypoint_code(entrypoint_type: &str) -> (Vec<u8>, Vec<u8>) {
     // FIXME:
     read_json_program(format!(
         "etc/system-contracts/contracts/{}.json",
@@ -80,11 +80,11 @@ pub fn read_entrypoint_code(entrypoint_type: &str) -> Vec<u8> {
     ))
 }
 
-pub fn read_proved_block_entrypoint_bytecode() -> Vec<u8> {
+pub fn read_proved_block_entrypoint_bytecode() -> (Vec<u8>, Vec<u8>) {
     read_entrypoint_code("entrypoint")
 }
 
-pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> Vec<u8> {
+pub fn read_sys_contract_bytecode(directory: &str, name: &str) -> (Vec<u8>, Vec<u8>) {
     // FIXME: repace zbin_path
     read_json_program(format!(
         "etc/system-contracts/contracts/{0}{1}.json",

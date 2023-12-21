@@ -55,7 +55,7 @@ pub async fn initialize_components(
         .await;
 
     let mut healthchecks: Vec<Box<dyn CheckHealth>> = Vec::new();
-    // FIXME: load from env?
+
     let contracts_config = load_contracts_config().expect("failed to load contract config");
 
     let (stop_sender, stop_receiver) = watch::channel(false);
@@ -103,7 +103,6 @@ pub async fn initialize_components(
     if components.contains(&Component::Sequencer) {
         let started_at = Instant::now();
         olaos_logs::info!("initializing Sequencer");
-        // FIXME: load from env?
         let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
         let mempool_config = load_mempool_config().expect("failed to load mempool config");
         add_sequencer_to_task_futures(
@@ -135,7 +134,6 @@ pub async fn initialize_components(
         replica_connection_pool,
     )));
 
-    // FIXME: load from env?
     let healtcheck_api_config =
         load_healthcheck_config().expect("failed to load health_check config");
     let health_check_handle =
