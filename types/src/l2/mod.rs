@@ -9,7 +9,7 @@ use crate::{
     tx::{execute::Execute, primitives::PackedEthSignature},
     utils::unix_timestamp_ms,
     ExecuteTransactionCommon, InputData, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE,
-    PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
+    OLA_RAW_TX_TYPE, PRIORITY_OPERATION_L2_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
 };
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +20,7 @@ pub mod error;
 pub enum TransactionType {
     EIP712Transaction = EIP_712_TX_TYPE as u32,
     EIP1559Transaction = EIP_1559_TX_TYPE as u32,
+    OlaRawTransaction = OLA_RAW_TX_TYPE as u32,
     PriorityOpTransaction = PRIORITY_OPERATION_L2_TX_TYPE as u32,
     ProtocolUpgradeTransaction = PROTOCOL_UPGRADE_TX_TYPE as u32,
 }
@@ -50,7 +51,7 @@ impl L2Tx {
                 nonce,
                 initiator_address,
                 signature: Default::default(),
-                transaction_type: TransactionType::EIP712Transaction,
+                transaction_type: TransactionType::OlaRawTransaction,
                 input: None,
             },
             received_timestamp_ms: unix_timestamp_ms(),
@@ -206,6 +207,14 @@ impl From<L2Tx> for TransactionRequest {
             }
             TransactionType::EIP1559Transaction => {
                 base_tx_req.transaction_type = Some(U64::from(tx_type as u32));
+            }
+            TransactionType::OlaRawTransaction => {
+                base_tx_req.transaction_type = Some(U64::from(tx_type as u32));
+                base_tx_req.eip712_meta = Some(Eip712Meta {
+                    factory_deps: tx.execute.factory_deps,
+                    custom_signature: Some(tx.common_data.signature),
+                    paymaster_params: None,
+                });
             }
             _ => panic!("Invalid transaction type: {}", tx_type as u32),
         }
