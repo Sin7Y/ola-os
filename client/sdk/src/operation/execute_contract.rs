@@ -3,11 +3,12 @@ use ola_types::{
 };
 use ola_web3_decl::namespaces::ola::OlaNamespaceClient;
 
-use crate::{errors::ClientError, wallet::Wallet, EthereumSigner};
+use crate::{errors::ClientError, wallet::Wallet};
+use crate::OlaTxSigner;
 
 use super::SyncTransactionHandle;
 
-pub struct ExecuteContractBuilder<'a, S: EthereumSigner, P> {
+pub struct ExecuteContractBuilder<'a, S: OlaTxSigner, P> {
     wallet: &'a Wallet<S, P>,
     contract_address: Option<Address>,
     calldata: Option<Vec<u8>>,
@@ -19,7 +20,7 @@ pub struct ExecuteContractBuilder<'a, S: EthereumSigner, P> {
 
 impl<'a, S, P> ExecuteContractBuilder<'a, S, P>
 where
-    S: EthereumSigner,
+    S: OlaTxSigner,
     P: OlaNamespaceClient + Sync,
 {
     pub fn new(
@@ -63,21 +64,20 @@ where
                 self.factory_deps.clone(),
                 paymaster_params.clone(),
             )
-            .await
             .map_err(ClientError::SigningError)?;
 
         let mut execute_contract = L2Tx::new(
             contract_address,
             calldata,
             nonce,
-            self.wallet.signer.eth_signer.get_address().await?,
+            self.wallet.signer.ola_signer.get_address()?,
             self.factory_deps,
             paymaster_params,
         );
 
         let signatures = match self.outer_signatures {
             Some(mut signatures) => {
-                signatures.push(signature);
+                signatures.insert(0, signature);
                 signatures
             }
             None => vec![signature],

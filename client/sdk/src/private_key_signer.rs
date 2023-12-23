@@ -1,9 +1,6 @@
-use ola_types::{
-    tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature},
-    Address,
-};
+use ola_types::{request::TransactionRequest, tx::primitives::PackedEthSignature, Address};
 
-use crate::{errors::SignerError, key_store::OlaKeyPair, EthereumSigner};
+use crate::{errors::SignerError, key_store::OlaKeyPair, OlaTxSigner};
 
 #[derive(Clone)]
 pub struct PrivateKeySigner {
@@ -22,26 +19,21 @@ impl PrivateKeySigner {
     }
 }
 
-#[async_trait::async_trait]
-impl EthereumSigner for PrivateKeySigner {
-    async fn sign_message(&self, message: &[u8]) -> Result<PackedEthSignature, SignerError> {
+impl OlaTxSigner for PrivateKeySigner {
+    fn sign_tx_request(&self, tx: TransactionRequest) -> Result<PackedEthSignature, SignerError> {
+        let message = tx.into_signed_bytes();
+        let signature = PackedEthSignature::sign(&self.key_pair.secret, message.as_slice())
+            .map_err(|err| SignerError::SigningFailed(err.to_string()))?;
+        Ok(signature)
+    }
+
+    fn sign_message(&self, message: &[u8]) -> Result<PackedEthSignature, SignerError> {
         let signature = PackedEthSignature::sign(&self.key_pair.secret, message)
             .map_err(|err| SignerError::SigningFailed(err.to_string()))?;
         Ok(signature)
     }
 
-    async fn sign_typed_data<S: EIP712TypedStructure + Sync>(
-        &self,
-        domain: &Eip712Domain,
-        typed_struct: &S,
-    ) -> Result<PackedEthSignature, SignerError> {
-        let signature =
-            PackedEthSignature::sign_typed_data(&self.key_pair.secret, domain, typed_struct)
-                .map_err(|err| SignerError::SigningFailed(err.to_string()))?;
-        Ok(signature)
-    }
-
-    async fn get_address(&self) -> Result<Address, SignerError> {
+    fn get_address(&self) -> Result<Address, SignerError> {
         Ok(self.key_pair.address)
     }
 }
