@@ -2,7 +2,7 @@ use blake2::{Blake2s256, Digest};
 pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H256, U256};
 use ola_config::constants::{
     contracts::{
-        ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
+        ACCOUNT_CODE_STORAGE_ADDRESS, ENTRYPOINT_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
         NONCE_HOLDER_ADDRESS, SYSTEM_CONTEXT_ADDRESS,
     },
     system_context::{

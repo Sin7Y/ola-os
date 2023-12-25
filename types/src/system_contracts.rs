@@ -1,6 +1,6 @@
 use ola_basic_types::{AccountTreeId, Address, U256};
 use ola_config::constants::contracts::{
-    ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, CONTRACT_DEPLOYER_ADDRESS,
+    ACCOUNT_CODE_STORAGE_ADDRESS, CONTRACT_DEPLOYER_ADDRESS, ENTRYPOINT_ADDRESS,
     KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
 };
 use ola_contracts::read_sys_contract_bytecode;
@@ -32,7 +32,7 @@ static SYSTEM_CONTRACTS: Lazy<Vec<DeployedContract>> = Lazy::new(|| {
     // For now, only zero address and the bootloader address have empty bytecode at the init
     // In the future, we might want to set all of the system contracts this way.
     let empty_system_contracts =
-        [Address::zero(), BOOTLOADER_ADDRESS].map(|address| DeployedContract {
+        [Address::zero(), ENTRYPOINT_ADDRESS].map(|address| DeployedContract {
             account_id: AccountTreeId::new(address),
             raw: empty_raw.clone(),
             bytecode: empty_bytecode.clone(),
