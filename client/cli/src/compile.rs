@@ -4,6 +4,8 @@ use std::{
     path::PathBuf,
 };
 
+use anyhow::Error;
+use anyhow::Result;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use ola_assembler::encoder::encode_asm_from_json_file;
@@ -14,29 +16,70 @@ use ola_lang::{
     sema::ast::{Layout, Namespace},
 };
 
-use crate::errors::Error;
+use crate::path::ExpandedPathbufParser;
+use clap::Parser;
 
-pub fn compile_ola_to_current_dir(ola_file_path: String) -> Result<(), Error> {
-    let (asm_path, _) = compile_ola_file_to_asm(ola_file_path, None, None)?;
-    let _ = ola_asm_to_binary(asm_path.clone(), None);
-    let _ = fs::remove_file(asm_path);
-    Ok(())
+#[derive(Debug, Parser)]
+pub struct Compile {
+    #[clap(
+        value_parser = ExpandedPathbufParser,
+        help = "Path to ola source file"
+    )]
+    input: PathBuf,
+    #[clap(
+        value_parser = ExpandedPathbufParser,
+        help = "Path to output dir"
+    )]
+    output_dir: PathBuf,
 }
 
-pub fn ola_asm_to_binary(asm_path: String, bin_path: Option<String>) -> Result<(), Error> {
+impl Compile {
+    pub fn run(self) -> Result<()> {
+        if !self.input.exists() {
+            anyhow::bail!("ola file not found");
+        }
+        if self.output_dir.is_file() {
+            anyhow::bail!("output dir is a file");
+        }
+        if !self.output_dir.exists() {
+            let create_outdir = fs::create_dir_all(self.output_dir.clone());
+            if let Err(err) = create_outdir {
+                anyhow::bail!("create output dir failed: {}", err);
+            }
+        }
+        let contract_name = self
+            .input
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        let asm_path = self.output_dir.join(contract_name.clone() + "_asm.json");
+        let abi_path = self.output_dir.join(contract_name.clone() + "_abi.json");
+        let bin_path = self.output_dir.join(contract_name + "_bin.json");
+
+        let (asm_path, abi_path) = compile_ola_file_to_asm(
+            self.input.display().to_string(),
+            Some(asm_path.display().to_string()),
+            Some(abi_path.display().to_string()),
+        )?;
+        let _ = ola_asm_to_binary(asm_path.clone(), Some(bin_path.display().to_string()));
+        let _ = fs::remove_file(asm_path);
+        Ok(())
+    }
+}
+
+pub fn ola_asm_to_binary(asm_path: String, bin_path: Option<String>) -> Result<()> {
     let (_, mut bin_file) = generate_output_file(asm_path.clone(), "bin", bin_path)?;
     let program = match encode_asm_from_json_file(asm_path) {
         Ok(p) => p,
-        Err(err) => return Err(Error::AsmCompileFailed(err)),
+        Err(err) => anyhow::bail!("asm failed: {}", err),
     };
     let serialized = match serde_json::to_string(&program) {
         Ok(s) => s,
-        Err(_) => return Err(Error::AsmCompileFailed("serialize failed".to_string())),
+        Err(err) => anyhow::bail!("asm failed: {}", err),
     };
-    let _ = match bin_file.write_all(serialized.as_bytes()) {
-        Ok(_) => Ok(()),
-        Err(err) => Err(Error::IOError(err)),
-    };
+    let _ = bin_file.write_all(serialized.as_bytes());
     Ok(())
 }
 
@@ -44,7 +87,7 @@ pub fn compile_ola_file_to_asm(
     ola_file_path: String,
     asm_path: Option<String>,
     abi_path: Option<String>,
-) -> Result<(String, String), Error> {
+) -> Result<(String, String)> {
     let (_src_path, mut ns) = pre_process_src(ola_file_path.clone())?;
     let (asm_path, asm_file) = generate_output_file(ola_file_path.clone(), "asm", asm_path)?;
     let (abi_path, abi_file) = generate_output_file(ola_file_path.clone(), "abi", abi_path)?;
@@ -61,28 +104,25 @@ pub fn pre_process_src(ola_file_path: String) -> Result<(PathBuf, Namespace), Er
     let mut resolver = FileResolver::new();
     let src_path = match PathBuf::from(ola_file_path.clone()).canonicalize() {
         Ok(path) => path,
-        Err(e) => return Err(Error::IOError(e)),
+        Err(e) => anyhow::bail!("IO Error: {}", e),
     };
     match src_path.parent() {
         Some(parent) => {
             let _ = resolver.add_import_path(parent);
         }
         None => {
-            return Err(Error::IOError(io::Error::new(
-                io::ErrorKind::Other,
-                "Cannot get parent directory",
-            )))
+            anyhow::bail!("invalid source dir path")
         }
     }
 
     if let Err(e) = resolver.add_import_path(&PathBuf::from(".")) {
-        return Err(Error::IOError(e));
+        anyhow::bail!("IO error: {}", e)
     }
 
     let mut ns = ola_lang::parse_and_resolve(ola_file_path.as_ref(), &mut resolver);
     if ns.diagnostics.any_errors() {
         ns.print_diagnostics(&resolver, true);
-        return Err(Error::CompileNameSpaceError);
+        anyhow::bail!("namespace error")
     }
     for contract_no in 0..ns.contracts.len() {
         layout(contract_no, &mut ns);
@@ -111,18 +151,18 @@ fn layout(contract_no: usize, ns: &mut Namespace) {
     ns.contracts[contract_no].fixed_layout_size = slot;
 }
 
-fn generate_abi(ns: &mut Namespace, mut output: File) -> Result<(), Error> {
+fn generate_abi(ns: &mut Namespace, mut output: File) -> Result<()> {
     for contract_no in 0..ns.contracts.len() {
         let (metadata, _) = abi::generate_abi(contract_no, &ns);
         match output.write_all(metadata.as_bytes()) {
             Ok(_) => {}
-            Err(err) => return Err(Error::IOError(err)),
+            Err(err) => anyhow::bail!("IO error: {}", err),
         }
     }
     Ok(())
 }
 
-fn generate_asm(src_name: String, ns: &mut Namespace, mut output: File) -> Result<(), Error> {
+fn generate_asm(src_name: String, ns: &mut Namespace, mut output: File) -> Result<()> {
     for contract_no in 0..ns.contracts.len() {
         let resolved_contract = &ns.contracts[contract_no];
         let context = inkwell::context::Context::create();
@@ -130,18 +170,18 @@ fn generate_asm(src_name: String, ns: &mut Namespace, mut output: File) -> Resul
         // Parse the assembly and get a module
         let module = match Module::try_from(binary.module.to_string().as_str()) {
             Ok(m) => m,
-            Err(_) => return Err(Error::IRParseFailed),
+            Err(err) => anyhow::bail!("IR parse failed: {}", err),
         };
         // Compile the module for Ola and get a machine module
         let isa = Ola::default();
         let code = match compile_module(&isa, &module) {
             Ok(c) => c,
-            Err(_) => return Err(Error::CompileModuleFailed),
+            Err(err) => anyhow::bail!("Module compile failed: {}", err),
         };
 
         match output.write_all(format!("{}", code.display_asm()).as_bytes()) {
             Ok(_) => {}
-            Err(err) => return Err(Error::IOError(err)),
+            Err(err) => anyhow::bail!("IO Error: {}", err),
         }
     }
     Ok(())
@@ -151,7 +191,7 @@ fn generate_output_file(
     ola_file_path: String,
     file_type: &str,
     result_path: Option<String>,
-) -> Result<(PathBuf, File), Error> {
+) -> Result<(PathBuf, File)> {
     let output_path = if let Some(path) = result_path {
         PathBuf::from(path)
     } else {
@@ -160,14 +200,14 @@ fn generate_output_file(
             path.set_file_name(stem.to_string_lossy().to_string() + "_" + file_type);
             path.set_extension("json");
         } else {
-            return Err(Error::InvalidFilePath(ola_file_path));
+            anyhow::bail!("Invalid file path: {}", ola_file_path)
         }
         path
     };
 
     let output = match File::create(output_path.clone()) {
         Ok(f) => f,
-        Err(err) => return Err(Error::IOError(err)),
+        Err(err) => anyhow::bail!("IO Error: {}", err),
     };
     Ok((output_path, output))
 }

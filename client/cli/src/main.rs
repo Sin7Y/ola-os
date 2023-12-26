@@ -1,40 +1,48 @@
 #![feature(path_file_prefix)]
 
-use clap::{arg, ArgMatches, Command};
+// use clap::{arg, ArgMatches, Command, Parser};
+use anyhow::Result;
+use clap::{CommandFactory, Parser, Subcommand};
+use colored::Colorize;
 
-use compile::compile_ola_to_current_dir;
+use compile::Compile;
 pub mod compile;
 pub mod errors;
+pub mod path;
 pub mod utils;
 
-fn main() {
-    let app = || {
-        Command::new("olatte")
-            .version(env!("CARGO_PKG_VERSION"))
-            .author(env!("CARGO_PKG_AUTHORS"))
-            .about(env!("CARGO_PKG_DESCRIPTION"))
-            .subcommand(
-                Command::new("compile")
-                    .about("Compile ola source files")
-                    .args(&[arg!(-i --input <INPUT> "Missing input ola file")])
-                    .arg_required_else_help(true),
-            )
-    };
-    let matches = app().get_matches();
+#[derive(Debug, Parser)]
+#[clap(author, about)]
+struct Cli {
+    #[clap(subcommand)]
+    command: Option<Subcommands>,
+    #[clap(long = "version", short = 'V', help = "Print version info and exit")]
+    version: bool,
+}
 
-    match matches.subcommand() {
-        Some(("compile", matches)) => compile(matches),
-        None | Some(_) => {
-            app().print_help().unwrap();
-            println!();
-        }
+#[derive(Debug, Subcommand)]
+enum Subcommands {
+    #[clap(about = "Compile ola source files to abi and binary")]
+    Compile(Compile),
+}
+
+#[tokio::main]
+async fn main() {
+    if let Err(err) = run_command(Cli::parse()).await {
+        eprintln!("{}", format!("Error: {err}").red());
+        std::process::exit(1);
     }
 }
 
-fn compile(matches: &ArgMatches) {
-    let input_path = matches.get_one::<String>("input").expect("required");
-    match compile_ola_to_current_dir(input_path.clone()) {
-        Ok(_) => println!("compile success"),
-        Err(e) => eprintln!("compile error: {}", e),
+async fn run_command(cli: Cli) -> Result<()> {
+    match (cli.version, cli.command) {
+        (false, None) => Ok(Cli::command().print_help()?),
+        (true, _) => {
+            println!("{}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
+        (false, Some(command)) => match command {
+            Subcommands::Compile(cmd) => cmd.run(),
+        },
     }
 }
