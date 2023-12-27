@@ -251,9 +251,9 @@ impl TransactionRequest {
             vec![*transaction_type, *nonce],
             from,
             to,
-            vec![input_len],
+            // vec![input_len],
             input,
-            vec![have_paymaster],
+            // vec![have_paymaster],
         ]
         .iter()
         .flatten()
