@@ -4,7 +4,7 @@ use crate::{
 };
 use ethereum_types::{Public, Secret, H256};
 use ola_types::Address;
-use parity_crypto::Keccak256;
+use ola_utils::hash::PoseidonBytes;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 #[derive(Clone)]
 pub struct OlaKeyPair {
@@ -36,8 +36,7 @@ impl OlaKeyPair {
         if !is_h256_a_valid_ola_hash(pub_y) {
             return Err(NumberConvertError::InvalidOlaHash(pub_y.to_string()));
         }
-
-        let address = H256::from_slice(&public.keccak256());
+        let address = H256::from_slice(&public.hash_bytes());
         if !is_h256_a_valid_ola_hash(address.clone()) {
             return Err(NumberConvertError::InvalidOlaHash(address.to_string()));
         }
@@ -70,8 +69,8 @@ impl OlaKeyPair {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethereum_types::H512;
     use ethereum_types::H256;
+    use ethereum_types::H512;
     use std::str::FromStr;
 
     #[test]
@@ -92,7 +91,7 @@ mod tests {
         );
         assert_eq!(
             key_pair.address,
-            H256::from_str("0xb665f9be1919998d337476305b073e9233944b5e729e46d618f0d8edf3d9c34a")
+            H256::from_str("0x2991c0899fee28da35e005cb4947131b27b9274008810b30adb209e8525bddeb")
                 .unwrap()
         );
     }

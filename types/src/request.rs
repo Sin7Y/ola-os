@@ -247,6 +247,7 @@ impl TransactionRequest {
             None
         };
 
+        // todo add chain_id
         let mut data = vec![
             vec![*transaction_type, *nonce],
             from,
