@@ -1,6 +1,9 @@
 use ethereum_types_old::H256 as ParityCryptoH256;
 use ola_basic_types::{Address, H256};
-use ola_utils::{h160_bytes_to_h256, hash::hash_bytes};
+use ola_utils::{
+    h160_bytes_to_h256,
+    hash::{hash_bytes, PoseidonBytes},
+};
 use parity_crypto::publickey::{
     sign, Error as ParityCryptoError, KeyPair, Signature as ETHSignature,
 };
@@ -103,9 +106,10 @@ impl PackedEthSignature {
 
     pub fn address_from_private_key(private_key: &H256) -> Result<Address, ParityCryptoError> {
         let private_key = ParityCryptoH256::from_slice(&private_key.0);
-        let address = KeyPair::from_secret(private_key.into())?.address();
-        let address = h160_bytes_to_h256(&address.0);
-        Ok(Address::from(address))
+        let pair = KeyPair::from_secret(private_key.into())?;
+        let public = pair.public();
+        let address = public.hash_bytes();
+        Ok(H256(address))
     }
 }
 
