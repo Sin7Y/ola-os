@@ -2,6 +2,7 @@ use crate::{
     errors::{ClientError, KeystoreError, NumberConvertError, SignerError},
     utils::{concat_h256_u32_and_sha256, is_h256_a_valid_ola_hash},
 };
+use const_hex::encode;
 use ethereum_types::{Public, Secret, H256, U256};
 use ola_types::Address;
 use ola_utils::{h256_to_u256, hash::PoseidonBytes, u256_to_h256};
@@ -117,6 +118,14 @@ impl OlaKeyPair {
             .map_err(KeystoreError::Inner)?;
 
         Ok(())
+    }
+
+    pub fn private_key_str(&self) -> String {
+        encode(&self.secret)
+    }
+
+    pub fn public_key_str(&self) -> String {
+        encode(&self.public)
     }
 }
 
