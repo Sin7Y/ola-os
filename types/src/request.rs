@@ -182,11 +182,18 @@ impl TransactionRequest {
         match &meta.paymaster_params {
             Some(params) => {
                 if params.paymaster_input.len() % 8 != 0 {
-                    panic!("Paymaster input must be 8-byte aligned",);
+                    panic!("Paymaster input must be 8-byte aligned");
                 }
             }
             None => {}
         }
+        match &self.chain_id {
+            Some(_) => {}
+            None => {
+                panic!("Chain id must be set when perform sign");
+            }
+        }
+        let chain_id = self.chain_id.unwrap().clone() as u64;
 
         let transaction_type = &self
             .transaction_type
@@ -247,19 +254,11 @@ impl TransactionRequest {
             None
         };
 
-        // todo add chain_id
-        let mut data = vec![
-            vec![*transaction_type, *nonce],
-            from,
-            to,
-            // vec![input_len],
-            input,
-            // vec![have_paymaster],
-        ]
-        .iter()
-        .flatten()
-        .cloned()
-        .collect::<Vec<_>>();
+        let mut data = vec![vec![chain_id, *transaction_type, *nonce], from, to, input]
+            .iter()
+            .flatten()
+            .cloned()
+            .collect::<Vec<_>>();
         match paymaster_address {
             Some(address) => {
                 data.extend(address);

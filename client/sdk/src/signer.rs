@@ -1,6 +1,7 @@
+use ethereum_types::U64;
 use ola_types::{
-    l2::L2Tx,
-    request::{PaymasterParams, TransactionRequest},
+    l2::{L2Tx, TransactionType},
+    request::{Eip712Meta, PaymasterParams, TransactionRequest},
     tx::primitives::PackedEthSignature,
     Address, L2ChainId, Nonce,
 };
@@ -25,6 +26,7 @@ impl<S: OlaTxSigner> Signer<S> {
             chain_id,
         }
     }
+
     pub fn sign_transaction(&self, transaction: &L2Tx) -> Result<PackedEthSignature, SignerError> {
         let transaction_request: TransactionRequest = transaction.clone().into();
         self.ola_signer
@@ -32,106 +34,59 @@ impl<S: OlaTxSigner> Signer<S> {
             .map_err(signing_failed_error)
     }
 
-    pub fn sign_execute_contract(
+    pub fn sign_transaction_request(
         &self,
-        contract: Address,
-        calldata: Vec<u8>,
-        nonce: Nonce,
-        factory_deps: Option<Vec<Vec<u8>>>,
-        paymaster_params: PaymasterParams,
+        transaction_request: TransactionRequest,
     ) -> Result<PackedEthSignature, SignerError> {
-        self.sign_execute_contract_for_deploy(
-            contract,
-            calldata,
-            nonce,
-            factory_deps,
-            paymaster_params,
-        )
+        self.ola_signer
+            .sign_tx_request(transaction_request)
+            .map_err(signing_failed_error)
     }
 
-    pub fn sign_execute_contract_for_deploy(
+    pub fn sign_execute_contract(
         &self,
+        chain_id: u16,
+        from: Option<Address>,
         contract: Address,
         calldata: Vec<u8>,
         nonce: Nonce,
         factory_deps: Option<Vec<Vec<u8>>>,
         paymaster_params: PaymasterParams,
     ) -> Result<PackedEthSignature, SignerError> {
-        let execute_contract = L2Tx::new(
-            contract,
-            calldata,
-            nonce,
-            self.ola_signer.get_address()?,
-            factory_deps,
-            paymaster_params,
-        );
+        let initiator = match from {
+            Some(from) => from,
+            None => self.ola_signer.get_address()?,
+        };
+        // let execute_contract = L2Tx::new(
+        //     contract,
+        //     calldata,
+        //     nonce,
+        //     initiator,
+        //     factory_deps,
+        //     paymaster_params,
+        // );
+
+        let mut req = TransactionRequest {
+            nonce: nonce.0,
+            from,
+            to: Some(contract),
+            input: calldata,
+            v: None,
+            r: None,
+            s: None,
+            raw: None,
+            transaction_type: Some(U64::from(TransactionType::OlaRawTransaction)),
+            eip712_meta: Some(Eip712Meta {
+                factory_deps,
+                custom_signature: None,
+                paymaster_params: None,
+            }),
+            chain_id: Some(chain_id),
+        };
 
         let signature = self
-            .sign_transaction(&execute_contract)
+            .sign_transaction_request(req)
             .map_err(signing_failed_error)?;
         Ok(signature)
     }
 }
-
-// impl<S: EthereumSigner> Signer<S> {
-//     pub fn new(eth_signer: S, address: Address, chain_id: L2ChainId) -> Self {
-//         Self {
-//             ola_signer: eth_signer,
-//             address,
-//             chain_id,
-//         }
-//     }
-
-//     pub async fn sign_transaction(
-//         &self,
-//         transaction: &L2Tx,
-//     ) -> Result<PackedEthSignature, SignerError> {
-//         let domain = Eip712Domain::new(self.chain_id);
-//         let transaction_request: TransactionRequest = transaction.clone().into();
-//         self.ola_signer
-//             .sign_typed_data(&domain, &transaction_request)
-//             .await
-//     }
-
-//     pub async fn sign_execute_contract(
-//         &self,
-//         contract: Address,
-//         calldata: Vec<u8>,
-//         nonce: Nonce,
-//         factory_deps: Option<Vec<Vec<u8>>>,
-//         paymaster_params: PaymasterParams,
-//     ) -> Result<PackedEthSignature, SignerError> {
-//         self.sign_execute_contract_for_deploy(
-//             contract,
-//             calldata,
-//             nonce,
-//             factory_deps,
-//             paymaster_params,
-//         )
-//         .await
-//     }
-
-//     pub async fn sign_execute_contract_for_deploy(
-//         &self,
-//         contract: Address,
-//         calldata: Vec<u8>,
-//         nonce: Nonce,
-//         factory_deps: Option<Vec<Vec<u8>>>,
-//         paymaster_params: PaymasterParams,
-//     ) -> Result<PackedEthSignature, SignerError> {
-//         let execute_contract = L2Tx::new(
-//             contract,
-//             calldata,
-//             nonce,
-//             self.ola_signer.get_address().await?,
-//             factory_deps,
-//             paymaster_params,
-//         );
-
-//         let signature = self
-//             .sign_transaction(&execute_contract)
-//             .await
-//             .map_err(signing_failed_error)?;
-//         Ok(signature)
-//     }
-// }
