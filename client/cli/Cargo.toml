@@ -8,6 +8,7 @@ description = "Ola cli tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ola_wallet_sdk = { path = "../sdk" }
 clap = { version = "4.4.7", features = ["derive", "env", "string"] }
 clap_complete = "4.4.4"
 thiserror = "1.0"
@@ -25,3 +26,4 @@ shellexpand = "3.1.0"
 anyhow = "1.0.75"
 colored = "2.0.0"
 tokio = { version = "1", features = ["full"] }
+rpassword = "7.2.0"

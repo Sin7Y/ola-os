@@ -56,13 +56,16 @@ where
             Some(nonce) => nonce,
             None => Nonce(self.wallet.get_nonce().await?),
         };
+        let from = self
+            .from
+            .unwrap_or_else(|| self.wallet.signer.ola_signer.get_address().unwrap());
 
         let signature = self
             .wallet
             .signer
             .sign_execute_contract(
                 self.wallet.get_chain_id(),
-                from,
+                Some(from),
                 contract_address,
                 calldata.clone(),
                 nonce,

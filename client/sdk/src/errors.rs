@@ -23,6 +23,16 @@ pub enum NumberConvertError {
 }
 
 #[derive(Debug, Error)]
+pub enum KeystoreError {
+    #[error("invalid path")]
+    InvalidPath,
+    #[error("invalid decrypted secret scalar")]
+    InvalidScalar,
+    #[error(transparent)]
+    Inner(eth_keystore::KeystoreError),
+}
+
+#[derive(Debug, Error)]
 pub enum ClientError {
     #[error("Missing required field for a transaction: {0}")]
     MissingRequiredField(String),
@@ -32,4 +42,8 @@ pub enum ClientError {
     RpcError(#[from] RpcError),
     #[error("Invalid ABI File")]
     AbiParseError,
+    #[error("NumberConvertError error: {0}")]
+    NumberConvertError(#[from] NumberConvertError),
+    #[error("Keystore error: {0}")]
+    KeystoreError(#[from] KeystoreError),
 }

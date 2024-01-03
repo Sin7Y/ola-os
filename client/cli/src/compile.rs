@@ -1,8 +1,9 @@
 use std::{
-    fs::{self, File},
-    io::{self, Write},
+    fs::File,
+    io::Write,
     path::PathBuf,
 };
+use std::fs;
 
 use anyhow::Error;
 use anyhow::Result;
