@@ -64,11 +64,16 @@ where
         Ok(nonce)
     }
 
+    pub fn get_chain_id(&self) -> u16 {
+        self.signer.chain_id.0
+    }
+
     pub fn start_execute_contract(
         &self,
+        from: Option<Address>,
         outer_signatures: Option<Vec<PackedEthSignature>>,
     ) -> ExecuteContractBuilder<'_, S, P> {
-        ExecuteContractBuilder::new(self, outer_signatures)
+        ExecuteContractBuilder::new(self, from, outer_signatures)
     }
 
     pub fn create_tx_raw(&self, tx: L2Tx) -> Result<Bytes, ClientError> {

@@ -3,13 +3,14 @@ use ola_types::{
 };
 use ola_web3_decl::namespaces::ola::OlaNamespaceClient;
 
-use crate::{errors::ClientError, wallet::Wallet};
 use crate::OlaTxSigner;
+use crate::{errors::ClientError, wallet::Wallet};
 
 use super::SyncTransactionHandle;
 
 pub struct ExecuteContractBuilder<'a, S: OlaTxSigner, P> {
     wallet: &'a Wallet<S, P>,
+    from: Option<Address>,
     contract_address: Option<Address>,
     calldata: Option<Vec<u8>>,
     nonce: Option<Nonce>,
@@ -25,10 +26,12 @@ where
 {
     pub fn new(
         wallet: &'a Wallet<S, P>,
+        from: Option<Address>,
         outer_signatures: Option<Vec<PackedEthSignature>>,
     ) -> Self {
         Self {
             wallet,
+            from,
             contract_address: None,
             calldata: None,
             nonce: None,
@@ -58,6 +61,8 @@ where
             .wallet
             .signer
             .sign_execute_contract(
+                self.wallet.get_chain_id(),
+                from,
                 contract_address,
                 calldata.clone(),
                 nonce,
