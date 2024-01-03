@@ -3,7 +3,7 @@ use ola_types::{
     l2::{L2Tx, TransactionType},
     request::{Eip712Meta, PaymasterParams, TransactionRequest},
     tx::primitives::PackedEthSignature,
-    Address, L2ChainId, Nonce,
+    Address, Bytes, L2ChainId, Nonce,
 };
 
 use crate::{errors::SignerError, OlaTxSigner};
@@ -67,15 +67,15 @@ impl<S: OlaTxSigner> Signer<S> {
         // );
 
         let mut req = TransactionRequest {
-            nonce: nonce.0,
+            nonce: nonce.0.into(),
             from,
             to: Some(contract),
-            input: calldata,
+            input: Bytes(calldata),
             v: None,
             r: None,
             s: None,
             raw: None,
-            transaction_type: Some(U64::from(TransactionType::OlaRawTransaction)),
+            transaction_type: Some(U64::from(TransactionType::OlaRawTransaction as u32)),
             eip712_meta: Some(Eip712Meta {
                 factory_deps,
                 custom_signature: None,

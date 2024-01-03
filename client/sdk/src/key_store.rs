@@ -1,10 +1,11 @@
 use crate::{
-    errors::{NumberConvertError, SignerError},
+    errors::{ClientError, KeystoreError, NumberConvertError, SignerError},
     utils::{concat_h256_u32_and_sha256, is_h256_a_valid_ola_hash},
 };
-use ethereum_types::{Public, Secret, H256};
+use ethereum_types::{Public, Secret, H256, U256};
 use ola_types::Address;
-use ola_utils::hash::PoseidonBytes;
+use ola_utils::{h256_to_u256, hash::PoseidonBytes, u256_to_h256};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 #[derive(Clone)]
 pub struct OlaKeyPair {
@@ -14,13 +15,26 @@ pub struct OlaKeyPair {
 }
 
 impl OlaKeyPair {
-    pub fn new(secret: Secret) -> Result<Self, NumberConvertError> {
+    pub fn from_random() -> Self {
+        let mut rng = StdRng::from_entropy();
+        let mut buffer = [0u8; 32];
+        rng.fill(&mut buffer);
+
+        let random_u256 = U256::from(&buffer);
+        Self::from_etherum_private_key(u256_to_h256(random_u256)).unwrap()
+    }
+
+    pub fn new(secret: Secret) -> Result<Self, ClientError> {
         if !is_h256_a_valid_ola_hash(secret) {
-            return Err(NumberConvertError::InvalidOlaHash(secret.to_string()));
+            return Err(NumberConvertError::InvalidOlaHash(secret.to_string()))
+                .map_err(ClientError::NumberConvertError)?;
         }
         let s = match SecretKey::from_slice(&secret[..]) {
             Ok(it) => it,
-            Err(err) => return Err(NumberConvertError::SecpError(err)),
+            Err(err) => {
+                return Err(NumberConvertError::SecpError(err))
+                    .map_err(ClientError::NumberConvertError)?
+            }
         };
 
         let secp = Secp256k1::new();
@@ -31,14 +45,17 @@ impl OlaKeyPair {
         let pub_x = H256::from_slice(&public[0..32]);
         let pub_y = H256::from_slice(&public[32..64]);
         if !is_h256_a_valid_ola_hash(pub_x) {
-            return Err(NumberConvertError::InvalidOlaHash(pub_x.to_string()));
+            return Err(NumberConvertError::InvalidOlaHash(pub_x.to_string()))
+                .map_err(ClientError::NumberConvertError)?;
         }
         if !is_h256_a_valid_ola_hash(pub_y) {
-            return Err(NumberConvertError::InvalidOlaHash(pub_y.to_string()));
+            return Err(NumberConvertError::InvalidOlaHash(pub_y.to_string()))
+                .map_err(ClientError::NumberConvertError)?;
         }
         let address = H256::from_slice(&public.hash_bytes());
         if !is_h256_a_valid_ola_hash(address.clone()) {
-            return Err(NumberConvertError::InvalidOlaHash(address.to_string()));
+            return Err(NumberConvertError::InvalidOlaHash(address.to_string()))
+                .map_err(ClientError::NumberConvertError)?;
         }
         Ok(OlaKeyPair {
             secret,
@@ -47,7 +64,7 @@ impl OlaKeyPair {
         })
     }
 
-    pub fn from_etherum_private_key(private_key: Secret) -> Result<Self, SignerError> {
+    pub fn from_etherum_private_key(private_key: Secret) -> Result<Self, ClientError> {
         let mut i: u32 = 0;
         loop {
             let secret = concat_h256_u32_and_sha256(private_key, i);
@@ -58,11 +75,48 @@ impl OlaKeyPair {
                     if i < 10000 {
                         i += 1
                     } else {
-                        return Err(SignerError::InvalidPrivateKey(private_key));
+                        return Err(SignerError::InvalidPrivateKey(private_key))
+                            .map_err(ClientError::SigningError)?;
                     }
                 }
             }
         }
+    }
+
+    pub fn from_keystore<P>(path: P, password: &str) -> Result<Self, ClientError>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        let key_vec = eth_keystore::decrypt_key(path, password)
+            .map_err(KeystoreError::Inner)
+            .map_err(ClientError::KeystoreError)?;
+        let mut key = [0u8; 32];
+        if key_vec.len() == 32 {
+            key.copy_from_slice(&key_vec);
+        } else {
+            return Err(KeystoreError::InvalidScalar).map_err(ClientError::KeystoreError)?;
+        }
+        Self::new(H256(key))
+    }
+
+    pub fn save_as_keystore<P>(&self, path: P, password: &str) -> Result<(), KeystoreError>
+    where
+        P: AsRef<std::path::Path>,
+    {
+        let mut path = path.as_ref().to_path_buf();
+        let file_name = path
+            .file_name()
+            .ok_or(KeystoreError::InvalidPath)?
+            .to_str()
+            .ok_or(KeystoreError::InvalidPath)?
+            .to_owned();
+        path.pop();
+
+        let mut rng = StdRng::from_entropy();
+        eth_keystore::encrypt_key(path, &mut rng, self.secret, password, Some(&file_name))
+            .map_err(KeystoreError::Inner)?;
+
+        Ok(())
     }
 }
 

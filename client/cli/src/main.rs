@@ -6,10 +6,12 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 
 use compile::Compile;
+use subcommands::Signer;
 pub mod compile;
 pub mod errors;
 pub mod path;
 pub mod utils;
+pub mod subcommands;
 
 #[derive(Debug, Parser)]
 #[clap(author, about)]
@@ -24,6 +26,8 @@ struct Cli {
 enum Subcommands {
     #[clap(about = "Compile ola source files to abi and binary")]
     Compile(Compile),
+    #[clap(about = "Signer management commands")]
+    Signer(Signer),
 }
 
 #[tokio::main]
@@ -43,6 +47,7 @@ async fn run_command(cli: Cli) -> Result<()> {
         }
         (false, Some(command)) => match command {
             Subcommands::Compile(cmd) => cmd.run(),
+            Subcommands::Signer(cmd) => cmd.run()
         },
     }
 }
