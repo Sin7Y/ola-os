@@ -19,6 +19,21 @@ pub fn create_invoke_calldata_with_abi_file(
     build_invoke_entry_point_input(from, to, biz_calldata, codes)
 }
 
+pub fn create_invoke_calldata_with_abi(
+    abi: &Abi,
+    function_sig: &str,
+    params: Vec<Value>,
+    from: &Address,
+    to: &Address,
+    codes: Option<Vec<u64>>,
+) -> Result<Vec<u8>, ClientError> {
+    let biz_calldata = abi
+        .encode_input_with_signature(function_sig, &params)
+        .map_err(|_| ClientError::AbiParseError)?;
+    println!("{:?}", biz_calldata);
+    build_invoke_entry_point_input(from, to, biz_calldata, codes)
+}
+
 fn get_calldata(
     abi_file: File,
     function_sig: &str,
