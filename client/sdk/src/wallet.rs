@@ -112,14 +112,115 @@ mod tests {
     use ola_lang_abi::Value;
     use ola_types::l2::L2Tx;
     use ola_types::request::TransactionRequest;
+    use ola_types::tx::primitives::PackedEthSignature;
     use ola_types::{Address, L2ChainId, Nonce};
     use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
     use crate::abi::create_invoke_calldata_with_abi_file;
     use crate::signer::Signer;
+    use crate::utils::{h256_to_u64_array, h512_to_u64_array};
     use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
 
     use super::Wallet;
+
+    use secp256k1::ecdsa::Signature;
+    use secp256k1::{Error as Secp256k1Error, SecretKey};
+    use secp256k1::{Message, PublicKey, Secp256k1};
+
+    #[test]
+    fn test_ecdsa() {
+        let key_pair = OlaKeyPair::from_random();
+        let public_key = key_pair.public.clone();
+        let public_key_string = hex::encode(&public_key);
+        let (x, y) = split_pubkey(public_key.0.as_slice()).unwrap();
+        let x_u256 = h256_to_u64_array(H256(x)).unwrap();
+        let y_u256 = h256_to_u64_array(H256(y)).unwrap();
+        let x_hex = hex::encode(x);
+        let y_hex = hex::encode(y);
+
+        println!("private key: {}", key_pair.private_key_str());
+        println!("public key: {}", public_key_string);
+        println!("public key x: {}, y: P{}", x_hex, y_hex);
+        println!("public key x fields: {:?}", x_u256);
+        println!("public key y fields: {:?}", y_u256);
+        println!("address: {}", key_pair.address_str());
+
+        let message = H256::random();
+        println!("message: {}", hex::encode(message));
+
+        let sig = sign_message(&key_pair.secret.0, &message.0).unwrap();
+        let sig_compact = sig.serialize_compact();
+        let (r, s) = sig_compact.split_at(32);
+
+        // let signature = PackedEthSignature::sign(&key_pair.secret, message.0.as_slice()).unwrap();
+        // let r = signature.r();
+        // let s = signature.s();
+        let mut r_h256 = [0u8; 32];
+        r_h256.copy_from_slice(r);
+        let mut s_h256 = [0u8; 32];
+        s_h256.copy_from_slice(s);
+        println!("r: {}", hex::encode(r_h256));
+        println!("s: {}", hex::encode(s_h256));
+        let r_u256 = h256_to_u64_array(H256(r_h256)).unwrap();
+        let s_u256 = h256_to_u64_array(H256(s_h256)).unwrap();
+        println!("r fields: {:?}", r_u256);
+        println!("s fields: {:?}", s_u256);
+
+        let verify_result = verify_signature(&x, &y, &message.0, &r_h256, &s_h256).unwrap();
+        println!("verify result: {}", verify_result)
+    }
+
+    fn split_pubkey(pubkey: &[u8]) -> Option<([u8; 32], [u8; 32])> {
+        if pubkey.len() != 64 {
+            return None;
+        }
+        let mut x = [0u8; 32];
+        let mut y = [0u8; 32];
+        x.copy_from_slice(&pubkey[0..32]);
+        y.copy_from_slice(&pubkey[32..64]);
+
+        Some((x, y))
+    }
+
+    fn sign_message(
+        private_key_bytes: &[u8; 32],
+        message_bytes: &[u8; 32],
+    ) -> Result<Signature, Secp256k1Error> {
+        let secp = Secp256k1::new();
+        let private_key = SecretKey::from_slice(private_key_bytes)?;
+        let message = Message::from_slice(message_bytes)?;
+        let signature = secp.sign_ecdsa(&message, &private_key);
+        Ok(signature)
+    }
+
+    fn verify_signature(
+        pub_x: &[u8; 32],
+        pub_y: &[u8; 32],
+        msg: &[u8],
+        sig_r: &[u8; 32],
+        sig_s: &[u8; 32],
+    ) -> Result<bool, Secp256k1Error> {
+        let secp = Secp256k1::new();
+
+        // 创建公钥
+        let mut pub_key_bytes = [0u8; 65];
+        pub_key_bytes[0] = 4; // 未压缩公钥前缀
+        pub_key_bytes[1..33].copy_from_slice(pub_x);
+        pub_key_bytes[33..].copy_from_slice(pub_y);
+        let public_key = PublicKey::from_slice(&pub_key_bytes)?;
+
+        // 创建消息
+        let message = Message::from_slice(msg)?;
+
+        // 创建签名
+        let mut signature_bytes = [0u8; 64];
+        signature_bytes[..32].copy_from_slice(sig_r);
+        signature_bytes[32..].copy_from_slice(sig_s);
+        let signature = Signature::from_compact(&signature_bytes)?;
+
+        // 验证签名
+        Ok(secp.verify_ecdsa(&message, &signature, &public_key).is_ok())
+    }
 
     #[tokio::test]
     async fn test_send_transaction() {

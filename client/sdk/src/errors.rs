@@ -12,6 +12,8 @@ pub enum SignerError {
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum NumberConvertError {
+    #[error("H512 to u64 array failed: {0}")]
+    H512ToU64ArrayFailed(String),
     #[error("H256 to u64 array failed: {0}")]
     H256ToU64ArrayFailed(String),
 
