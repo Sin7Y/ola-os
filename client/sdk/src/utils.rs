@@ -1,9 +1,32 @@
-use ethereum_types::{H256, U256};
+use ethereum_types::{H256, H512, U256};
 use sha2::{Digest, Sha256};
 
 use crate::errors::NumberConvertError;
 
 pub const OLA_FIELD_ORDER: u64 = 18446744069414584321; // 2^64-2^32+1
+
+pub fn h256_from_hex_be(value: &str) -> anyhow::Result<H256> {
+    let value = value.trim_start_matches("0x");
+
+    let hex_chars_len = value.len();
+    let expected_hex_length = 64;
+
+    let parsed_bytes: [u8; 32] = if hex_chars_len == expected_hex_length {
+        let mut buffer = [0u8; 32];
+        hex::decode_to_slice(value, &mut buffer)?;
+        buffer
+    } else if hex_chars_len < expected_hex_length {
+        let mut padded_hex = str::repeat("0", expected_hex_length - hex_chars_len);
+        padded_hex.push_str(value);
+
+        let mut buffer = [0u8; 32];
+        hex::decode_to_slice(&padded_hex, &mut buffer)?;
+        buffer
+    } else {
+        anyhow::bail!("Key out of range.");
+    };
+    Ok(H256(parsed_bytes))
+}
 
 pub fn h256_to_u64_array(h: H256) -> Result<[u64; 4], NumberConvertError> {
     let bytes = h.0;
@@ -25,6 +48,52 @@ pub fn h256_to_u64_array(h: H256) -> Result<[u64; 4], NumberConvertError> {
         ),
         u64::from_be_bytes(
             bytes[24..32]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+    ])
+}
+
+pub fn h512_to_u64_array(h: H512) -> Result<[u64; 8], NumberConvertError> {
+    let bytes = h.0;
+    Ok([
+        u64::from_be_bytes(
+            bytes[0..8]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[8..16]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[16..24]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[24..32]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[32..40]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[40..48]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[48..56]
+                .try_into()
+                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
+        ),
+        u64::from_be_bytes(
+            bytes[56..64]
                 .try_into()
                 .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
         ),

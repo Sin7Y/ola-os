@@ -127,6 +127,10 @@ impl OlaKeyPair {
     pub fn public_key_str(&self) -> String {
         encode(&self.public)
     }
+
+    pub fn address_str(&self) -> String {
+        encode(&self.address)
+    }
 }
 
 #[cfg(test)]
