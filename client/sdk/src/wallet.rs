@@ -148,13 +148,10 @@ mod tests {
         let message = H256::random();
         println!("message: {}", hex::encode(message));
 
-        let sig = sign_message(&key_pair.secret.0, &message.0).unwrap();
-        let sig_compact = sig.serialize_compact();
-        let (r, s) = sig_compact.split_at(32);
+        let signature = PackedEthSignature::sign_raw(&key_pair.secret, &message).unwrap();
+        let r = signature.r();
+        let s = signature.s();
 
-        // let signature = PackedEthSignature::sign(&key_pair.secret, message.0.as_slice()).unwrap();
-        // let r = signature.r();
-        // let s = signature.s();
         let mut r_h256 = [0u8; 32];
         r_h256.copy_from_slice(r);
         let mut s_h256 = [0u8; 32];
@@ -167,7 +164,8 @@ mod tests {
         println!("s fields: {:?}", s_u256);
 
         let verify_result = verify_signature(&x, &y, &message.0, &r_h256, &s_h256).unwrap();
-        println!("verify result: {}", verify_result)
+        println!("verify result: {}", verify_result);
+        assert!(verify_result)
     }
 
     fn split_pubkey(pubkey: &[u8]) -> Option<([u8; 32], [u8; 32])> {
@@ -182,17 +180,6 @@ mod tests {
         Some((x, y))
     }
 
-    fn sign_message(
-        private_key_bytes: &[u8; 32],
-        message_bytes: &[u8; 32],
-    ) -> Result<Signature, Secp256k1Error> {
-        let secp = Secp256k1::new();
-        let private_key = SecretKey::from_slice(private_key_bytes)?;
-        let message = Message::from_slice(message_bytes)?;
-        let signature = secp.sign_ecdsa(&message, &private_key);
-        Ok(signature)
-    }
-
     fn verify_signature(
         pub_x: &[u8; 32],
         pub_y: &[u8; 32],
@@ -202,23 +189,19 @@ mod tests {
     ) -> Result<bool, Secp256k1Error> {
         let secp = Secp256k1::new();
 
-        // 创建公钥
         let mut pub_key_bytes = [0u8; 65];
-        pub_key_bytes[0] = 4; // 未压缩公钥前缀
+        pub_key_bytes[0] = 4;
         pub_key_bytes[1..33].copy_from_slice(pub_x);
         pub_key_bytes[33..].copy_from_slice(pub_y);
         let public_key = PublicKey::from_slice(&pub_key_bytes)?;
 
-        // 创建消息
         let message = Message::from_slice(msg)?;
 
-        // 创建签名
         let mut signature_bytes = [0u8; 64];
         signature_bytes[..32].copy_from_slice(sig_r);
         signature_bytes[32..].copy_from_slice(sig_s);
         let signature = Signature::from_compact(&signature_bytes)?;
 
-        // 验证签名
         Ok(secp.verify_ecdsa(&message, &signature, &public_key).is_ok())
     }
 
