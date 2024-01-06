@@ -6,12 +6,12 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 
 use compile::Compile;
-use subcommands::Signer;
+use subcommands::{Invoke, Signer};
 pub mod compile;
 pub mod errors;
 pub mod path;
-pub mod utils;
 pub mod subcommands;
+pub mod utils;
 
 #[derive(Debug, Parser)]
 #[clap(author, about)]
@@ -28,6 +28,8 @@ enum Subcommands {
     Compile(Compile),
     #[clap(about = "Signer management commands")]
     Signer(Signer),
+    #[clap(about = "Send an invoke transaction from an account contract")]
+    Invoke(Invoke),
 }
 
 #[tokio::main]
@@ -47,7 +49,8 @@ async fn run_command(cli: Cli) -> Result<()> {
         }
         (false, Some(command)) => match command {
             Subcommands::Compile(cmd) => cmd.run(),
-            Subcommands::Signer(cmd) => cmd.run()
+            Subcommands::Signer(cmd) => cmd.run(),
+            Subcommands::Invoke(cmd) => cmd.run().await,
         },
     }
 }
