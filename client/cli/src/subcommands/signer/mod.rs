@@ -18,6 +18,7 @@ enum Subcommands {
     Keystore(Keystore),
     #[clap(about = "Randomly generate a new key pair")]
     GenKeypair(GenKeypair),
+    
 }
 
 impl Signer {
