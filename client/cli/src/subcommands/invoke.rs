@@ -4,21 +4,35 @@ use anyhow::{bail, Ok, Result};
 use clap::Parser;
 use colored::Colorize;
 use ola_lang_abi::{Abi, FixedArray4, Param, Type, Value};
+use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
     abi::create_invoke_calldata_with_abi,
-    utils::{h256_to_u64_array, OLA_FIELD_ORDER},
+    key_store::OlaKeyPair,
+    private_key_signer::PrivateKeySigner,
+    provider::ProviderParams,
+    signer::Signer,
+    utils::{h256_from_hex_be, h256_to_u64_array, OLA_FIELD_ORDER},
+    wallet::{self, Wallet},
 };
+use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
 use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
 
+// let from = key_pair.address;
+//         let ola_http_endpoint = "https://testnet.ola.network";
+//         let nonce = 0;
+//         let chain_id = 270;
+
 #[derive(Debug, Parser)]
 pub struct Invoke {
-    // #[clap(flatten)]
-    // provider: ProviderArgs,
-    // #[clap(flatten)]
-    // account: AccountArgs,
-    // #[clap(long, help = "Provide transaction nonce manually")]
-    // nonce: Option<u32>,
+    #[clap(long, help = "network name")]
+    network: Option<String>,
+    #[clap(long, help = "AA Address")]
+    aa: Option<String>,
+    #[clap(long, help = "Provide transaction nonce manually")]
+    nonce: Option<u32>,
+    #[clap(long, env = "OLA_KEYSTORE", help = "Path to keystore config JSON file")]
+    keystore: String,
     #[clap(
         value_parser = ExpandedPathbufParser,
         help = "Path to the JSON keystore"
@@ -30,10 +44,27 @@ pub struct Invoke {
 
 impl Invoke {
     pub async fn run(self) -> Result<()> {
+        let network = if let Some(network) = self.network {
+            match network.as_str() {
+                "local" => ProviderParams::local(),
+                "test" => ProviderParams::pub_test(),
+                _ => {
+                    bail!("invalid network name")
+                }
+            }
+        } else {
+            ProviderParams::pub_test()
+        };
+
+        let keystore_path = PathBuf::from(self.keystore);
+        if !keystore_path.exists() {
+            anyhow::bail!("keystore file not found");
+        }
+        let password = rpassword::prompt_password("Enter password: ")?;
+        let key_pair = OlaKeyPair::from_keystore(keystore_path, &password)?;
+
         let unexpected_end_of_args = || anyhow::anyhow!("unexpected end of arguments");
-
         let mut arg_iter = self.calls.into_iter();
-
         let contract_address_hex = arg_iter.next().expect("contract address needed");
         let contract_address =
             from_hex_be(contract_address_hex.as_str()).expect("invalid contract address");
@@ -61,39 +92,44 @@ impl Invoke {
             .map(|(p, i)| Self::parse_input(p.clone().clone(), i.clone()))
             .collect();
 
-        // todo from
+        let pk_signer = PrivateKeySigner::new(key_pair.clone());
+        let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(network.chain_id));
+        let client = HttpClientBuilder::default()
+            .build(network.http_endpoint.as_str())
+            .unwrap();
+        let wallet = Wallet::new(client, signer);
+
+        let from = if let Some(addr) = self.aa {
+            h256_from_hex_be(addr.as_str()).unwrap()
+        } else {
+            key_pair.address
+        };
+        let nonce = if let Some(n) = self.nonce {
+            n
+        } else {
+            wallet.get_addr_nonce(from).await.unwrap()
+        };
+
         let calldata = create_invoke_calldata_with_abi(
             &abi,
             func.signature().as_str(),
             params,
-            &contract_address,
+            &from,
             &contract_address,
             None,
         )?;
 
-        dbg!(param_to_input);
+        let handle = wallet
+            .start_execute_contract(Some(from), None)
+            .calldata(calldata)
+            .contract_address(contract_address)
+            .nonce(Nonce(nonce))
+            .send()
+            .await?;
+        let tx_hash = hex::encode(&handle.hash());
+        println!("tx_hash: {}", tx_hash);
+
         Ok(())
-
-        // let eth_private_key = H256::random();
-        // let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
-        // let pk_signer = PrivateKeySigner::new(key_pair.clone());
-        // let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(270));
-        // let client = HttpClientBuilder::default()
-        //     .build("http://localhost:13000")
-        //     .unwrap();
-        // let wallet = Wallet::new(client, signer);
-
-        // let handle = wallet
-        //     .start_execute_contract(None)
-        //     .calldata(calldata)
-        //     .contract_address(contract_address)
-        //     .nonce(Nonce(nonce))
-        //     .send()
-        //     .await;
-        // match handle {
-        //     Ok(_) => println!("ok"),
-        //     Err(e) => println!("err: {:?}", e),
-        // }
     }
 
     fn parse_input(param: Param, input: String) -> Value {

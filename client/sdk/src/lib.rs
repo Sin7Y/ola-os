@@ -11,6 +11,7 @@ pub mod private_key_signer;
 pub mod signer;
 pub mod utils;
 pub mod wallet;
+pub mod provider;
 
 pub trait OlaTxSigner: Send + Sync + Clone {
     fn sign_tx_request(&self, tx: TransactionRequest) -> Result<PackedEthSignature, SignerError>;

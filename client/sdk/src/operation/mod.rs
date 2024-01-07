@@ -27,4 +27,8 @@ where
             finalize_timeout: None,
         }
     }
+
+    pub fn hash(&self) -> H256 {
+        self.hash
+    }
 }
