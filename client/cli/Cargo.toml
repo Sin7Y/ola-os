@@ -8,6 +8,7 @@ description = "Ola cli tools"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ola_types = { path = "../../types" }
 ola_wallet_sdk = { path = "../sdk" }
 clap = { version = "4.4.7", features = ["derive", "env", "string"] }
 clap_complete = "4.4.4"
@@ -29,3 +30,6 @@ tokio = { version = "1", features = ["full"] }
 rpassword = "7.2.0"
 hex = "0.4.3"
 ethereum-types = "0.14.1"
+ola_web3_decl = { path = "../../web3_decl", default-features = false, features = [
+    "client",
+] }

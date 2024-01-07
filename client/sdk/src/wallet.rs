@@ -52,6 +52,18 @@ where
         self.signer.address
     }
 
+    pub async fn get_addr_nonce(&self, addr: Address) -> Result<u32, ClientError> {
+        let nonce = self
+            .provider
+            .get_transaction_count(
+                addr,
+                Some(BlockIdVariant::BlockNumber(BlockNumber::Committed)),
+            )
+            .await?;
+
+        Ok(nonce)
+    }
+
     pub async fn get_nonce(&self) -> Result<u32, ClientError> {
         let nonce = self
             .provider
