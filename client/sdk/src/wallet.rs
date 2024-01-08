@@ -1,6 +1,9 @@
 use crate::{
     errors::ClientError,
-    operation::{execute_contract::ExecuteContractBuilder, SyncTransactionHandle},
+    operation::{
+        deploy_contract::DeployContractBuilder, execute_contract::ExecuteContractBuilder,
+        SyncTransactionHandle,
+    },
     signer::Signer,
     OlaTxSigner,
 };
@@ -86,6 +89,10 @@ where
         outer_signatures: Option<Vec<PackedEthSignature>>,
     ) -> ExecuteContractBuilder<'_, S, P> {
         ExecuteContractBuilder::new(self, from, outer_signatures)
+    }
+
+    pub fn start_deploy_contract(&self, from: Option<Address>) -> DeployContractBuilder<'_, S, P> {
+        DeployContractBuilder::new(self, from)
     }
 
     pub fn create_tx_raw(&self, tx: L2Tx) -> Result<Bytes, ClientError> {

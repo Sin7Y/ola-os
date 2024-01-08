@@ -57,14 +57,6 @@ impl<S: OlaTxSigner> Signer<S> {
             Some(from) => from,
             None => self.ola_signer.get_address()?,
         };
-        // let execute_contract = L2Tx::new(
-        //     contract,
-        //     calldata,
-        //     nonce,
-        //     initiator,
-        //     factory_deps,
-        //     paymaster_params,
-        // );
 
         let req = TransactionRequest {
             nonce: nonce.0.into(),
