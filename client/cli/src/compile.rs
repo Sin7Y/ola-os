@@ -59,7 +59,7 @@ impl Compile {
         let abi_path = self.output_dir.join(contract_name.clone() + "_abi.json");
         let bin_path = self.output_dir.join(contract_name + "_bin.json");
 
-        let (asm_path, abi_path) = compile_ola_file_to_asm(
+        let (asm_path, _abi_path) = compile_ola_file_to_asm(
             self.input.display().to_string(),
             Some(asm_path.display().to_string()),
             Some(abi_path.display().to_string()),

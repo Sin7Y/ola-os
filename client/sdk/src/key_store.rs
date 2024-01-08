@@ -5,7 +5,7 @@ use crate::{
 use const_hex::encode;
 use ethereum_types::{Public, Secret, H256, U256};
 use ola_types::Address;
-use ola_utils::{h256_to_u256, hash::PoseidonBytes, u256_to_h256};
+use ola_utils::{hash::PoseidonBytes, u256_to_h256};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 #[derive(Clone)]

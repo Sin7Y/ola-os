@@ -1,8 +1,7 @@
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{fs::File, path::PathBuf};
 
 use anyhow::{bail, Ok, Result};
 use clap::Parser;
-use colored::Colorize;
 use ola_lang_abi::{Abi, FixedArray4, Param, Type, Value};
 use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
@@ -12,16 +11,11 @@ use ola_wallet_sdk::{
     provider::ProviderParams,
     signer::Signer,
     utils::{h256_from_hex_be, h256_to_u64_array, OLA_FIELD_ORDER},
-    wallet::{self, Wallet},
+    wallet::Wallet,
 };
 use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
 use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
-
-// let from = key_pair.address;
-//         let ola_http_endpoint = "https://testnet.ola.network";
-//         let nonce = 0;
-//         let chain_id = 270;
 
 #[derive(Debug, Parser)]
 pub struct Invoke {
@@ -63,7 +57,6 @@ impl Invoke {
         let password = rpassword::prompt_password("Enter password: ")?;
         let key_pair = OlaKeyPair::from_keystore(keystore_path, &password)?;
 
-        let unexpected_end_of_args = || anyhow::anyhow!("unexpected end of arguments");
         let mut arg_iter = self.calls.into_iter();
         let contract_address_hex = arg_iter.next().expect("contract address needed");
         let contract_address =

@@ -11,6 +11,7 @@ ola_web3_decl = { path = "../../web3_decl", default-features = false, features =
     "client",
 ] }
 ola_utils = { path = "../../utils" }
+ola-core = { git = "https://github.com/Sin7Y/olavm.git", branch = "main", package = "core" }
 parity-crypto = { version = "0.9", features = ["publickey"] }
 ethereum-types = "0.14.1"
 thiserror = "1.0"

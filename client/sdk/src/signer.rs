@@ -51,7 +51,7 @@ impl<S: OlaTxSigner> Signer<S> {
         calldata: Vec<u8>,
         nonce: Nonce,
         factory_deps: Option<Vec<Vec<u8>>>,
-        paymaster_params: PaymasterParams,
+        _paymaster_params: PaymasterParams,
     ) -> Result<PackedEthSignature, SignerError> {
         let initiator = match from {
             Some(from) => from,
@@ -66,9 +66,9 @@ impl<S: OlaTxSigner> Signer<S> {
         //     paymaster_params,
         // );
 
-        let mut req = TransactionRequest {
+        let req = TransactionRequest {
             nonce: nonce.0.into(),
-            from,
+            from: Some(initiator),
             to: Some(contract),
             input: Bytes(calldata),
             v: None,
