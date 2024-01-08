@@ -95,6 +95,7 @@ where
                 meta.custom_signature = Some(tx.common_data.signature);
             }
             req.from = Some(self.address());
+            req.chain_id = Some(self.signer.chain_id.0);
             req
         };
         let signature = self
