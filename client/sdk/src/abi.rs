@@ -1,7 +1,7 @@
 use std::fs::File;
 
 use ola_lang_abi::{Abi, FixedArray4, Value};
-use ola_types::{tx::primitives::PackedEthSignature, Address};
+use ola_types::Address;
 use ola_utils::{h256_to_u64_array, u64s_to_bytes};
 
 use crate::errors::ClientError;
@@ -56,8 +56,6 @@ fn build_invoke_entry_point_input(
     let abi: Abi =
         serde_json::from_str(entry_point_abi_str).map_err(|_| ClientError::AbiParseError)?;
     let func = abi.functions[0].clone();
-
-    // let function_sig = "system_entrance(tuple(address,address,fields,fields),bool)";
 
     let params = [
         Value::Tuple(vec![

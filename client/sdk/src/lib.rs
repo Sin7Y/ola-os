@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use errors::SignerError;
 use ola_types::request::TransactionRequest;
 use ola_types::{tx::primitives::PackedEthSignature, Address};
@@ -8,10 +7,11 @@ pub mod errors;
 pub mod key_store;
 pub mod operation;
 pub mod private_key_signer;
+pub mod program_meta;
+pub mod provider;
 pub mod signer;
 pub mod utils;
 pub mod wallet;
-pub mod provider;
 
 pub trait OlaTxSigner: Send + Sync + Clone {
     fn sign_tx_request(&self, tx: TransactionRequest) -> Result<PackedEthSignature, SignerError>;
