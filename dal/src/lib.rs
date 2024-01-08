@@ -30,8 +30,8 @@ pub mod storage_logs_dedup_dal;
 pub mod storage_web3_dal;
 pub mod time_utils;
 pub mod token_dal;
-pub mod transactions_dal;
 pub mod transaction_web3_dal;
+pub mod transactions_dal;
 
 pub fn get_master_database_url() -> String {
     // FIXME:
