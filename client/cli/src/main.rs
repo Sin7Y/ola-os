@@ -6,7 +6,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 
 use compile::Compile;
-use subcommands::{Invoke, Signer, Deploy};
+use subcommands::{Deploy, Invoke, Signer};
 pub mod compile;
 pub mod errors;
 pub mod path;
