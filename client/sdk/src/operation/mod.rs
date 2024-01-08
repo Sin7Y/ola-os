@@ -3,6 +3,7 @@ use std::time::Duration;
 use ethereum_types::H256;
 use ola_web3_decl::namespaces::eth::EthNamespaceClient;
 
+pub mod deploy_contract;
 pub mod execute_contract;
 
 #[derive(Debug)]

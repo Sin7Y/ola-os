@@ -4,15 +4,18 @@ use anyhow::Result;
 use clap::Parser;
 use ethereum_types::{H256, U256};
 use ola_lang_abi::{Abi, FixedArray4, Value};
+use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
     abi::create_invoke_calldata_with_abi,
     key_store::OlaKeyPair,
+    private_key_signer::PrivateKeySigner,
     program_meta::ProgramMeta,
     provider::ProviderParams,
-    utils::{
-        h256_from_hex_be, h256_to_u64_array, is_h256_a_valid_ola_hash,
-    },
+    signer::Signer,
+    utils::{h256_from_hex_be, h256_to_u64_array, is_h256_a_valid_ola_hash},
+    wallet::Wallet,
 };
+use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
 use crate::path::ExpandedPathbufParser;
 
@@ -84,6 +87,20 @@ impl Deploy {
         } else {
             key_pair.address
         };
+
+        let pk_signer = PrivateKeySigner::new(key_pair.clone());
+        let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(network.chain_id));
+        let client = HttpClientBuilder::default()
+            .build(network.http_endpoint.as_str())
+            .unwrap();
+        let wallet = Wallet::new(client, signer);
+
+        let nonce = if let Some(n) = self.nonce {
+            n
+        } else {
+            wallet.get_addr_nonce(from).await.unwrap()
+        };
+
         let contract_address = H256([
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -99,7 +116,15 @@ impl Deploy {
             Some(code),
         )?;
 
-        // todo deploy
+        let handle = wallet
+            .start_deploy_contract(Some(from))
+            .calldata(calldata)
+            .nonce(Nonce(nonce))
+            .raw_code(prog_meta.bytes)
+            .send()
+            .await?;
+        let tx_hash = hex::encode(&handle.hash());
+        println!("tx_hash: {}", tx_hash);
         Ok(())
     }
 
