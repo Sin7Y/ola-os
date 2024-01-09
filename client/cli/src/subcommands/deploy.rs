@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs::File, path::PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
@@ -62,9 +62,9 @@ impl Deploy {
         let password = rpassword::prompt_password("Enter password: ")?;
         let key_pair = OlaKeyPair::from_keystore(keystore_path, &password)?;
         let prog_meta = ProgramMeta::from_file(self.contract)?;
-
-        let deployer_abi_str = include_str!("../abi/ContractDeployer.json");
-        let deployer_abi: Abi = serde_json::from_str(deployer_abi_str)?;
+        let deployer_abi_file =
+            File::open("abi/ContractDeployer.json").expect("failed to open ABI file");
+        let deployer_abi: Abi = serde_json::from_reader(deployer_abi_file)?;
         let func = deployer_abi
             .functions
             .iter()
