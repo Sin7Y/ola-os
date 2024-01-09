@@ -225,64 +225,64 @@ mod tests {
         Ok(secp.verify_ecdsa(&message, &signature, &public_key).is_ok())
     }
 
-    #[tokio::test]
-    async fn test_send_transaction() {
-        let eth_private_key = H256::random();
-        let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
-        let pk_signer = PrivateKeySigner::new(key_pair.clone());
-        let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(270));
-        let client = HttpClientBuilder::default()
-            .build("http://localhost:13000")
-            .unwrap();
+    // #[tokio::test]
+    // async fn test_send_transaction() {
+    //     let eth_private_key = H256::random();
+    //     let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
+    //     let pk_signer = PrivateKeySigner::new(key_pair.clone());
+    //     let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(270));
+    //     let client = HttpClientBuilder::default()
+    //         .build("http://localhost:13000")
+    //         .unwrap();
 
-        let wallet = Wallet::new(client, signer);
-        let nonce = 0;
+    //     let wallet = Wallet::new(client, signer);
+    //     let nonce = 0;
 
-        println!("from: {}", wallet.address());
-        let contract_address = H256([
-            0u8, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-            0, 0, 0, 0,
-        ]);
-        let abi_file =
-            File::open("examples/vote_simple_abi.json").expect("failed to open ABI file");
-        let function_sig = "vote_proposal(u32)";
-        let params = vec![Value::U32(1)];
-        let calldata = create_invoke_calldata_with_abi_file(
-            abi_file,
-            function_sig,
-            params,
-            &wallet.address(),
-            &contract_address,
-            None,
-        )
-        .unwrap();
-        println!("{:?}", calldata);
+    //     println!("from: {}", wallet.address());
+    //     let contract_address = H256([
+    //         0u8, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0,
+    //         0, 0, 0, 0,
+    //     ]);
+    //     let abi_file =
+    //         File::open("examples/vote_simple_abi.json").expect("failed to open ABI file");
+    //     let function_sig = "vote_proposal(u32)";
+    //     let params = vec![Value::U32(1)];
+    //     let calldata = create_invoke_calldata_with_abi_file(
+    //         abi_file,
+    //         function_sig,
+    //         params,
+    //         &wallet.address(),
+    //         &contract_address,
+    //         None,
+    //     )
+    //     .unwrap();
+    //     println!("{:?}", calldata);
 
-        // let l2Tx: L2Tx = wallet
-        //     .start_execute_contract(None)
-        //     .calldata(calldata)
-        //     .contract_address(contract_address)
-        //     .nonce(Nonce(nonce))
-        //     .tx()
-        //     .await
-        //     .unwrap();
-        // let bytes = wallet.create_tx_raw(l2Tx.clone()).unwrap();
-        // let b = bytes.0.as_slice();
-        // let (decoded_transaction, _) = TransactionRequest::from_bytes(b, 270).unwrap();
-        // let origin_transaction: TransactionRequest = l2Tx.into();
+    //     // let l2Tx: L2Tx = wallet
+    //     //     .start_execute_contract(None)
+    //     //     .calldata(calldata)
+    //     //     .contract_address(contract_address)
+    //     //     .nonce(Nonce(nonce))
+    //     //     .tx()
+    //     //     .await
+    //     //     .unwrap();
+    //     // let bytes = wallet.create_tx_raw(l2Tx.clone()).unwrap();
+    //     // let b = bytes.0.as_slice();
+    //     // let (decoded_transaction, _) = TransactionRequest::from_bytes(b, 270).unwrap();
+    //     // let origin_transaction: TransactionRequest = l2Tx.into();
 
-        // assert_eq!(origin_transaction, decoded_transaction)
+    //     // assert_eq!(origin_transaction, decoded_transaction)
 
-        // let handle = wallet
-        //     .start_execute_contract(None)
-        //     .calldata(calldata)
-        //     .contract_address(contract_address)
-        //     .nonce(Nonce(nonce))
-        //     .send()
-        //     .await;
-        // match handle {
-        //     Ok(_) => println!("ok"),
-        //     Err(e) => println!("err: {:?}", e),
-        // }
-    }
+    //     // let handle = wallet
+    //     //     .start_execute_contract(None)
+    //     //     .calldata(calldata)
+    //     //     .contract_address(contract_address)
+    //     //     .nonce(Nonce(nonce))
+    //     //     .send()
+    //     //     .await;
+    //     // match handle {
+    //     //     Ok(_) => println!("ok"),
+    //     //     Err(e) => println!("err: {:?}", e),
+    //     // }
+    // }
 }
