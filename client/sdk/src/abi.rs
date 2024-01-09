@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::Address;
@@ -52,9 +52,10 @@ fn build_invoke_entry_point_input(
     biz_calldata: Vec<u64>,
     codes: Option<Vec<u64>>,
 ) -> Result<Vec<u8>, ClientError> {
-    let entry_point_abi_file = File::open("abi/EntryPoint.json").expect("failed to open ABI file");
+    let entry_point_abi_str = include_str!("abi/EntryPoint.json");
     let abi: Abi =
-        serde_json::from_reader(entry_point_abi_file).map_err(|_| ClientError::AbiParseError)?;
+        serde_json::from_str(entry_point_abi_str).map_err(|_| ClientError::AbiParseError)?;
+
     let func = abi.functions[0].clone();
 
     let params = [
