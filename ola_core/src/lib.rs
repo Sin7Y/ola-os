@@ -35,6 +35,7 @@ pub mod api_server;
 pub mod genesis;
 pub mod metadata_calculator;
 pub mod sequencer;
+pub mod tests;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Component {
@@ -291,7 +292,7 @@ async fn add_sequencer_to_task_futures(
 }
 
 pub async fn genesis_init(network_config: &NetworkConfig, _contracts_config: &ContractsConfig) {
-    let mut storage = StorageProcessor::establish_connection(true).await;
+    let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
 
     genesis::ensure_genesis_state(
         &mut storage,
