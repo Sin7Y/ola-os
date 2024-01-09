@@ -52,7 +52,7 @@ fn build_invoke_entry_point_input(
     biz_calldata: Vec<u64>,
     codes: Option<Vec<u64>>,
 ) -> Result<Vec<u8>, ClientError> {
-    let entry_point_abi_str = include_str!("abi/EntryPoint.json");
+    let entry_point_abi_str = include_str!("abi/EntryPointAbi.json");
     let abi: Abi =
         serde_json::from_str(entry_point_abi_str).map_err(|_| ClientError::AbiParseError)?;
 
