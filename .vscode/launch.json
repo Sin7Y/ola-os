@@ -27,6 +27,20 @@
                 "OLAOS_MEMPOOL_CAPACITY": "1000000",
                 "OLAOS_OPERATIONS_MANAGER_DELAY_INTERVAL": "100",
             }
-        },  
+        },
+        {
+            "name": "Debug Olatte",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/debug/olatte",
+            "args": [
+                "signer",
+                "keystore",
+                "inspect-private",
+                "~/.ola-wallets/deployer/keystore.json"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+        }
     ]
 }
