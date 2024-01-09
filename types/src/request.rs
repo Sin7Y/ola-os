@@ -605,7 +605,7 @@ mod tests {
             PackedEthSignature::typed_data_to_signed_bytes(&Eip712Domain::new(L2ChainId(270)), &tx);
         let signature = PackedEthSignature::sign_raw(&private_key, &msg).unwrap();
 
-        tx.v = Some(U64([0; 1]));
+        tx.v = Some(U64([signature.v() as u64; 1]));
         tx.r = Some(U256::from_big_endian(&signature.r()));
         tx.s = Some(U256::from_big_endian(&signature.s()));
         let data = tx.get_signed_bytes(&signature, 270);
