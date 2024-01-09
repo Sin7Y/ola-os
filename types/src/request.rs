@@ -419,7 +419,8 @@ impl TransactionRequest {
         }
 
         if let Some(signature) = signature {
-            rlp.append(&signature.v());
+            let v = signature.v();
+            rlp.append(&U256::from_big_endian(&[v]));
             rlp.append(&U256::from_big_endian(signature.r()));
             rlp.append(&U256::from_big_endian(signature.s()));
         }
@@ -587,7 +588,7 @@ mod tests {
             to: Some(Address::random()),
             from: Some(address),
             input: Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8]),
-            transaction_type: Some(U64::from(EIP_712_TX_TYPE)),
+            transaction_type: Some(U64::from(OLA_RAW_TX_TYPE)),
             eip712_meta: Some(Eip712Meta {
                 factory_deps: Some(vec![vec![2; 32]]),
                 custom_signature: Some(vec![1; 32]),
@@ -604,15 +605,11 @@ mod tests {
             PackedEthSignature::typed_data_to_signed_bytes(&Eip712Domain::new(L2ChainId(270)), &tx);
         let signature = PackedEthSignature::sign_raw(&private_key, &msg).unwrap();
 
-        let mut rlp = RlpStream::new();
-        tx.rlp(&mut rlp, 270, Some(&signature));
-        let mut data = rlp.out().to_vec();
-        data.insert(0, EIP_712_TX_TYPE);
+        tx.v = Some(U64([0; 1]));
+        tx.r = Some(U256::from_big_endian(&signature.r()));
+        tx.s = Some(U256::from_big_endian(&signature.s()));
+        let data = tx.get_signed_bytes(&signature, 270);
         tx.raw = Some(Bytes(data.clone()));
-        tx.v = Some(U64::from(signature.v()));
-        tx.r = Some(U256::from_big_endian(signature.r()));
-        tx.s = Some(U256::from_big_endian(signature.s()));
-        dbg!(hex::encode(data.clone()));
 
         let (tx2, _) = TransactionRequest::from_bytes(&data, 270).unwrap();
 
