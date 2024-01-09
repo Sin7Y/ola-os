@@ -613,7 +613,7 @@ mod tests {
             common_data: Default::default(),
             received_timestamp_ms: 0,
         };
-        l2_tx.common_data.signature = vec![0; 32];
+        l2_tx.common_data.signature = vec![0; 64];
         let tx = Transaction::from(l2_tx);
         let exec_result = batch_executor.execute_tx(tx.clone()).await;
         match exec_result {
