@@ -109,6 +109,16 @@ pub fn bytes_to_u64s(bytes: Vec<u8>) -> Vec<u64> {
         .collect()
 }
 
+pub fn h256_to_u64_array(h: &H256) -> [u64; 4] {
+    let bytes = h.0;
+    [
+        u64::from_be_bytes(bytes[0..8].try_into().unwrap()),
+        u64::from_be_bytes(bytes[8..16].try_into().unwrap()),
+        u64::from_be_bytes(bytes[16..24].try_into().unwrap()),
+        u64::from_be_bytes(bytes[24..32].try_into().unwrap()),
+    ]
+}
+
 pub fn program_bytecode_to_bytes(bytecode: &str) -> Option<Vec<u8>> {
     let felt_str_vec: Vec<_> = bytecode.split("\n").collect();
     let mut bytes = vec![];

@@ -272,7 +272,8 @@ impl BatchExecutor {
                 &l1_batch_params.base_system_contracts.default_aa.hash,
             ),
             nonce: GoldilocksField::ZERO,
-            signature: Default::default(),
+            signature_r: Default::default(),
+            signature_s: Default::default(),
             tx_hash: Default::default(),
         };
         while let Some(cmd) = self.commands.blocking_recv() {
@@ -281,7 +282,10 @@ impl BatchExecutor {
                     let mut tx_ctx_info = tx_ctx.clone();
                     match tx.common_data {
                         ExecuteTransactionCommon::L2(tx) => {
-                            tx_ctx_info.signature = u8_arr_to_tree_key(&tx.signature);
+                            let r = tx.signature[0..32].to_vec();
+                            let s = tx.signature[32..64].to_vec();
+                            tx_ctx_info.signature_r = u8_arr_to_tree_key(&r);
+                            tx_ctx_info.signature_s = u8_arr_to_tree_key(&s);
                             tx_ctx_info.nonce = GoldilocksField::from_canonical_u32(tx.nonce.0);
                         }
                         _ => panic!("not support now"),
@@ -609,7 +613,7 @@ mod tests {
             common_data: Default::default(),
             received_timestamp_ms: 0,
         };
-        l2_tx.common_data.signature = vec![0; 32];
+        l2_tx.common_data.signature = vec![0; 64];
         let tx = Transaction::from(l2_tx);
         let exec_result = batch_executor.execute_tx(tx.clone()).await;
         match exec_result {

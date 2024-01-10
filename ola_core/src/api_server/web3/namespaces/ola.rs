@@ -26,6 +26,7 @@ impl OlaNamespace {
     pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
         olaos_logs::info!("received a transaction: {:?}", tx_bytes);
         let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
+        olaos_logs::debug!("parsed transaction: {:?}", tx);
         tx.set_input(tx_bytes.0, hash);
 
         let submit_result = self.state.tx_sender.submit_tx(tx).await;
