@@ -14,9 +14,9 @@ use ola_types::{
     protocol_version::ProtocolUpgradeTx,
     tx::{tx_execution_info::TxExecutionStatus, TransactionExecutionResult},
     Address, ExecuteTransactionCommon, L1BatchNumber, MiniblockNumber, Nonce, PriorityOpId,
-    Transaction, H256, PROTOCOL_UPGRADE_TX_TYPE, U256,
+    Transaction, H256, PROTOCOL_UPGRADE_TX_TYPE,
 };
-use ola_utils::{h256_to_u32, u256_to_big_decimal};
+use ola_utils::h256_to_u32;
 
 use crate::{
     models::storage_transaction::StorageTransaction, time_utils::pg_interval_from_duration,

@@ -14,5 +14,7 @@ members = [
     "vm",
     "mempool",
     "storage",
+    "client/cli",
+    "client/sdk",
 ]
 resolver = "2"

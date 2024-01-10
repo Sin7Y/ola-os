@@ -5,15 +5,19 @@ use jsonrpsee::{
     server::{BatchRequestConfig, ServerBuilder},
     RpcModule,
 };
-use ola_dal::connection::ConnectionPool;
-use ola_web3_decl::namespaces::ola::OlaNamespaceServer;
+use ola_dal::{connection::ConnectionPool, StorageProcessor};
+use ola_types::{api::BlockId, MiniblockNumber};
+use ola_web3_decl::{
+    error::Web3Error,
+    namespaces::{eth::EthNamespaceServer, ola::OlaNamespaceServer},
+};
 use olaos_health_check::{HealthStatus, HealthUpdater, ReactiveHealthCheck};
 use serde::Deserialize;
 use tokio::sync::watch;
 use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
 
 use self::{
-    namespaces::ola::OlaNamespace,
+    namespaces::{eth::EthNamespace, ola::OlaNamespace},
     state::{InternalApiconfig, RpcState},
 };
 
@@ -35,10 +39,11 @@ enum ApiTransport {
 #[serde(rename_all = "camelCase")]
 pub enum Namespace {
     Ola,
+    Eth,
 }
 
 impl Namespace {
-    pub const ALL: &'static [Namespace] = &[Namespace::Ola];
+    pub const ALL: &'static [Namespace] = &[Namespace::Ola, Namespace::Eth];
 }
 
 #[derive(Debug)]
@@ -283,6 +288,10 @@ impl ApiBuilder {
             rpc.merge(OlaNamespace::new(rpc_app.clone()).into_rpc())
                 .expect("Can't merge ola namespace");
         }
+        if namespaces.contains(&Namespace::Eth) {
+            rpc.merge(EthNamespace::new(rpc_app.clone()).into_rpc())
+                .expect("Can't merge eth namespace");
+        }
         rpc
     }
 
@@ -299,4 +308,15 @@ impl ApiBuilder {
             tokio::time::timeout(SERVER_SHUTDOWN_TIMEOUT, vm_barrier.wait_until_stopped());
         wait_for_vm.await;
     }
+}
+
+async fn resolve_block(
+    connection: &mut StorageProcessor<'_>,
+    block: BlockId,
+    method_name: &'static str,
+) -> Result<MiniblockNumber, Web3Error> {
+    let result = connection.blocks_web3_dal().resolve_block_id(block).await;
+    result
+        .map_err(|err| Web3Error::InternalError)?
+        .ok_or(Web3Error::NoBlock)
 }
