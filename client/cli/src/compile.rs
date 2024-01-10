@@ -6,6 +6,7 @@ use anyhow::Result;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use ola_assembler::encoder::encode_asm_from_json_file;
+use ola_lang::irgen::binary::Binary;
 use ola_lang::{
     abi,
     codegen::{core::ir::module::Module, isa::ola::Ola, lower::compile_module},
@@ -161,9 +162,8 @@ fn generate_abi(ns: &mut Namespace, mut output: File) -> Result<()> {
 
 fn generate_asm(src_name: String, ns: &mut Namespace, mut output: File) -> Result<()> {
     for contract_no in 0..ns.contracts.len() {
-        let resolved_contract = &ns.contracts[contract_no];
         let context = inkwell::context::Context::create();
-        let binary = resolved_contract.binary(&ns, &context, &src_name);
+        let binary = Binary::gen_ir(&context, contract_no, &ns, &src_name);
         // Parse the assembly and get a module
         let module = match Module::try_from(binary.module.to_string().as_str()) {
             Ok(m) => m,
