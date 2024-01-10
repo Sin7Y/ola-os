@@ -115,7 +115,6 @@ impl Invoke {
         let handle = wallet
             .start_execute_contract(Some(from), None)
             .calldata(calldata)
-            .contract_address(contract_address)
             .nonce(Nonce(nonce))
             .send()
             .await?;
