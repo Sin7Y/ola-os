@@ -127,7 +127,7 @@ impl RocksdbStorage {
         L1BatchNumber(block_number)
     }
 
-    fn read_value_inner(&self, key: &StorageKey) -> Option<StorageValue> {
+    pub fn read_value_inner(&self, key: &StorageKey) -> Option<StorageValue> {
         let cf = SequencerColumnFamily::State;
         self.db
             .get_cf(cf, &Self::serialize_state_key(key))

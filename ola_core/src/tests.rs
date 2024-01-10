@@ -2,11 +2,13 @@
 // mod tests {
 //     use std::{collections::HashMap, fs::File, io::Read};
 
+// use ola_config::constants::contracts::*;
 //     use ola_dal::StorageProcessor;
+//     use ola_state::rocksdb::RocksdbStorage;
 //     use ola_types::{
 //         get_full_code_key,
 //         log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
-//         AccountTreeId, L1BatchNumber, MiniblockNumber, StorageKey, H256, U256,
+//         AccountTreeId, Address, L1BatchNumber, MiniblockNumber, StorageKey, H256, U256,
 //     };
 //     use ola_utils::{h256_to_u256, hash::PoseidonBytes, u256_to_h256};
 //     use olavm_core::{
@@ -112,5 +114,35 @@
 //             .await;
 
 //         transaction.commit().await;
+//     }
+
+//     #[tokio::test]
+//     async fn rocks_read() {
+//         // let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
+
+//         let path = "/Users/Softcloud/develop/zk/sin7y/ola-os/db".to_string();
+//         let mut db = RocksdbStorage::new(path.as_ref());
+
+//         // db.update_from_postgres(&mut storage).await;
+
+//         let l1_number = db.l1_batch_number();
+//         println!("l1_number: {:?}", l1_number);
+
+//         // ("", "AccountCodeStorage", ACCOUNT_CODE_STORAGE_ADDRESS),
+//         // ("", "NonceHolder", NONCE_HOLDER_ADDRESS),
+//         // ("", "KnownCodesStorage", KNOWN_CODES_STORAGE_ADDRESS),
+//         // ("", "ContractDeployer", CONTRACT_DEPLOYER_ADDRESS),
+//         // ("", "VoteSimple", SIMPLE_VOTE_ADDRESS),
+
+//         let storage_key = get_full_code_key(&BOOTLOADER_ADDRESS);
+//         let v = db.read_value_inner(&storage_key);
+//         match v {
+//             Some(v) => {
+//                 println!("v: {:?}", v);
+//             }
+//             None => {
+//                 println!("value not found");
+//             }
+//         }
 //     }
 // }
