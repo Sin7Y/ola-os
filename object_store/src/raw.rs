@@ -168,7 +168,7 @@ impl ObjectStoreFactory {
     async fn create_from_config(config: &ObjectStoreConfig) -> Arc<dyn ObjectStore> {
         match config.mode {
             ObjectStoreMode::FileBacked => {
-                tracing::trace!("Initialized FileBacked Object store");
+                olaos_logs::trace!("Initialized FileBacked Object store");
                 let store = FileBackedObjectStore::new(config.file_backed_base_path.clone()).await;
                 Arc::new(store)
             }

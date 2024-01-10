@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use crate::log::StorageLog;
 
 pub mod log;
+pub mod witness_block_state;
 pub mod writes;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
