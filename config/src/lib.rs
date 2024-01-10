@@ -9,6 +9,7 @@ pub mod constants;
 pub mod contracts;
 pub mod database;
 pub mod environment;
+pub mod object_store;
 pub mod sequencer;
 pub mod utils;
 

@@ -16,5 +16,6 @@ members = [
     "storage",
     "client/cli",
     "client/sdk",
+    "object_store",
 ]
 resolver = "2"
