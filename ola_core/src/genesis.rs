@@ -155,7 +155,7 @@ pub(crate) async fn create_genesis_l1_batch(
         .mark_miniblocks_as_executed_in_l1_batch(L1BatchNumber(0))
         .await;
 
-    insert_base_system_contracts_to_factory_deps(&mut transaction, base_system_contracts).await;
+    // insert_base_system_contracts_to_factory_deps(&mut transaction, base_system_contracts).await;
     insert_system_contracts(&mut transaction, system_contracts, chain_id).await;
 
     transaction.commit().await;
