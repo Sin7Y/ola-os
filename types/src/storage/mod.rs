@@ -1,27 +1,15 @@
-use blake2::{Blake2s256, Digest};
 pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H256, U256};
-use ola_config::constants::{
-    contracts::{
-        ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
-        NONCE_HOLDER_ADDRESS, SYSTEM_CONTEXT_ADDRESS,
-    },
-    system_context::{
-        SYSTEM_CONTEXT_CHAIN_ID_POSITION, SYSTEM_CONTEXT_COINBASE_POSITION,
-        SYSTEM_CONTEXT_DIFFICULTY, SYSTEM_CONTEXT_DIFFICULTY_POSITION,
-    },
+use ola_config::constants::contracts::{
+    ACCOUNT_CODE_STORAGE_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
+    SYSTEM_CONTEXT_ADDRESS,
 };
-use ola_utils::{convert::address_to_h256, hash::hash_bytes};
-use olavm_core::{
-    types::account::{AccountTreeId as OlavmAccountTreeId, Address as OlavmAddress},
-    types::merkle_tree::{h256_to_tree_key, TreeKey as OlavmTreeKey, TreeValue as OlavmTreeValue},
-    // merkle_tree::log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind},
-    // types::merkle_tree::{TreeKey, TreeValue},
-    types::storage::StorageKey as OlavmStorageKey,
+use ola_utils::{
+    convert::address_to_h256,
+    hash::{hash_bytes, PoseidonBytes},
 };
+
 use olavm_plonky2::hash::utils::h256_add_offset;
 use serde::{Deserialize, Serialize};
-
-use crate::log::StorageLog;
 
 pub mod log;
 pub mod writes;
@@ -53,7 +41,7 @@ impl StorageKey {
         let mut bytes = [0_u8; 64];
         bytes[0..32].copy_from_slice(&address.0);
         U256::from(key.to_fixed_bytes()).to_big_endian(&mut bytes[32..64]);
-        Blake2s256::digest(bytes).into()
+        bytes.hash_bytes()
     }
 
     pub fn hashed_key(&self) -> H256 {
