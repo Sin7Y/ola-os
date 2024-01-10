@@ -43,6 +43,7 @@ pub enum Component {
     WsApi,
     Sequencer,
     Tree,
+    WitnessInputProducer,
 }
 pub async fn initialize_components(
     components: Vec<Component>,
@@ -125,6 +126,22 @@ pub async fn initialize_components(
             &mut task_futures,
             &mut healthchecks,
             &components,
+            stop_receiver.clone(),
+        )
+        .await;
+        olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
+    }
+
+    if components.contains(&Component::WitnessInputProducer) {
+        let started_at = Instant::now();
+        olaos_logs::info!("initializing Merkle Tree");
+        let pool_builder = ConnectionPool::singleton(DbVariant::Master);
+        let connection_pool = pool_builder.build().await;
+        let network_config = load_network_config().expect("failed to load network config");
+        add_witness_input_producer_to_task_futures(
+            &mut task_futures,
+            &connection_pool,
+            L2ChainId(network_config.ola_network_id),
             stop_receiver.clone(),
         )
         .await;
@@ -338,4 +355,12 @@ async fn run_tree(
     let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
     olaos_logs::info!("Initialized merkle tree in {:?}", started_at.elapsed());
     (future, tree_health_check)
+}
+
+async fn add_witness_input_producer_to_task_futures(
+    task_futures: &mut Vec<JoinHandle<()>>,
+    connection_pool: &ConnectionPool,
+    l2_chain_id: L2ChainId,
+    stop_receiver: watch::Receiver<bool>,
+) {
 }
