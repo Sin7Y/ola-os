@@ -17,5 +17,6 @@ members = [
     "client/cli",
     "client/sdk",
     "object_store",
+    "queued_job_processor",
 ]
 resolver = "2"
