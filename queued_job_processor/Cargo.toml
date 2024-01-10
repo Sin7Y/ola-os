@@ -1,0 +1,11 @@
+[package]
+name = "olaos_queued_job_processor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ola_utils = { path = "../utils" }
+olaos_logs = { path = "../logs" }
+anyhow = "1.0"
+async-trait = "0.1"
+tokio = { version = "1", features = ["time"] }
