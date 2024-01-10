@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use async_trait::async_trait;
 use ola_contracts::BaseSystemContracts;
 use ola_types::{
@@ -58,7 +59,7 @@ impl MiniblockSealer {
         (this, handle)
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self) -> anyhow::Result<()> {
         if self.is_sync {
             olaos_logs::info!("Starting synchronous miniblock sealer");
         } else if let Some(sender) = self.commands_sender.upgrade() {
@@ -79,6 +80,7 @@ impl MiniblockSealer {
             completable.completion_sender.send(()).ok();
             // ^ We don't care whether anyone listens to the processing progress
         }
+        Ok(())
     }
 
     async fn next_command(&mut self) -> Option<Completable<MiniblockSealCommand>> {
