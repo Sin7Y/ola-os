@@ -1,0 +1,4 @@
+http_port: 13320
+proof_generation_timeout_in_secs: 18000
+protocol_version_loading_mode: "FromEnvVar"
+fri_protocol_version_id: 2

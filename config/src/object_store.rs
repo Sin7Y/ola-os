@@ -29,7 +29,7 @@ mod tests {
 
     static MUTEX: EnvMutex = EnvMutex::new();
 
-    fn default_db_config() -> ObjectStoreConfig {
+    fn default_object_store_config() -> ObjectStoreConfig {
         ObjectStoreConfig {
             bucket_base_url: "public_base_url".to_string(),
             mode: ObjectStoreMode::FileBacked,
@@ -51,7 +51,7 @@ mod tests {
         "#;
         lock.set_env(config);
 
-        let db_config = load_object_store_config().expect("failed to load object store config");
-        assert_eq!(db_config, default_db_config());
+        let config = load_object_store_config().expect("failed to load object store config");
+        assert_eq!(config, default_object_store_config());
     }
 }
