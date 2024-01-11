@@ -2,4 +2,4 @@ mod file;
 mod mock;
 mod raw;
 
-pub use self::raw::{ObjectStore, ObjectStoreFactory};
+pub use self::raw::{ObjectStore, ObjectStoreError, ObjectStoreFactory};
