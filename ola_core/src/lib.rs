@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
-use anyhow::Ok;
+use anyhow::{Context, Ok};
 use api_server::{
     execution_sandbox::{VmConcurrencyBarrier, VmConcurrencyLimiter},
     healthcheck::HealthCheckHandle,
@@ -17,6 +17,7 @@ use ola_config::{
     contracts::{load_contracts_config, ContractsConfig},
     database::{load_db_config, DBConfig},
     object_store::load_object_store_config,
+    proof_data_handler::load_proof_data_handler_config,
     sequencer::{load_network_config, load_sequencer_config, NetworkConfig, SequencerConfig},
 };
 use ola_contracts::BaseSystemContracts;
@@ -39,6 +40,7 @@ use witness_input_producer::WitnessInputProducer;
 pub mod api_server;
 pub mod genesis;
 pub mod metadata_calculator;
+pub mod proof_data_handler;
 pub mod sequencer;
 pub mod tests;
 pub mod witness_input_producer;
@@ -50,6 +52,7 @@ pub enum Component {
     Sequencer,
     Tree,
     WitnessInputProducer,
+    ProofDataHandler,
 }
 pub async fn initialize_components(
     components: Vec<Component>,
@@ -142,24 +145,40 @@ pub async fn initialize_components(
         olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
     }
 
+    let object_store_config =
+        load_object_store_config().expect("failed to load object store config");
+    let store_factory = ObjectStoreFactory::new(object_store_config);
+
     if components.contains(&Component::WitnessInputProducer) {
         let started_at = Instant::now();
         olaos_logs::info!("initializing Merkle Tree");
         let pool_builder = ConnectionPool::singleton(DbVariant::Master);
         let connection_pool = pool_builder.build().await;
         let network_config = load_network_config().expect("failed to load network config");
-        let object_store_config =
-            load_object_store_config().expect("failed to load object store config");
-        let store_factory = ObjectStoreFactory::new(object_store_config);
-        add_witness_input_producer_to_task_futures(
+        let _ = add_witness_input_producer_to_task_futures(
             &mut task_futures,
             &connection_pool,
             &store_factory,
             L2ChainId(network_config.ola_network_id),
             stop_receiver.clone(),
         )
-        .await;
-        olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
+        .await
+        .context("add_witness_input_producer_to_task_futures");
+        olaos_logs::info!(
+            "initialized WitnessInputProducer in {:?}",
+            started_at.elapsed()
+        );
+    }
+
+    if components.contains(&Component::ProofDataHandler) {
+        let proof_data_handler_config =
+            load_proof_data_handler_config().expect("failed to load proof data handler config");
+        task_futures.push(tokio::spawn(proof_data_handler::run_server(
+            proof_data_handler_config,
+            store_factory.create_store().await,
+            connection_pool.clone(),
+            stop_receiver.clone(),
+        )));
     }
 
     healthchecks.push(Box::new(ConnectionPoolHealthCheck::new(
