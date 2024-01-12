@@ -16,38 +16,16 @@ pub fn create_calldata(
         .encode_input_with_signature(function_sig, &params)
         .map_err(|_| ClientError::AbiParseError)?;
     dbg!("{biz_calldata: }", biz_calldata.clone());
-    let aa_calldata = build_aa_calldata(&to, biz_calldata)?;
-    let entry_point_calldata = build_entry_point_calldata(from, to, aa_calldata, codes)?;
+    let entry_point_calldata = build_entry_point_calldata(from, to, biz_calldata, codes)?;
     dbg!("{entry_point_calldata: }", entry_point_calldata.clone());
     let calldata_bytes = u64s_to_bytes(&entry_point_calldata);
     Ok(calldata_bytes)
 }
 
-fn build_aa_calldata(to: &Address, biz_calldata: Vec<u64>) -> anyhow::Result<Vec<u64>> {
-    let aa_abi_str = include_str!("abi/AAInterface.json");
-    let abi: Abi = serde_json::from_str(aa_abi_str).map_err(|_| ClientError::AbiParseError)?;
-
-    let func = abi
-        .functions
-        .iter()
-        .find(|func| func.name == "executeTransaction".to_string())
-        .expect("executeTransaction function not found");
-
-    let params = [
-        Value::Address(FixedArray4(h256_to_u64_array(to))),
-        Value::Fields(biz_calldata),
-    ];
-    let input = abi
-        .encode_input_with_signature(func.signature().as_str(), &params)
-        .map_err(|_| ClientError::AbiParseError)?;
-    dbg!("{aa calldata: }", input.clone());
-    Ok(input)
-}
-
 fn build_entry_point_calldata(
     from: &Address,
     to: &Address,
-    aa_calldata: Vec<u64>,
+    biz_calldata: Vec<u64>,
     codes: Option<Vec<u64>>,
 ) -> anyhow::Result<Vec<u64>> {
     let entry_point_abi_str = include_str!("abi/EntryPointAbi.json");
@@ -70,7 +48,7 @@ fn build_entry_point_calldata(
                 "to".to_string(),
                 Value::Address(FixedArray4(h256_to_u64_array(to))),
             ),
-            ("data".to_string(), Value::Fields(aa_calldata)),
+            ("data".to_string(), Value::Fields(biz_calldata)),
             (
                 "codes".to_string(),
                 Value::Fields(codes.unwrap_or_default()),
