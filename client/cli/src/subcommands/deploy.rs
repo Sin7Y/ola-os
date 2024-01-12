@@ -6,7 +6,7 @@ use ethereum_types::{H256, U256};
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
-    abi::create_invoke_calldata_with_abi,
+    abi::create_calldata,
     key_store::OlaKeyPair,
     private_key_signer::PrivateKeySigner,
     program_meta::ProgramMeta,
@@ -107,7 +107,7 @@ impl Deploy {
             0x00, 0x00, 0x80, 0x05,
         ]);
 
-        let calldata = create_invoke_calldata_with_abi(
+        let calldata = create_calldata(
             &deployer_abi,
             func.signature().as_str(),
             params.to_vec(),

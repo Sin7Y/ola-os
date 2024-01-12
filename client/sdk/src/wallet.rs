@@ -136,7 +136,6 @@ mod tests {
     use ola_types::{Address, L2ChainId, Nonce};
     use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
-    use crate::abi::create_invoke_calldata_with_abi_file;
     use crate::signer::Signer;
     use crate::utils::{h256_to_u64_array, h512_to_u64_array};
     use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
