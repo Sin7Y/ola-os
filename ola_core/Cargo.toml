@@ -51,10 +51,11 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
 derivative = "*"
 rayon = "*"
-olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core" }
+# olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core" }
+olavm_core = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/core", package = "core" }
 tempfile = "3.0.2"
 # zk-vm = {git = "https://github.com/Sin7Y/olavm.git"}
-zk-vm = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/zk-vm" }
+zk-vm = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/zk-vm", package = "zk-vm" }
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"
 [features]
