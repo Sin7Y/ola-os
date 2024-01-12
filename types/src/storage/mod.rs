@@ -62,16 +62,16 @@ impl StorageKey {
 
 pub type StorageValue = H256;
 
-fn get_address_mapping_key(address: &Address, position: H256) -> H256 {
+fn get_address_mapping_key(position: H256, address: &Address) -> H256 {
     let padded_address = address_to_h256(address);
-    hash_bytes(&[padded_address.as_bytes(), position.as_bytes()].concat())
+    hash_bytes(&[position.as_bytes(), padded_address.as_bytes()].concat())
 }
 
 pub fn get_nonce_key(account: &Address) -> StorageKey {
     let nonce_manager = AccountTreeId::new(NONCE_HOLDER_ADDRESS);
 
     // The `minNonce` (used as nonce for EOAs) is stored in a mapping inside the NONCE_HOLDER system contract
-    let key = get_address_mapping_key(account, H256::zero());
+    let key = get_address_mapping_key(H256::zero(), account);
 
     StorageKey::new(nonce_manager, key)
 }
