@@ -15,9 +15,9 @@ pub fn create_calldata(
     let biz_calldata = abi
         .encode_input_with_signature(function_sig, &params)
         .map_err(|_| ClientError::AbiParseError)?;
-    dbg!("{biz_calldata: }", biz_calldata.clone());
+    dbg!(biz_calldata.clone());
     let entry_point_calldata = build_entry_point_calldata(from, to, biz_calldata, codes)?;
-    dbg!("{entry_point_calldata: }", entry_point_calldata.clone());
+    dbg!(entry_point_calldata.clone());
     let calldata_bytes = u64s_to_bytes(&entry_point_calldata);
     Ok(calldata_bytes)
 }
@@ -38,6 +38,10 @@ fn build_entry_point_calldata(
         .find(|func| func.name == "system_entrance".to_string())
         .expect("system_entrance function not found");
 
+    let code_value = match codes {
+        Some(codes) => Value::Fields(codes),
+        None => Value::Fields(vec![]),
+    };
     let params = [
         Value::Tuple(vec![
             (
@@ -49,10 +53,7 @@ fn build_entry_point_calldata(
                 Value::Address(FixedArray4(h256_to_u64_array(to))),
             ),
             ("data".to_string(), Value::Fields(biz_calldata)),
-            (
-                "codes".to_string(),
-                Value::Fields(codes.unwrap_or_default()),
-            ),
+            ("codes".to_string(), code_value),
         ]),
         Value::Bool(false),
     ];
