@@ -24,7 +24,7 @@ impl StorageWeb3Dal<'_, '_> {
             .get_historical_value_unchecked(&nonce_key, block_number)
             .await?;
         let full_nonce = h256_to_u256(nonce_value);
-        Ok(decompose_full_nonce(full_nonce).0)
+        Ok(full_nonce)
     }
 
     #[tracing::instrument(name = "get_historical_value_unchecked", skip_all)]
