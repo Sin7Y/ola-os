@@ -100,8 +100,9 @@ impl Invoke {
         let nonce = if let Some(n) = self.nonce {
             n
         } else {
-            wallet.get_addr_nonce(from).await.unwrap()
+            wallet.get_addr_nonce(from).await.unwrap() + 1
         };
+        dbg!(nonce);
 
         let calldata = create_calldata(
             &abi,

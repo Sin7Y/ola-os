@@ -327,8 +327,8 @@ impl BatchExecutor {
                         resp.send(result).unwrap();
                     }
                 }
-                Command::FinishBatch(_resp) => {
-                    // resp.send(self.finish_batch(&mut vm)).unwrap();
+                Command::FinishBatch(resp) => {
+                    resp.send(self.finish_batch()).unwrap();
                     return;
                 }
             }
@@ -337,7 +337,7 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self, _vm: &mut OlaVM) -> VmBlockResult {
+    fn finish_batch(&self) -> VmBlockResult {
         // FIXME: @pierre
         // vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
         VmBlockResult {
