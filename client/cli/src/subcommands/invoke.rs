@@ -5,7 +5,7 @@ use clap::Parser;
 use ola_lang_abi::{Abi, FixedArray4, Param, Type, Value};
 use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
-    abi::create_invoke_calldata_with_abi,
+    abi::create_calldata,
     key_store::OlaKeyPair,
     private_key_signer::PrivateKeySigner,
     provider::ProviderParams,
@@ -103,7 +103,7 @@ impl Invoke {
             wallet.get_addr_nonce(from).await.unwrap()
         };
 
-        let calldata = create_invoke_calldata_with_abi(
+        let calldata = create_calldata(
             &abi,
             func.signature().as_str(),
             params,
