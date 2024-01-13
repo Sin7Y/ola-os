@@ -1,8 +1,27 @@
+use ethereum_types::{H256, H512};
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::Address;
 use ola_utils::{h256_to_u64_array, u64s_to_bytes};
 
-use crate::errors::ClientError;
+use crate::{errors::ClientError, utils::h512_to_u64_array};
+
+pub fn create_set_public_key_calldata(from: &Address, pub_key: H512) -> anyhow::Result<Vec<u8>> {
+    let abi_str = include_str!("abi/DefaultAccountAbi.json");
+    let abi: Abi = serde_json::from_str(abi_str).map_err(|_| ClientError::AbiParseError)?;
+    let pub_key_fes = h512_to_u64_array(pub_key)?;
+    let params = vec![Value::Fields(pub_key_fes.to_vec())];
+    let to = H256([
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x80, 0x06,
+    ]);
+    let func = abi
+        .functions
+        .iter()
+        .find(|func| func.name == "setPubkey".to_string())
+        .expect("function not found");
+    create_calldata(&abi, func.signature().as_str(), params, from, &to, None)
+}
 
 pub fn create_calldata(
     abi: &Abi,
