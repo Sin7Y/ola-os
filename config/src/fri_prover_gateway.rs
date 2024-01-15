@@ -17,12 +17,15 @@ impl FriProverGatewayConfig {
 }
 
 pub fn load_fri_prover_gateway_config() -> Result<FriProverGatewayConfig, config::ConfigError> {
-    load_config("configuration/fri_prover_gateway", "OLAOS_FRI_PROVER_GATEWAY")
+    load_config(
+        "configuration/fri_prover_gateway",
+        "OLAOS_FRI_PROVER_GATEWAY",
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{utils::tests::EnvMutex, fri_prover_gateway::load_fri_prover_gateway_config};
+    use crate::{fri_prover_gateway::load_fri_prover_gateway_config, utils::tests::EnvMutex};
 
     use super::FriProverGatewayConfig;
 
@@ -44,7 +47,8 @@ mod tests {
         "#;
         lock.set_env(config);
 
-        let config = load_fri_prover_gateway_config().expect("failed to load fri prover gateway config");
+        let config =
+            load_fri_prover_gateway_config().expect("failed to load fri prover gateway config");
         assert_eq!(config, default_fri_prover_gateway_config());
     }
 }

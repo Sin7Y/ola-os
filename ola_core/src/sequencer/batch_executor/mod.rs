@@ -327,8 +327,14 @@ impl BatchExecutor {
                         resp.send(result).unwrap();
                     }
                 }
-                Command::FinishBatch(_resp) => {
-                    // resp.send(self.finish_batch(&mut vm)).unwrap();
+                Command::FinishBatch(resp) => {
+                    let tx_ctx_info = tx_ctx.clone();
+                    let mut vm = OlaVM::new(
+                        merkle_tree_path.as_ref(),
+                        secondary_storage_path.as_ref(),
+                        tx_ctx_info,
+                    );
+                    resp.send(self.finish_batch(&mut vm)).unwrap();
                     return;
                 }
             }

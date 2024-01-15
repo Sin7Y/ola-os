@@ -306,19 +306,18 @@ impl UpdatesManager {
         storage: &mut StorageProcessor<'_>,
         current_miniblock_number: MiniblockNumber,
         current_l1_batch_number: L1BatchNumber,
-        _block_result: VmBlockResult,
+        block_result: VmBlockResult,
         block_context: DerivedBlockContext,
     ) {
-        let _started_at = Instant::now();
         let mut progress = SealProgress::for_l1_batch();
         let mut transaction = storage.start_transaction().await;
 
         // The vm execution was paused right after the last transaction was executed.
         // There is some post-processing work that the VM needs to do before the block is fully processed.
-        // let VmBlockResult {
-        //     full_result,
-        //     block_tip_result,
-        // } = block_result;
+        let VmBlockResult {
+            full_result,
+            block_tip_result,
+        } = block_result;
         // assert!(
         //     full_result.revert_reason.is_none(),
         //     "VM must not revert when finalizing block. Revert reason: {:?}",
