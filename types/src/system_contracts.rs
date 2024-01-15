@@ -2,7 +2,7 @@ use ola_basic_types::{AccountTreeId, Address, U256};
 use ola_config::constants::contracts::{
     ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, CONTRACT_DEPLOYER_ADDRESS,
     DEFAULT_ACCOUNT_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
-    SIMPLE_VOTE_ADDRESS,
+    SIMPLE_VOTE_ADDRESS, SYSTEM_CONTEXT_ADDRESS,
 };
 use ola_contracts::read_sys_contract_bytecode;
 use once_cell::sync::Lazy;
@@ -20,6 +20,7 @@ static SYSTEM_CONTRACTS: Lazy<Vec<DeployedContract>> = Lazy::new(|| {
         ("", "KnownCodesStorage", KNOWN_CODES_STORAGE_ADDRESS),
         ("", "ContractDeployer", CONTRACT_DEPLOYER_ADDRESS),
         ("", "DefaultAccount", DEFAULT_ACCOUNT_ADDRESS),
+        ("", "SystemContext", SYSTEM_CONTEXT_ADDRESS),
         ("", "VoteSimple", SIMPLE_VOTE_ADDRESS),
     ]
     .map(|(path, name, address)| {
