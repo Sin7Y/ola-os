@@ -16,7 +16,7 @@ thiserror = "1.0"
 # ola_assembler = { git = "https://github.com/Sin7Y/olavm.git", branch = "main", package = "assembler" }
 ola_assembler = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/assembler", package = "assembler" }
 ola-lang = { git = "https://github.com/Sin7Y/ola-lang.git", branch = "develop" }
-ola-lang-abi = { git = "https://github.com/Sin7Y/ola-lang-abi.git", branch = "main" }
+ola-lang-abi = "1.0.4"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
 num-integer = "0.1.44"
