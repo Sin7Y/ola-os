@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::Ok;
 use ola_config::chain::MempoolConfig;
 use ola_dal::connection::ConnectionPool;
 use tokio::sync::watch;
@@ -28,7 +29,7 @@ impl MempoolFetcher {
         remove_stuck_txs: bool,
         stuck_tx_timeout: Duration,
         stop_receiver: watch::Receiver<bool>,
-    ) {
+    ) -> anyhow::Result<()> {
         {
             let mut storage = pool.access_storage_tagged("sequencer").await;
             if remove_stuck_txs {
@@ -63,5 +64,6 @@ impl MempoolFetcher {
                 tokio::time::sleep(self.sync_interval).await;
             }
         }
+        Ok(())
     }
 }

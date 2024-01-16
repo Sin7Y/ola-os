@@ -1,8 +1,8 @@
 use ola_basic_types::{AccountTreeId, Address, U256};
 use ola_config::constants::contracts::{
-    ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, CONTRACT_DEPLOYER_ADDRESS,
+    ACCOUNT_CODE_STORAGE_ADDRESS, CONTRACT_DEPLOYER_ADDRESS,
     DEFAULT_ACCOUNT_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
-    SIMPLE_VOTE_ADDRESS, SYSTEM_CONTEXT_ADDRESS,
+    SIMPLE_VOTE_ADDRESS, SYSTEM_CONTEXT_ADDRESS, ENTRYPOINT_ADDRESS,
 };
 use ola_contracts::read_sys_contract_bytecode;
 use once_cell::sync::Lazy;
@@ -14,7 +14,7 @@ pub const DEPLOYMENT_NONCE_INCREMENT: U256 = U256([0, 0, 1, 0]); // 2^128
 
 static SYSTEM_CONTRACTS: Lazy<Vec<DeployedContract>> = Lazy::new(|| {
     let mut deployed_system_contracts = [
-        ("", "Entrypoint", BOOTLOADER_ADDRESS),
+        ("", "Entrypoint", ENTRYPOINT_ADDRESS),
         ("", "AccountCodeStorage", ACCOUNT_CODE_STORAGE_ADDRESS),
         ("", "NonceHolder", NONCE_HOLDER_ADDRESS),
         ("", "KnownCodesStorage", KNOWN_CODES_STORAGE_ADDRESS),

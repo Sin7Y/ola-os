@@ -1,4 +1,5 @@
-use std::time::Duration;
+use anyhow::Context as _;
+use std::{convert::Infallible, time::Duration};
 
 use ola_types::{
     block::MiniblockReexecuteData, protocol_version::ProtocolUpgradeTx,
@@ -22,8 +23,23 @@ use super::{
 
 pub(super) const POLL_WAIT_DURATION: Duration = Duration::from_secs(1);
 
-#[derive(Debug)]
-struct Cancelled;
+/// Structure used to indicate that task cancellation was requested.
+#[derive(thiserror::Error, Debug)]
+enum Error {
+    #[error("canceled")]
+    Canceled,
+    #[error(transparent)]
+    Fatal(#[from] anyhow::Error),
+}
+
+impl Error {
+    fn context(self, msg: &'static str) -> Self {
+        match self {
+            Self::Canceled => Self::Canceled,
+            Self::Fatal(err) => Self::Fatal(err.context(msg)),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct OlaSequencer {
@@ -48,19 +64,18 @@ impl OlaSequencer {
         }
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self) -> anyhow::Result<()> {
         match self.run_inner().await {
-            Ok(()) => {
-                // Normally, sequencer can only exit its routine if the task was cancelled.
-                panic!("Sequencer exited the main loop")
-            }
+            Ok(_) => unreachable!(),
+            Err(Error::Fatal(err)) => Err(err).context("state_keeper failed"),
             Err(Cancelled) => {
                 olaos_logs::info!("Stop signal received, sequencer is shutting down");
+                Ok(())
             }
         }
     }
 
-    async fn run_inner(&mut self) -> Result<(), Cancelled> {
+    async fn run_inner(&mut self) -> Result<Infallible, Error> {
         olaos_logs::info!(
             "Starting sequencer. Next l1 batch to seal: {}, Next miniblock to seal: {}",
             self.io.current_l1_batch_number(),
@@ -169,16 +184,17 @@ impl OlaSequencer {
                 None
             };
         }
+        Err(Error::Canceled)
     }
 
-    fn check_if_cancelled(&self) -> Result<(), Cancelled> {
+    fn check_if_cancelled(&self) -> Result<(), Error> {
         if *self.stop_receiver.borrow() {
-            return Err(Cancelled);
+            return Err(Error::Canceled);
         }
         Ok(())
     }
 
-    async fn wait_for_new_batch_params(&mut self) -> Result<L1BatchParams, Cancelled> {
+    async fn wait_for_new_batch_params(&mut self) -> Result<L1BatchParams, Error> {
         let params = loop {
             if let Some(params) = self.io.wait_for_new_batch_params(POLL_WAIT_DURATION).await {
                 break params;
@@ -191,7 +207,7 @@ impl OlaSequencer {
     async fn wait_for_new_miniblock_params(
         &mut self,
         prev_miniblock_timestamp: u64,
-    ) -> Result<u64, Cancelled> {
+    ) -> Result<u64, Error> {
         let params = loop {
             if let Some(params) = self
                 .io
@@ -210,7 +226,7 @@ impl OlaSequencer {
         batch_executor: &BatchExecutorHandle,
         updates_manager: &mut UpdatesManager,
         miniblocks_to_reexecute: Vec<MiniblockReexecuteData>,
-    ) -> Result<(), Cancelled> {
+    ) -> Result<(), Error> {
         if miniblocks_to_reexecute.is_empty() {
             return Ok(());
         }
@@ -281,7 +297,7 @@ impl OlaSequencer {
         batch_executor: &BatchExecutorHandle,
         updates_manager: &mut UpdatesManager,
         protocol_upgrade_tx: Option<ProtocolUpgradeTx>,
-    ) -> Result<(), Cancelled> {
+    ) -> Result<(), Error> {
         if let Some(protocol_upgrade_tx) = protocol_upgrade_tx {
             self.process_upgrade_tx(batch_executor, updates_manager, protocol_upgrade_tx)
                 .await;

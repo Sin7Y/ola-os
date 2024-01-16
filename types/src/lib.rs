@@ -23,6 +23,7 @@ pub mod fee;
 pub mod l2;
 pub mod priority_op_onchain_data;
 pub mod protocol_version;
+pub mod prover_server_api;
 pub mod request;
 pub mod storage;
 pub mod storage_writes_deduplicator;

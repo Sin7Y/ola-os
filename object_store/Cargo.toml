@@ -1,0 +1,15 @@
+[package]
+name = "olaos_object_store"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ola_config = { path = "../config" }
+olaos_logs = { path = "../logs" }
+anyhow = "1.0"
+async-trait = "0.1"
+bincode = "1"
+tokio = { version = "1.21.2", features = ["full"] }
+
+[dev-dependencies]
+tempdir = "0.3.7"

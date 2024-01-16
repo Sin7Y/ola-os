@@ -327,7 +327,13 @@ impl BatchExecutor {
                     }
                 }
                 Command::FinishBatch(resp) => {
-                    resp.send(self.finish_batch()).unwrap();
+                    let tx_ctx_info = tx_ctx.clone();
+                    let mut vm = OlaVM::new(
+                        merkle_tree_path.as_ref(),
+                        secondary_storage_path.as_ref(),
+                        tx_ctx_info,
+                    );
+                    resp.send(self.finish_batch(&mut vm, tx_ctx.block_number.0)).unwrap();
                     return;
                 }
             }
@@ -336,9 +342,9 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self) -> VmBlockResult {
+    fn finish_batch(&self, vm: &mut OlaVM, l1_batch_number: u64) -> VmBlockResult {
         // FIXME: @pierre
-        // vm.execute_till_block_end(BootloaderJobType::BlockPostprocessing)
+        // vm.finish_batch(l1_batch_number as u32)
         VmBlockResult {
             full_result: VmExecutionResult::default(),
             block_tip_result: VmPartialExecutionResult::default(),
