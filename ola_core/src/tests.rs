@@ -134,7 +134,7 @@ use ola_config::constants::contracts::*;
         // ("", "ContractDeployer", CONTRACT_DEPLOYER_ADDRESS),
         // ("", "VoteSimple", SIMPLE_VOTE_ADDRESS),
 
-        let storage_key = get_full_code_key(&BOOTLOADER_ADDRESS);
+        let storage_key = get_full_code_key(&ENTRYPOINT_ADDRESS);
         let v = db.read_value_inner(&storage_key);
         match v {
             Some(v) => {

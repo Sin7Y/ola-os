@@ -12,6 +12,7 @@ use olavm_plonky2::hash::utils::h256_add_offset;
 use serde::{Deserialize, Serialize};
 
 pub mod log;
+pub mod witness_block_state;
 pub mod writes;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

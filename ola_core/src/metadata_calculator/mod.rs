@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use ola_config::{chain::OperationsManagerConfig, database::DBConfig};
 use ola_dal::connection::ConnectionPool;
 use ola_types::{
@@ -79,7 +80,7 @@ impl MetadataCalculator {
         pool: ConnectionPool,
         prover_pool: ConnectionPool,
         stop_receiver: watch::Receiver<bool>,
-    ) {
+    ) -> anyhow::Result<()> {
         let update_task = self.updater.loop_updating_tree(
             self.delayer,
             &pool,
@@ -88,6 +89,7 @@ impl MetadataCalculator {
             self.health_updater,
         );
         update_task.await;
+        Ok(())
     }
 
     fn build_block_metadata(

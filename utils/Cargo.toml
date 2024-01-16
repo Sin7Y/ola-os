@@ -15,3 +15,4 @@ bigdecimal = { version = "0.2.2", features = ["serde"]}
 # olavm_plonky2 = {package = "plonky2", git = "https://github.com/Sin7Y/olavm.git"}
 olavm_plonky2 = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/plonky2/plonky2", package = "plonky2" }
 hex = "0.4"
+anyhow = "1.0"

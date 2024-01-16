@@ -302,31 +302,30 @@ impl UpdatesManager {
     /// This action includes a creation of an empty "fictive" miniblock that contains
     /// the events generated during the bootloader "tip phase".
     pub(crate) async fn seal_l1_batch(
-        self,
+        mut self,
         storage: &mut StorageProcessor<'_>,
         current_miniblock_number: MiniblockNumber,
         current_l1_batch_number: L1BatchNumber,
-        _block_result: VmBlockResult,
+        block_result: VmBlockResult,
         block_context: DerivedBlockContext,
     ) {
-        let _started_at = Instant::now();
         let mut progress = SealProgress::for_l1_batch();
         let mut transaction = storage.start_transaction().await;
 
         // The vm execution was paused right after the last transaction was executed.
         // There is some post-processing work that the VM needs to do before the block is fully processed.
-        // let VmBlockResult {
-        //     full_result,
-        //     block_tip_result,
-        // } = block_result;
-        // assert!(
-        //     full_result.revert_reason.is_none(),
-        //     "VM must not revert when finalizing block. Revert reason: {:?}",
-        //     full_result.revert_reason
-        // );
-        // progress.end_stage("vm_finalization", None);
+        let VmBlockResult {
+            full_result,
+            block_tip_result,
+        } = block_result;
+        assert!(
+            full_result.revert_reason.is_none(),
+            "VM must not revert when finalizing block. Revert reason: {:?}",
+            full_result.revert_reason
+        );
+        progress.end_stage("vm_finalization", None);
 
-        // self.extend_from_fictive_transaction(block_tip_result.logs);
+        self.extend_from_fictive_transaction(block_tip_result.logs);
         // Seal fictive miniblock with last events and storage logs.
         let miniblock_command =
             self.seal_miniblock_command(current_l1_batch_number, current_miniblock_number);

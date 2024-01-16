@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
+use anyhow::Ok;
 use futures::future;
 use jsonrpsee::{
     server::{BatchRequestConfig, ServerBuilder},
@@ -124,7 +125,10 @@ impl ApiBuilder {
     pub async fn build(
         mut self,
         stop_receiver: watch::Receiver<bool>,
-    ) -> (Vec<tokio::task::JoinHandle<()>>, ReactiveHealthCheck) {
+    ) -> (
+        Vec<tokio::task::JoinHandle<anyhow::Result<()>>>,
+        ReactiveHealthCheck,
+    ) {
         match self.transport.take() {
             Some(ApiTransport::Http(addr)) => {
                 let (api_health_check, health_updater) = ReactiveHealthCheck::new("http_api");
@@ -149,7 +153,7 @@ impl ApiBuilder {
         addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
         health_updater: HealthUpdater,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> tokio::task::JoinHandle<anyhow::Result<()>> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -179,6 +183,7 @@ impl ApiBuilder {
                 response_body_size_limit,
             ));
             runtime.shutdown_timeout(SERVER_SHUTDOWN_TIMEOUT);
+            Ok(())
         })
     }
 
@@ -187,7 +192,7 @@ impl ApiBuilder {
         addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
         health_updater: HealthUpdater,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> tokio::task::JoinHandle<anyhow::Result<()>> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -218,6 +223,7 @@ impl ApiBuilder {
                 response_body_size_limit,
             ));
             runtime.shutdown_timeout(SERVER_SHUTDOWN_TIMEOUT);
+            Ok(())
         })
     }
 

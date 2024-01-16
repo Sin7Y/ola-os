@@ -10,3 +10,4 @@ olaos_storage = { path = "../storage" }
 olaos_logs = { path = "../logs" }
 mini-moka = "0.10.0"
 tokio = { version = "1", features = ["rt"] }
+anyhow = "1.0"

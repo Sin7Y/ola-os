@@ -1,7 +1,7 @@
 use std::fmt;
 
 use ola_basic_types::{bytes8::Bytes8, Address};
-use ola_config::constants::contracts::BOOTLOADER_ADDRESS;
+use ola_config::constants::contracts::ENTRYPOINT_ADDRESS;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -96,7 +96,7 @@ impl Call {
         Self {
             r#type: CallType::Call(FarCallOpcode::Normal),
             from: Address::zero(),
-            to: BOOTLOADER_ADDRESS,
+            to: ENTRYPOINT_ADDRESS,
             input,
             output,
             error: None,
