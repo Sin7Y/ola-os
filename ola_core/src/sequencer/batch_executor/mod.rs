@@ -268,9 +268,7 @@ impl BatchExecutor {
             ),
             version: GoldilocksField::from_canonical_u64(l1_batch_params.protocol_version as u64),
             chain_id: GoldilocksField::from_canonical_u64(1),
-            caller_address: h256_to_tree_key(
-                &l1_batch_params.base_system_contracts.default_aa.hash,
-            ),
+            caller_address: Default::default(),
             nonce: GoldilocksField::ZERO,
             signature_r: Default::default(),
             signature_s: Default::default(),
@@ -287,6 +285,7 @@ impl BatchExecutor {
                             tx_ctx_info.signature_r = u8_arr_to_tree_key(&r);
                             tx_ctx_info.signature_s = u8_arr_to_tree_key(&s);
                             tx_ctx_info.nonce = GoldilocksField::from_canonical_u32(tx.nonce.0);
+                            tx_ctx_info.caller_address = h256_to_tree_key(&tx.initiator_address);
                         }
                         _ => panic!("not support now"),
                     }
