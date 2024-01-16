@@ -333,7 +333,8 @@ impl BatchExecutor {
                         secondary_storage_path.as_ref(),
                         tx_ctx_info,
                     );
-                    resp.send(self.finish_batch(&mut vm, tx_ctx.block_number.0)).unwrap();
+                    resp.send(self.finish_batch(&mut vm, tx_ctx.block_number.0))
+                        .unwrap();
                     return;
                 }
             }
