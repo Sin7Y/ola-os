@@ -460,7 +460,6 @@ impl OlaSequencer {
                 tx_result,
                 tx_metrics,
                 entrypoint_dry_run_metrics,
-                // TODO: useless?
                 entrypoint_dry_run_result,
                 ..
             } => {

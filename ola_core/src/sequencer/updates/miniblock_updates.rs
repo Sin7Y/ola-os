@@ -55,7 +55,7 @@ impl MiniblockUpdates {
             .map(|bytecode| (hash_bytecode(bytecode), bytecode))
             .collect();
 
-        // Save all bytecodes that were marked as known on the bootloader
+        // Save all bytecodes that were marked as known on the entrypoint
         let known_bytecodes = saved_factory_deps.into_iter().map(|bytecode_hash| {
             let bytecode = tx_factory_deps.get(&bytecode_hash).unwrap_or_else(|| {
                 panic!(
