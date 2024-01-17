@@ -8,6 +8,32 @@ use crate::{l2::TransactionType, tx::execute::Execute, ExecuteTransactionCommon,
 
 #[repr(u16)]
 #[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, TryFromPrimitive, Serialize, Deserialize,
+)]
+pub enum FriProtocolVersionId {
+    Version0 = 0,
+    Version1,
+    Version2,
+}
+
+impl FriProtocolVersionId {
+    pub fn latest() -> Self {
+        Self::Version0
+    }
+
+    pub fn next() -> Self {
+        Self::Version1
+    }
+}
+
+impl Default for FriProtocolVersionId {
+    fn default() -> Self {
+        Self::latest()
+    }
+}
+
+#[repr(u16)]
+#[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TryFromPrimitive,
 )]
 pub enum ProtocolVersionId {

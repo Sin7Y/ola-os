@@ -4,6 +4,8 @@ use blocks_dal::BlocksDal;
 use blocks_web3_dal::BlocksWeb3Dal;
 use connection::holder::ConnectionHolder;
 use events_dal::EventsDal;
+use fri_protocol_versions_dal::FriProtocolVersionsDal;
+use fri_witness_generator_dal::FriWitnessGeneratorDal;
 use protocol_version_dal::ProtocolVersionsDal;
 pub use sqlx::Error as SqlxError;
 use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres, Transaction};
@@ -21,6 +23,8 @@ pub mod blocks_dal;
 pub mod blocks_web3_dal;
 pub mod connection;
 pub mod events_dal;
+pub mod fri_protocol_versions_dal;
+pub mod fri_witness_generator_dal;
 pub mod healthcheck;
 pub mod models;
 pub mod protocol_version_dal;
@@ -62,7 +66,18 @@ pub fn get_replica_database_url() -> String {
 }
 
 pub fn get_prover_database_url() -> String {
-    env::var("OLAOS_DATABASE_PROVER_URL").unwrap_or_else(|_| get_master_database_url())
+    // env::var("OLAOS_DATABASE_PROVER_URL").unwrap_or_else(|_| get_master_database_url())
+    // FIXME:
+    // env::var("OLAOS_DATABASE_PROVER_URL").unwrap_or_else(|_| get_master_database_url())
+    if env::var("OLAOS_IN_DOCKER")
+        .unwrap_or_else(|_| "false".to_string())
+        .parse()
+        .unwrap_or(false)
+    {
+        "postgres://admin:admin123@host.docker.internal:5434/olaos".into()
+    } else {
+        "postgres://admin:admin123@localhost:5434/olaos".into()
+    }
 }
 
 #[derive(Debug)]
@@ -150,6 +165,14 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn protocol_versions_dal(&mut self) -> ProtocolVersionsDal<'_, 'a> {
         ProtocolVersionsDal { storage: self }
+    }
+
+    pub fn fri_protocol_versions_dal(&mut self) -> FriProtocolVersionsDal<'_, 'a> {
+        FriProtocolVersionsDal { storage: self }
+    }
+
+    pub fn fri_witness_generator_dal(&mut self) -> FriWitnessGeneratorDal<'_, 'a> {
+        FriWitnessGeneratorDal { storage: self }
     }
 
     pub fn conn(&mut self) -> &mut PgConnection {
