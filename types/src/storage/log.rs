@@ -42,7 +42,7 @@ pub struct LogQuery {
 
 impl From<&OlavmStorageQuery> for LogQuery {
     fn from(query: &OlavmStorageQuery) -> Self {
-        Self { timestamp: Timestamp(query.block_timestamp as u32), tx_number_in_block: 0, aux_byte: 0, shard_id: 0, address: olavm_address_to_address(&query.contract_addr), key: olavm_address_to_u256(&query.storage_key), read_value: olavm_address_to_u256(&query.value), written_value: olavm_address_to_u256(&query.value), rw_flag: query.kind != OlavmStorageLogKind::Read, rollback: false, is_service: false }
+        Self { timestamp: Timestamp(query.block_timestamp as u32), tx_number_in_block: 0, aux_byte: 0, shard_id: 0, address: olavm_address_to_address(&query.contract_addr), key: olavm_address_to_u256(&query.storage_key), read_value: olavm_address_to_u256(&query.pre_value), written_value: olavm_address_to_u256(&query.value), rw_flag: query.kind != OlavmStorageLogKind::Read, rollback: false, is_service: false }
     }
 }
 
@@ -53,12 +53,12 @@ pub enum StorageLogQueryType {
     RepeatedWrite,
 }
 
-impl From<StorageLogKind> for StorageLogQueryType {
-    fn from(kind: StorageLogKind) -> Self {
+impl From<OlavmStorageLogKind> for StorageLogQueryType {
+    fn from(kind: OlavmStorageLogKind) -> Self {
         match kind {
-            StorageLogKind::Read => StorageLogQueryType::Read,
-            StorageLogKind::InititalWrite => StorageLogQueryType::InitialWrite,
-            StorageLogKind::RepeatedWrite => StorageLogQueryType::RepeatedWrite,
+            OlavmStorageLogKind::Read => StorageLogQueryType::Read,
+            OlavmStorageLogKind::InitialWrite => StorageLogQueryType::InitialWrite,
+            OlavmStorageLogKind::RepeatedWrite => StorageLogQueryType::RepeatedWrite,
         }
     }
 }
