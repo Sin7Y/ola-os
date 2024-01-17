@@ -5,6 +5,7 @@ use ola_config::{
 };
 use ola_dal::connection::{ConnectionPool, DbVariant};
 use ola_types::prover_server_api::{ProofGenerationDataRequest, SubmitProofRequest};
+use ola_utils::wait_for_tasks::wait_for_tasks;
 use olaos_logs::telemetry::{get_subscriber, init_subscriber};
 use olaos_object_store::ObjectStoreFactory;
 use reqwest::Client;
@@ -12,6 +13,7 @@ use tokio::sync::{oneshot, watch};
 
 mod api_data_fetcher;
 mod proof_gen_data_fetcher;
+mod proof_submitter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -64,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
     let graceful_shutdown = None::<futures::future::Ready<()>>;
     let tasks_allowed_to_finish = false;
     tokio::select! {
-        _ = wait_for_tasks(tasks, None, graceful_shutdown, tasks_allowed_to_finish) => {},
+        _ = wait_for_tasks(tasks, graceful_shutdown, tasks_allowed_to_finish) => {},
         _ = stop_signal_receiver => {
             olaos_logs::info!("Stop signal received, shutting down");
         }

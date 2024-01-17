@@ -9,7 +9,10 @@ use crate::protocol_version::FriProtocolVersionId;
 pub struct ProofGenerationDataRequest {}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ProofGenerationDataResponse {}
+pub enum ProofGenerationDataResponse {
+    Success(Option<ProofGenerationData>),
+    Error(String),
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SubmitProofRequest {}

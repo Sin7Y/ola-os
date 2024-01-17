@@ -9,6 +9,7 @@ ola_dal = { path = "../../dal" }
 olaos_logs = { path = "../../logs" }
 ola_config = { path = "../../config" }
 ola_types = { path = "../../types" }
+ola_utils = { path = "../../utils" }
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["blocking"] }
 tokio = { version = "1", features = ["time", "macros"] }
