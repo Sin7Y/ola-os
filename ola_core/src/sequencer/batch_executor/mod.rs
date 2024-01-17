@@ -304,9 +304,7 @@ impl BatchExecutor {
                         let result = TxExecutionResult::Success {
                             tx_result: Box::new(VmTxExecutionResult {
                                 status: TxExecutionStatus::Success,
-                                // todo convert storage_queries to Vec<StorageLogQuery>
-                                // vm.ola_state.storage_queries
-                                result: Default::default(),
+                                result: VmPartialExecutionResult::new(&vm.ola_state.storage_queries),
                                 ret,
                                 trace: tx_trace,
                                 call_traces: vec![],

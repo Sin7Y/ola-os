@@ -1,6 +1,7 @@
 use bigdecimal::BigDecimal;
 use num::{bigint::ToBigInt, rational::Ratio, BigUint};
 use ola_basic_types::{Address, H256, U256};
+use olavm_core::types::{account::Address as OlavmAddress, merkle_tree::tree_key_to_h256};
 
 pub fn u256_to_big_decimal(value: U256) -> BigDecimal {
     let ratio = Ratio::new_raw(u256_to_biguint(value), BigUint::from(1u8));
@@ -44,6 +45,14 @@ pub fn address_to_h256(address: &Address) -> H256 {
     let mut buffer = [0u8; 32];
     buffer.copy_from_slice(address.as_bytes());
     H256(buffer)
+}
+
+pub fn olavm_address_to_address(addr: &OlavmAddress) -> Address {
+    tree_key_to_h256(addr)
+}
+
+pub fn olavm_address_to_u256(addr: &OlavmAddress) -> U256 {
+    h256_to_u256(tree_key_to_h256(addr))
 }
 
 pub fn h160_bytes_to_h256(data: &[u8; 20]) -> H256 {

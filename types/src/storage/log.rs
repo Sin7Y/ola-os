@@ -1,5 +1,5 @@
 use ola_basic_types::{AccountTreeId, Address, H256, U256};
-use ola_utils::u256_to_h256;
+use ola_utils::{u256_to_h256, olavm_address_to_address, olavm_address_to_u256};
 use serde::{Deserialize, Serialize};
 
 use crate::{StorageKey, StorageValue};
@@ -7,6 +7,7 @@ use olavm_core::{
     merkle_tree::log::{
         StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind,
         WitnessStorageLog as OlavmWitnessStorageLog,
+        StorageQuery as OlavmStorageQuery,
     },
     types::{
         account::AccountTreeId as OlavmAccountTreeId,
@@ -39,11 +40,27 @@ pub struct LogQuery {
     pub is_service: bool,
 }
 
+impl From<&OlavmStorageQuery> for LogQuery {
+    fn from(query: &OlavmStorageQuery) -> Self {
+        Self { timestamp: Timestamp(query.block_timestamp as u32), tx_number_in_block: 0, aux_byte: 0, shard_id: 0, address: olavm_address_to_address(&query.contract_addr), key: olavm_address_to_u256(&query.storage_key), read_value: olavm_address_to_u256(&query.value), written_value: olavm_address_to_u256(&query.value), rw_flag: query.kind != OlavmStorageLogKind::Read, rollback: false, is_service: false }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum StorageLogQueryType {
     Read,
     InitialWrite,
     RepeatedWrite,
+}
+
+impl From<StorageLogKind> for StorageLogQueryType {
+    fn from(kind: StorageLogKind) -> Self {
+        match kind {
+            StorageLogKind::Read => StorageLogQueryType::Read,
+            StorageLogKind::InititalWrite => StorageLogQueryType::InitialWrite,
+            StorageLogKind::RepeatedWrite => StorageLogQueryType::RepeatedWrite,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
