@@ -38,9 +38,3 @@ DROP INDEX miniblocks_l1_batch_number_idx;
 DROP TABLE miniblocks;
 
 DROP TABLE storage;
-
-DROP TABLE prover_fri_protocol_versions;
-
-DROP TABLE IF EXISTS witness_inputs_fri;
-DROP INDEX IF EXISTS idx_witness_inputs_fri_queued_order;
-DROP INDEX IF EXISTS idx_witness_inputs_fri_status_processing_attempts;
