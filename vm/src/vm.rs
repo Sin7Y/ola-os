@@ -37,17 +37,18 @@ pub struct VmPartialExecutionResult {
 
 impl VmPartialExecutionResult {
     pub fn new(storage_queries: &Vec<StorageQuery>) -> Self {
-        let storage_logs = storage_queries.iter().map(|log| {
+        let storage_logs: Vec<StorageLogQuery> = storage_queries.iter().map(|log| {
             let log_query = log.into();
             StorageLogQuery {
                 log_query,
                 log_type: log.kind.into(),
             }
         }).collect();
+        let total_log_queries_count = storage_logs.len();
         let logs: VmExecutionLogs = VmExecutionLogs {
             storage_logs,
             events: vec![],
-            total_log_queries_count: storage_logs.len(),
+            total_log_queries_count,
         };
         Self { logs, revert_reason: None, contracts_used: 0, cycles_used: 0 }
     }
