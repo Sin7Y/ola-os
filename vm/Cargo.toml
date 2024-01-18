@@ -10,5 +10,5 @@ ola_utils = { path = "../utils" }
 ola-lang-abi = { git = "https://github.com/Sin7Y/ola-lang-abi.git" }
 thiserror = "1.0"
 hex = "0.4"
-# olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core"}
-olavm_core = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/core", package = "core" }
+olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "dev/debug-sys"}
+

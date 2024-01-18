@@ -121,8 +121,10 @@ impl AsyncTree {
     fn filter_block_logs(
         logs: &[WitnessStorageLog],
     ) -> impl Iterator<Item = &WitnessStorageLog> + '_ {
-        logs.iter()
-            .filter(move |log| log.storage_log.kind == StorageLogKind::Write)
+        logs.iter().filter(move |log| {
+            log.storage_log.kind == StorageLogKind::InitialWrite
+                || log.storage_log.kind == StorageLogKind::RepeatedWrite
+        })
     }
 
     fn as_ref(&self) -> &AccountTree {
@@ -234,7 +236,11 @@ pub(crate) async fn get_logs_for_l1_batch(
             storage_logs.insert(
                 storage_key,
                 WitnessStorageLog {
-                    storage_log: StorageLog::new_write_log(storage_key, value),
+                    storage_log: StorageLog::new_log(
+                        StorageLogKind::RepeatedWrite,
+                        storage_key,
+                        value,
+                    ),
                     previous_value,
                 },
             );
