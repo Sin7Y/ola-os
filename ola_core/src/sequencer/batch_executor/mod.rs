@@ -304,7 +304,9 @@ impl BatchExecutor {
                         let result = TxExecutionResult::Success {
                             tx_result: Box::new(VmTxExecutionResult {
                                 status: TxExecutionStatus::Success,
-                                result: VmPartialExecutionResult::new(&vm.ola_state.storage_queries),
+                                result: VmPartialExecutionResult::new(
+                                    &vm.ola_state.storage_queries,
+                                ),
                                 ret,
                                 trace: tx_trace,
                                 call_traces: vec![],
