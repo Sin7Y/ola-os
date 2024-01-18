@@ -126,7 +126,7 @@ impl WitnessStorageLog {
                 kind: if self.storage_log.kind == StorageLogKind::Read {
                     OlavmStorageLogKind::Read
                 } else {
-                    OlavmStorageLogKind::Write
+                    OlavmStorageLogKind::RepeatedWrite
                 },
                 key: h256_to_tree_key(&self.storage_log.key.hashed_key()),
                 value: h256_to_tree_value(&self.storage_log.value),
