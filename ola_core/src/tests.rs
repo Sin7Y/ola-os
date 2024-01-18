@@ -43,8 +43,8 @@ mod tests {
         let storage_logs = vec![(
             H256::default(),
             vec![
-                StorageLog::new_write_log(prog_hash_key, program_hash),
-                StorageLog::new_write_log(bytecode_key, bytecode_hash),
+                StorageLog::new_log(StorageLogKind::InitialWrite, prog_hash_key, program_hash),
+                StorageLog::new_log(StorageLogKind::InitialWrite, bytecode_key, bytecode_hash),
             ],
         )];
 
@@ -73,7 +73,8 @@ mod tests {
                             key: h256_to_u256(*storage_log.key.key()),
                             read_value: h256_to_u256(H256::zero()),
                             written_value: h256_to_u256(storage_log.value),
-                            rw_flag: storage_log.kind == StorageLogKind::Write,
+                            rw_flag: storage_log.kind == StorageLogKind::InitialWrite
+                                || storage_log.kind == StorageLogKind::RepeatedWrite,
                             rollback: false,
                             is_service: false,
                         }
