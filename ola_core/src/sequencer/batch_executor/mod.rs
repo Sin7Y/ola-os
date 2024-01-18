@@ -4,6 +4,7 @@ use std::{fmt, time::Instant};
 use async_trait::async_trait;
 use ola_dal::connection::ConnectionPool;
 use ola_state::rocksdb::RocksdbStorage;
+use ola_types::log::StorageLogQuery;
 use ola_types::{ExecuteTransactionCommon, Transaction};
 use ola_vm::{
     errors::TxRevertReason,
@@ -346,11 +347,10 @@ impl BatchExecutor {
     }
 
     fn finish_batch(&self, vm: &mut OlaVM, l1_batch_number: u64) -> VmBlockResult {
-        // FIXME: @pierre
-        // vm.finish_batch(l1_batch_number as u32)
+        vm.finish_batch(l1_batch_number as u32).unwrap();
         VmBlockResult {
             full_result: VmExecutionResult::default(),
-            block_tip_result: VmPartialExecutionResult::default(),
+            block_tip_result: VmPartialExecutionResult::new(&vm.ola_state.storage_queries),
         }
     }
 
