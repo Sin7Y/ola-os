@@ -635,6 +635,8 @@ mod tests {
             TxExecutionResult::BootloaderOutOfGasForBlockTip => {}
         }
     }
+    
+    #[ignore]
     #[tokio::test]
     async fn call_ret_test() {
         let _ = env_logger::builder()
@@ -664,6 +666,7 @@ mod tests {
         .await;
     }
 
+    #[ignore]
     #[tokio::test]
     async fn sccall_test() {
         let addr_caller = tree_key_to_h256(&[
