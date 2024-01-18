@@ -117,7 +117,7 @@ mod tests {
         transaction.commit().await;
     }
 
-    #[tokio::test]  
+    #[tokio::test]
     async fn rocks_read() {
         let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
 
