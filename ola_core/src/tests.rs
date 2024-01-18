@@ -2,7 +2,7 @@
 mod tests {
     use std::{collections::HashMap, fs::File, io::Read};
 
-use ola_config::constants::contracts::*;
+    use ola_config::constants::contracts::*;
     use ola_dal::StorageProcessor;
     use ola_state::rocksdb::RocksdbStorage;
     use ola_types::{
