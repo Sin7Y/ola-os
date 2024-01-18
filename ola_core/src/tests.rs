@@ -120,7 +120,7 @@ use ola_config::constants::contracts::*;
     async fn rocks_read() {
         let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
 
-        let path = "/Users/Softcloud/develop/zk/sin7y/ola-os/db".to_string();
+        let path = "../db/main/sequencer".to_string();
         let mut db = RocksdbStorage::new(path.as_ref());
 
         db.update_from_postgres(&mut storage).await;

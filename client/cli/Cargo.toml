@@ -13,8 +13,7 @@ ola_wallet_sdk = { path = "../sdk" }
 clap = { version = "4.4.7", features = ["derive", "env", "string"] }
 clap_complete = "4.4.4"
 thiserror = "1.0"
-# ola_assembler = { git = "https://github.com/Sin7Y/olavm.git", branch = "main", package = "assembler" }
-ola_assembler = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/assembler", package = "assembler" }
+ola_assembler = { git = "https://github.com/Sin7Y/olavm.git", branch = "dev/debug-sys", package = "assembler" }
 ola-lang = { git = "https://github.com/Sin7Y/ola-lang.git", branch = "develop" }
 ola-lang-abi = "1.0.4"
 num-bigint = { version = "0.4", features = ["rand"] }
