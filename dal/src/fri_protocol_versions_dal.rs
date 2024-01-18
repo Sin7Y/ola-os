@@ -26,4 +26,23 @@ impl FriProtocolVersionsDal<'_, '_> {
         .await
         .unwrap();
     }
+
+    pub async fn protocol_versions(
+        &mut self,
+    ) -> Vec<FriProtocolVersionId> {
+        sqlx::query!(
+            r#"
+            SELECT
+                id
+            FROM
+                prover_fri_protocol_versions
+            "#,
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| FriProtocolVersionId::try_from(row.id as u16).unwrap())
+        .collect()
+    }
 }
