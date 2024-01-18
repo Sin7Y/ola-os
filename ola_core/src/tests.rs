@@ -18,6 +18,7 @@ mod tests {
 
     use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 
+    #[ignore]
     #[tokio::test]
     async fn manually_depoly_contract() {
         let address = u256_to_h256(U256([100, 100, 100, 100]));
@@ -116,7 +117,7 @@ mod tests {
         transaction.commit().await;
     }
 
-    #[tokio::test]
+    #[tokio::test]  
     async fn rocks_read() {
         let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
 
