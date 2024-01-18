@@ -13,6 +13,7 @@ itertools = "0.10.5"
 num = { version = "0.3.1", features = ["serde"] }
 bigdecimal = { version = "0.2.2", features = ["serde"]}
 # olavm_plonky2 = {package = "plonky2", git = "https://github.com/Sin7Y/olavm.git"}
-olavm_plonky2 = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/plonky2/plonky2", package = "plonky2" }
+olavm_plonky2 = { path = "/Users/payne/Sin7y/code/Olavm/plonky2/plonky2", package = "plonky2" }
+olavm_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git"}
 hex = "0.4"
 anyhow = "1.0"
