@@ -635,7 +635,7 @@ mod tests {
             TxExecutionResult::BootloaderOutOfGasForBlockTip => {}
         }
     }
-    
+
     #[ignore]
     #[tokio::test]
     async fn call_ret_test() {
