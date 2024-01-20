@@ -53,7 +53,7 @@ impl SetPubKey {
         let nonce = if let Some(n) = self.nonce {
             n
         } else {
-            wallet.get_addr_nonce(from).await.unwrap() + 1
+            wallet.get_addr_nonce(from).await.unwrap()
         };
         let calldata = create_set_public_key_calldata(&from, public_key)?;
         let handle = wallet
