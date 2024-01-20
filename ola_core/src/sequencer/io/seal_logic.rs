@@ -333,8 +333,8 @@ impl UpdatesManager {
         progress.end_stage("fictive_miniblock", None);
 
         let (_, deduped_log_queries) = sort_storage_access_queries(
-            self.l1_batch
-                .block_storage_logs
+            full_result
+                .storage_log_queries
                 .iter()
                 .map(|log| &log.log_query),
         );
@@ -342,7 +342,7 @@ impl UpdatesManager {
 
         let (l1_tx_count, l2_tx_count) = l1_l2_tx_count(&self.l1_batch.executed_transactions);
         let (writes_count, reads_count) =
-            storage_log_query_write_read_counts(&self.l1_batch.block_storage_logs);
+            storage_log_query_write_read_counts(&full_result.storage_log_queries);
         let (dedup_writes_count, dedup_reads_count) =
             log_query_write_read_counts(deduped_log_queries.iter());
 
@@ -443,7 +443,7 @@ impl UpdatesManager {
             .storage_logs_dedup_dal()
             .insert_initial_writes(current_l1_batch_number, &written_storage_keys)
             .await;
-        progress.end_stage("insert_initial_writes", Some(deduplicated_writes.len()));
+        progress.end_stage("insert_initial_writes", Some(written_storage_keys.len()));
 
         transaction.commit().await;
         progress.end_stage("commit_l1_batch", None);

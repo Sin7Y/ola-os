@@ -1,5 +1,5 @@
 use ola_types::{
-    log::StorageLogQuery,
+    log::{LogQuery, StorageLogQuery},
     tx::tx_execution_info::{TxExecutionStatus, VmExecutionLogs},
     vm_trace::Call,
     U256,
@@ -36,11 +36,12 @@ pub struct VmPartialExecutionResult {
 }
 
 impl VmPartialExecutionResult {
-    pub fn new(storage_queries: &Vec<StorageQuery>) -> Self {
+    pub fn new(storage_queries: &Vec<StorageQuery>, tx_index_in_l1_batch: u32) -> Self {
         let storage_logs: Vec<StorageLogQuery> = storage_queries
             .iter()
             .map(|log| {
-                let log_query = log.into();
+                let mut log_query: LogQuery = log.into();
+                log_query.tx_number_in_block = tx_index_in_l1_batch as u16;
                 StorageLogQuery {
                     log_query,
                     log_type: log.kind.into(),
