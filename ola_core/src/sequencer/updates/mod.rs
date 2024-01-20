@@ -73,7 +73,7 @@ impl UpdatesManager {
         self.storage_writes_deduplicator
             .apply(&vm_execution_logs.storage_logs);
         self.miniblock
-            .extend_from_fictive_transaction(vm_execution_logs);
+            .extend_from_fictive_transaction(vm_execution_logs.clone());
     }
 
     pub(crate) fn seal_miniblock_command(

@@ -10,6 +10,7 @@ use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
+use olavm_core::merkle_tree::log::{StorageLogKind, StorageQuery};
 use olavm_core::state::error::StateError;
 use olavm_core::types::merkle_tree::{h256_to_tree_key, u8_arr_to_tree_key, TreeValue};
 use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
@@ -57,10 +58,18 @@ impl BatchExecutorHandle {
         }
     }
 
-    pub(super) async fn execute_tx(&self, tx: Transaction) -> TxExecutionResult {
+    pub(super) async fn execute_tx(
+        &self,
+        tx: Transaction,
+        tx_index_in_l1_batch: u32,
+    ) -> TxExecutionResult {
         let (response_sender, response_receiver) = oneshot::channel();
         self.commands
-            .send(Command::ExecuteTx(Box::new(tx), response_sender))
+            .send(Command::ExecuteTx(
+                Box::new(tx),
+                tx_index_in_l1_batch,
+                response_sender,
+            ))
             .await
             .unwrap();
 
@@ -71,10 +80,10 @@ impl BatchExecutorHandle {
         res.unwrap()
     }
 
-    pub(super) async fn finish_batch(self) -> VmBlockResult {
+    pub(super) async fn finish_batch(self, tx_index_in_l1_batch: u32) -> VmBlockResult {
         let (response_sender, response_receiver) = oneshot::channel();
         self.commands
-            .send(Command::FinishBatch(response_sender))
+            .send(Command::FinishBatch(tx_index_in_l1_batch, response_sender))
             .await
             .unwrap();
         let _start = Instant::now();
@@ -86,8 +95,8 @@ impl BatchExecutorHandle {
 
 #[derive(Debug)]
 pub(super) enum Command {
-    ExecuteTx(Box<Transaction>, oneshot::Sender<TxExecutionResult>),
-    FinishBatch(oneshot::Sender<VmBlockResult>),
+    ExecuteTx(Box<Transaction>, u32, oneshot::Sender<TxExecutionResult>),
+    FinishBatch(u32, oneshot::Sender<VmBlockResult>),
 }
 
 #[derive(Debug, Clone)]
@@ -277,7 +286,7 @@ impl BatchExecutor {
         };
         while let Some(cmd) = self.commands.blocking_recv() {
             match cmd {
-                Command::ExecuteTx(tx, resp) => {
+                Command::ExecuteTx(tx, tx_index_in_l1_batch, resp) => {
                     let mut tx_ctx_info = tx_ctx.clone();
                     match tx.common_data {
                         ExecuteTransactionCommon::L2(tx) => {
@@ -307,6 +316,7 @@ impl BatchExecutor {
                                 status: TxExecutionStatus::Success,
                                 result: VmPartialExecutionResult::new(
                                     &vm.ola_state.storage_queries,
+                                    tx_index_in_l1_batch,
                                 ),
                                 ret,
                                 trace: tx_trace,
@@ -329,15 +339,19 @@ impl BatchExecutor {
                         resp.send(result).unwrap();
                     }
                 }
-                Command::FinishBatch(resp) => {
+                Command::FinishBatch(tx_index_in_l1_batch, resp) => {
                     let tx_ctx_info = tx_ctx.clone();
                     let mut vm = OlaVM::new(
                         merkle_tree_path.as_ref(),
                         secondary_storage_path.as_ref(),
                         tx_ctx_info,
                     );
-                    resp.send(self.finish_batch(&mut vm, tx_ctx.block_number.0))
-                        .unwrap();
+                    resp.send(self.finish_batch(
+                        &mut vm,
+                        tx_ctx.block_number.0,
+                        tx_index_in_l1_batch,
+                    ))
+                    .unwrap();
                     return;
                 }
             }
@@ -346,11 +360,19 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self, vm: &mut OlaVM, l1_batch_number: u64) -> VmBlockResult {
+    fn finish_batch(
+        &self,
+        vm: &mut OlaVM,
+        l1_batch_number: u64,
+        tx_index_in_l1_batch: u32,
+    ) -> VmBlockResult {
         vm.finish_batch(l1_batch_number as u32).unwrap();
         VmBlockResult {
             full_result: VmExecutionResult::default(),
-            block_tip_result: VmPartialExecutionResult::new(&vm.ola_state.storage_queries),
+            block_tip_result: VmPartialExecutionResult::new(
+                &vm.ola_state.storage_queries,
+                tx_index_in_l1_batch,
+            ),
         }
     }
 
@@ -623,7 +645,7 @@ mod tests {
         };
         l2_tx.common_data.signature = vec![0; 64];
         let tx = Transaction::from(l2_tx);
-        let exec_result = batch_executor.execute_tx(tx.clone()).await;
+        let exec_result = batch_executor.execute_tx(tx.clone(), 0).await;
         match exec_result {
             TxExecutionResult::Success { tx_result, .. } => {
                 println!("tx ret:{:?}", u8_arr_to_field_arr(&tx_result.ret))
