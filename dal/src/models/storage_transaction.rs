@@ -3,7 +3,7 @@ use ola_types::{
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
     Address, ExecuteTransactionCommon, Nonce, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE, H256,
-    PROTOCOL_UPGRADE_TX_TYPE,
+    OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
 };
 use sqlx::types::chrono::NaiveDateTime;
 
@@ -50,6 +50,7 @@ impl From<StorageTransaction> for L2TxCommonData {
         let tx_format = match tx.tx_format.map(|a| a as u8) {
             Some(EIP_712_TX_TYPE) | None => TransactionType::EIP712Transaction,
             Some(EIP_1559_TX_TYPE) => TransactionType::EIP1559Transaction,
+            Some(OLA_RAW_TX_TYPE) => TransactionType::OlaRawTransaction,
             Some(_) => unreachable!("Unsupported tx type"),
         };
 
