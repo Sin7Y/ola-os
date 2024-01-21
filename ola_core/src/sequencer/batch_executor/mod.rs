@@ -296,6 +296,9 @@ impl BatchExecutor {
                             tx_ctx_info.signature_s = u8_arr_to_tree_key(&s);
                             tx_ctx_info.nonce = GoldilocksField::from_canonical_u32(tx.nonce.0);
                             tx_ctx_info.caller_address = h256_to_tree_key(&tx.initiator_address);
+                            tx_ctx_info.chain_id = GoldilocksField::from_canonical_u16(
+                                tx.extract_chain_id().unwrap_or_default(),
+                            );
                         }
                         _ => panic!("not support now"),
                     }
