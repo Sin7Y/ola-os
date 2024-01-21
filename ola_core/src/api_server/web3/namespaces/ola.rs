@@ -29,6 +29,11 @@ impl OlaNamespace {
         olaos_logs::debug!("parsed transaction: {:?}", tx);
         tx.set_input(tx_bytes.0, hash);
 
+        let tx_chain_id = tx.common_data.extract_chain_id().unwrap_or_default();
+        if self.state.api_config.l2_chain_id.0 != tx_chain_id {
+            return Err(Web3Error::InvalidChainId(tx_chain_id));
+        }
+
         let submit_result = self.state.tx_sender.submit_tx(tx).await;
 
         submit_result.map(|_| hash).map_err(|err| {
