@@ -23,3 +23,6 @@ db/
 dal/scripts/olsoa_pgdata/
 
 dump.json
+
+# js dependencies
+node_modules
