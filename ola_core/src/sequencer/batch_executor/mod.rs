@@ -6,6 +6,7 @@ use ola_dal::connection::ConnectionPool;
 use ola_state::rocksdb::RocksdbStorage;
 use ola_types::log::StorageLogQuery;
 use ola_types::{ExecuteTransactionCommon, Transaction};
+use ola_vm::errors::VmRevertReason;
 use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
@@ -312,7 +313,6 @@ impl BatchExecutor {
                         secondary_storage_path.as_ref(),
                         tx_ctx_info,
                     );
-                    // FIXME: @pierre
                     let address = h256_to_tree_key(&tx.execute.contract_address);
                     let calldata = u8_arr_to_field_arr(&tx.execute.calldata);
                     let exec_res = self.execute_tx(&mut vm, address, calldata);
@@ -343,7 +343,18 @@ impl BatchExecutor {
                         resp.send(result).unwrap();
                     } else {
                         println!("exec tx err: {:?}", exec_res);
-                        let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
+                        let revert_reason = VmRevertReason::General {
+                            msg: exec_res
+                                .err()
+                                .unwrap_or_else(|| {
+                                    StateError::VmExecError("vm internal error".to_string())
+                                })
+                                .to_string(),
+                            data: vec![],
+                        };
+                        let result = TxExecutionResult::RejectedByVm {
+                            rejection_reason: TxRevertReason::TxReverted(revert_reason),
+                        };
                         resp.send(result).unwrap();
                     }
                 }
