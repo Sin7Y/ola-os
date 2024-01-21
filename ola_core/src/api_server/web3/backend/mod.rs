@@ -7,7 +7,7 @@ pub fn into_rpc_error(err: Web3Error) -> ErrorObjectOwned {
     ErrorObjectOwned::owned(
         match err {
             Web3Error::InternalError => ErrorCode::InternalError.code(),
-            Web3Error::NoBlock => ErrorCode::InvalidParams.code(),
+            Web3Error::NoBlock | Web3Error::InvalidChainId(_) => ErrorCode::InvalidParams.code(),
             Web3Error::SerializationError(_) | Web3Error::SubmitTransactionError(_, _) => 3,
         },
         match err {
