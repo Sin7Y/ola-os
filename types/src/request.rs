@@ -526,7 +526,8 @@ impl L2Tx {
         tx.common_data.transaction_type = match request.transaction_type.map(|t| t.as_u64() as u8) {
             Some(EIP_712_TX_TYPE) => TransactionType::EIP712Transaction,
             Some(EIP_1559_TX_TYPE) => TransactionType::EIP1559Transaction,
-            _ => TransactionType::EIP712Transaction,
+            Some(OLA_RAW_TX_TYPE) => TransactionType::OlaRawTransaction,
+            _ => TransactionType::OlaRawTransaction,
         };
         tx.set_raw_signature(raw_signature);
         Ok(tx)

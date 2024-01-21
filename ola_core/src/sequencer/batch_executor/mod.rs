@@ -288,6 +288,11 @@ impl BatchExecutor {
             match cmd {
                 Command::ExecuteTx(tx, tx_index_in_l1_batch, resp) => {
                     let mut tx_ctx_info = tx_ctx.clone();
+                    let msg_hash = tx.msg_hash();
+                    match msg_hash {
+                        Some(hash) => tx_ctx_info.tx_hash = u8_arr_to_tree_key(&hash),
+                        None => {}
+                    }
                     match tx.common_data {
                         ExecuteTransactionCommon::L2(tx) => {
                             let r = tx.signature[0..32].to_vec();
