@@ -11,4 +11,10 @@ impl OlaNamespaceServer for OlaNamespace {
             .await
             .map_err(into_rpc_error)
     }
+
+    async fn call_transaction(&self, tx_bytes: Bytes) -> RpcResult<Bytes> {
+        self.call_transaction_impl(tx_bytes)
+            .await
+            .map_err(into_rpc_error)
+    }
 }

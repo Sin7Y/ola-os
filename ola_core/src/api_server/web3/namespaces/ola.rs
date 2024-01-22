@@ -41,4 +41,21 @@ impl OlaNamespace {
             Web3Error::SubmitTransactionError(err.to_string(), err.data())
         })
     }
+
+    #[tracing::instrument(skip(self, tx_bytes))]
+    pub async fn call_transaction_impl(&self, tx_bytes: Bytes) -> Result<Bytes, Web3Error> {
+        olaos_logs::info!("received a transaction: {:?}", tx_bytes);
+        let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
+        olaos_logs::debug!("parsed transaction: {:?}", tx);
+        tx.set_input(tx_bytes.0, hash);
+
+        let call_result = self.state.tx_sender.call_transaction_impl(tx).await;
+        let res_bytes = call_result.map_err(|err| {
+            olaos_logs::debug!("Send raw transaction error: {err}");
+            Web3Error::SubmitTransactionError(err.to_string(), err.data())
+        })?;
+
+        Ok(res_bytes.into())
+        // Ok(Bytes(vec![0x01]))
+    }
 }

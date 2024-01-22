@@ -16,4 +16,7 @@ use ola_types::{Bytes, H256};
 pub trait OlaNamespace {
     #[method(name = "sendRawTransaction")]
     async fn send_raw_transaction(&self, tx_bytes: Bytes) -> RpcResult<H256>;
+
+    #[method(name = "callTransaction")]
+    async fn call_transaction(&self, tx_bytes: Bytes) -> RpcResult<Bytes>;
 }
