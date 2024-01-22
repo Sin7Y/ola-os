@@ -184,7 +184,7 @@ impl TxSender {
             .await;
         let (base_system_contracts, protocol_version) = storage
             .protocol_versions_dal()
-            .base_system_contracts_by_timestamp(u64::MAX)
+            .base_system_contracts_by_timestamp(i64::MAX)
             .await;
 
         let l1_batch_header = storage.blocks_dal().get_newest_l1_batch_header().await;

@@ -1,6 +1,6 @@
 use ethereum_types::{H256, H512};
 use ola_lang_abi::{Abi, FixedArray4, Value};
-use ola_types::Address;
+use ola_types::{l2::L2Tx, request::CallRequest, request::PaymasterParams, Address, Bytes, Nonce};
 use ola_utils::{h256_to_u64_array, u64s_to_bytes};
 
 use crate::{errors::ClientError, utils::h512_to_u64_array};
@@ -80,6 +80,20 @@ fn build_entry_point_calldata(
         .encode_input_with_signature(func.signature().as_str(), &params)
         .map_err(|_| ClientError::AbiParseError)?;
     Ok(input)
+}
+
+pub fn build_call_request(calldata: Vec<u8>, from: Address) -> CallRequest {
+    let contract_address = H256([
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x80, 0x01,
+    ]);
+
+    CallRequest::builder()
+        .from(from)
+        .to(contract_address)
+        .data(Bytes(calldata))
+        .build()
 }
 
 // #[cfg(test)]

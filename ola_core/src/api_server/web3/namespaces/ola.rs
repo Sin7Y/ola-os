@@ -1,6 +1,11 @@
 use ola_types::H256;
+use ola_types::{
+    api::{BlockId, BlockNumber},
+    l2::L2Tx,
+    request::{CallRequest, TransactionRequest},
+    Bytes,
+};
 use ola_web3_decl::error::Web3Error;
-use web3::types::Bytes;
 
 use crate::api_server::web3::state::RpcState;
 
@@ -42,12 +47,10 @@ impl OlaNamespace {
         })
     }
 
-    #[tracing::instrument(skip(self, tx_bytes))]
-    pub async fn call_transaction_impl(&self, tx_bytes: Bytes) -> Result<Bytes, Web3Error> {
-        olaos_logs::info!("received a transaction: {:?}", tx_bytes);
-        let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
-        olaos_logs::debug!("parsed transaction: {:?}", tx);
-        tx.set_input(tx_bytes.0, hash);
+    #[tracing::instrument(skip(self, request))]
+    pub async fn call_impl(&self, request: CallRequest) -> Result<Bytes, Web3Error> {
+        let tx = L2Tx::from_request(request.into(), self.state.api_config.max_tx_size)?;
+        olaos_logs::debug!("parsed call request transaction: {:?}", tx);
 
         let call_result = self.state.tx_sender.call_transaction_impl(tx).await;
         let res_bytes = call_result.map_err(|err| {
@@ -56,6 +59,5 @@ impl OlaNamespace {
         })?;
 
         Ok(res_bytes.into())
-        // Ok(Bytes(vec![0x01]))
     }
 }

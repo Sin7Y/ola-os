@@ -1,5 +1,5 @@
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
-use ola_types::{Bytes, H256};
+use ola_types::{request::CallRequest, Bytes, H256};
 
 #[cfg_attr(
     all(feature = "client", feature = "server"),
@@ -18,5 +18,5 @@ pub trait OlaNamespace {
     async fn send_raw_transaction(&self, tx_bytes: Bytes) -> RpcResult<H256>;
 
     #[method(name = "callTransaction")]
-    async fn call_transaction(&self, tx_bytes: Bytes) -> RpcResult<Bytes>;
+    async fn call_transaction(&self, call_request: CallRequest) -> RpcResult<Bytes>;
 }

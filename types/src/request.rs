@@ -61,6 +61,117 @@ impl PaymasterParams {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallRequest {
+    /// Sender address (None for arbitrary address)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<Address>,
+    /// To address (None allowed for eth_estimateGas)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<Address>,
+    /// Data (None for empty data)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<Bytes>,
+    /// Nonce
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<U256>,
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub transaction_type: Option<U64>,
+    /// Eip712 meta
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eip712_meta: Option<Eip712Meta>,
+}
+
+impl CallRequest {
+    /// Function to return a builder for a Call Request
+    pub fn builder() -> CallRequestBuilder {
+        CallRequestBuilder::default()
+    }
+}
+
+/// Call Request Builder
+#[derive(Clone, Debug, Default)]
+pub struct CallRequestBuilder {
+    call_request: CallRequest,
+}
+
+impl CallRequestBuilder {
+    /// Set sender address (None for arbitrary address)
+    pub fn from(mut self, from: Address) -> Self {
+        self.call_request.from = Some(from);
+        self
+    }
+
+    /// Set to address (None allowed for eth_estimateGas)
+    pub fn to(mut self, to: Address) -> Self {
+        self.call_request.to = Some(to);
+        self
+    }
+
+    /// Set data (None for empty data)
+    pub fn data(mut self, data: Bytes) -> Self {
+        self.call_request.data = Some(data);
+        self
+    }
+
+    /// Set transaction type, Some(1) for AccessList transaction, None for Legacy
+    pub fn transaction_type(mut self, transaction_type: U64) -> Self {
+        self.call_request.transaction_type = Some(transaction_type);
+        self
+    }
+
+    /// Set meta
+    pub fn eip712_meta(mut self, eip712_meta: Eip712Meta) -> Self {
+        self.call_request.eip712_meta = Some(eip712_meta);
+        self
+    }
+
+    /// build the Call Request
+    pub fn build(&self) -> CallRequest {
+        self.call_request.clone()
+    }
+}
+
+impl From<L2Tx> for CallRequest {
+    fn from(tx: L2Tx) -> Self {
+        let mut meta = Eip712Meta {
+            factory_deps: None,
+            custom_signature: Some(tx.common_data.signature.clone()),
+            paymaster_params: None,
+        };
+        meta.factory_deps = tx.execute.factory_deps.clone();
+        let mut request = CallRequestBuilder::default()
+            .from(tx.initiator_account())
+            .transaction_type(U64::from(tx.common_data.transaction_type as u32))
+            .to(tx.execute.contract_address)
+            .data(Bytes(tx.execute.calldata.clone()))
+            .eip712_meta(meta)
+            .build();
+
+        request.transaction_type = match tx.common_data.transaction_type {
+            TransactionType::EIP712Transaction => Some(U64::from(EIP_712_TX_TYPE)),
+            TransactionType::EIP1559Transaction => Some(U64::from(EIP_1559_TX_TYPE)),
+            _ => Some(U64::from(OLA_RAW_TX_TYPE)),
+        };
+        request
+    }
+}
+
+impl From<CallRequest> for TransactionRequest {
+    fn from(call_request: CallRequest) -> Self {
+        TransactionRequest {
+            nonce: call_request.nonce.unwrap_or_default(),
+            from: call_request.from,
+            to: call_request.to,
+            input: call_request.data.unwrap_or_default(),
+            transaction_type: call_request.transaction_type,
+            eip712_meta: call_request.eip712_meta,
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionRequest {
@@ -459,7 +570,7 @@ impl TransactionRequest {
                 return Ok(custom_sig);
             }
         }
-        panic!("packed_eth_signature is unsupported");
+        Ok([0; 32].to_vec())
     }
 }
 

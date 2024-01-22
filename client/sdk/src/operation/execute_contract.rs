@@ -102,7 +102,7 @@ where
     pub async fn send(self) -> Result<SyncTransactionHandle<'a, P>, ClientError> {
         let wallet = self.wallet;
         let tx = self.tx().await?;
-
+        println!("tx: {:?}", tx);
         wallet.send_transaction(tx).await
     }
 

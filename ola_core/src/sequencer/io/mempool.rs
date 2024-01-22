@@ -112,7 +112,7 @@ impl SequencerIO for MempoolIO {
             let mut storage = self.pool.access_storage().await;
             let (base_system_contracts, protocol_version) = storage
                 .protocol_versions_dal()
-                .base_system_contracts_by_timestamp(current_timestamp)
+                .base_system_contracts_by_timestamp(current_timestamp as i64)
                 .await;
             return Some(l1_batch_params(
                 self.current_l1_batch_number,
