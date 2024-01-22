@@ -305,6 +305,8 @@ impl BatchExecutor {
                             tx_ctx_info.chain_id = GoldilocksField::from_canonical_u16(
                                 tx.extract_chain_id().unwrap_or_default(),
                             );
+                            tx_ctx_info.version =
+                                GoldilocksField::from_canonical_u32(tx.transaction_type as u32);
                         }
                         _ => panic!("not support now"),
                     }
