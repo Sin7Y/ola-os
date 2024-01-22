@@ -214,8 +214,11 @@ impl TransactionRequest {
         )
         .to_vec();
 
-        let input_len = (&self.input.0.len() / 8) as u64;
         let input = bytes_to_u64s(self.input.clone().0);
+        let pos_biz_calldata_start = 8;
+        let biz_calldata_len = input.get(pos_biz_calldata_start).unwrap_or(&0);
+        let pos_biz_calldata_end = pos_biz_calldata_start + *biz_calldata_len as usize + 1;
+        let biz_input = input[pos_biz_calldata_start..pos_biz_calldata_end].to_vec();
 
         let have_paymaster: u64 = if meta.paymaster_params.is_some() {
             1
@@ -254,11 +257,16 @@ impl TransactionRequest {
             None
         };
 
-        let mut data = vec![vec![chain_id, *transaction_type, *nonce], from, to, input]
-            .iter()
-            .flatten()
-            .cloned()
-            .collect::<Vec<_>>();
+        let mut data = vec![
+            vec![chain_id, *transaction_type, *nonce],
+            from,
+            to,
+            biz_input,
+        ]
+        .iter()
+        .flatten()
+        .cloned()
+        .collect::<Vec<_>>();
         match paymaster_address {
             Some(address) => {
                 data.extend(address);
