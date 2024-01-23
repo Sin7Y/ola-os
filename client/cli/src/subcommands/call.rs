@@ -123,7 +123,7 @@ impl Call {
 
     fn parse_hash(input: String) -> Result<Value> {
         let hash = from_hex_be(input.as_str()).expect("invalid contract address");
-        let u256 = h256_to_u64_array(hash)?;
+        let u256 = h256_to_u64_array(hash);
         Ok(Value::Hash(FixedArray4(u256)))
     }
 
