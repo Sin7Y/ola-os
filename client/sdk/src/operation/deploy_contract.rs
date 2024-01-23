@@ -14,7 +14,6 @@ pub struct DeployContractBuilder<'a, S: OlaTxSigner, P> {
     raw_code: Vec<u8>,
     calldata: Option<Vec<u8>>,
     nonce: Option<Nonce>,
-    factory_deps: Option<Vec<Vec<u8>>>,
     paymaster_params: Option<PaymasterParams>,
     outer_signatures: Option<Vec<PackedEthSignature>>,
 }
@@ -31,7 +30,6 @@ where
             raw_code: Vec::new(),
             calldata: None,
             nonce: None,
-            factory_deps: None,
             paymaster_params: None,
             outer_signatures: None,
         }
@@ -77,7 +75,7 @@ where
             calldata,
             nonce,
             self.wallet.signer.ola_signer.get_address()?,
-            self.factory_deps,
+            Some(vec![self.raw_code]),
             paymaster_params,
         );
 
@@ -101,11 +99,6 @@ where
 
     pub fn calldata(mut self, calldata: Vec<u8>) -> Self {
         self.calldata = Some(calldata);
-        self
-    }
-
-    pub fn factory_deps(mut self, factory_deps: Vec<Vec<u8>>) -> Self {
-        self.factory_deps = Some(factory_deps);
         self
     }
 
