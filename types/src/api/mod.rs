@@ -1,5 +1,6 @@
 pub use crate::request::{SerializationTransactionError, TransactionRequest};
-use ola_basic_types::H256;
+use chrono::{DateTime, Utc};
+use ola_basic_types::{Address, H256, U256};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use strum::Display;
 use web3::types::U64;
@@ -127,4 +128,27 @@ impl From<BlockIdVariant> for BlockId {
             BlockIdVariant::BlockHashObject(hash_object) => BlockId::Hash(hash_object.block_hash),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransactionStatus {
+    Pending,
+    Included,
+    Verified,
+    Failed,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TransactionDetails {
+    pub is_l1_originated: bool,
+    pub status: TransactionStatus,
+    pub fee: U256,
+    pub gas_per_pubdata: Option<U256>,
+    pub initiator_address: Address,
+    pub received_at: DateTime<Utc>,
+    pub eth_commit_tx_hash: Option<H256>,
+    pub eth_prove_tx_hash: Option<H256>,
+    pub eth_execute_tx_hash: Option<H256>,
 }

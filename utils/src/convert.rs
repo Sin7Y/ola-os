@@ -71,6 +71,16 @@ pub fn u256_to_biguint(value: U256) -> BigUint {
     BigUint::from_bytes_le(&bytes)
 }
 
+pub fn biguint_to_u256(value: BigUint) -> U256 {
+    let bytes = value.to_bytes_le();
+    U256::from_little_endian(&bytes)
+}
+
+pub fn bigdecimal_to_u256(value: BigDecimal) -> U256 {
+    let bigint = value.with_scale(0).into_bigint_and_exponent().0;
+    biguint_to_u256(bigint.to_biguint().unwrap())
+}
+
 pub fn u256_to_h256(num: U256) -> H256 {
     let mut bytes = [0u8; 32];
     num.to_big_endian(&mut bytes);

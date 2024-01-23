@@ -1,11 +1,16 @@
+use std::str::FromStr;
+
+use bigdecimal::BigDecimal;
 use ola_types::{
+    api::{TransactionDetails, TransactionStatus},
     l2::{L2TxCommonData, TransactionType},
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
     Address, ExecuteTransactionCommon, Nonce, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE, H256,
-    OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE,
+    OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256,
 };
-use sqlx::types::chrono::NaiveDateTime;
+use ola_utils::bigdecimal_to_u256;
+use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageTransaction {
@@ -98,6 +103,48 @@ impl From<StorageTransaction> for Transaction {
                 execute,
                 received_timestamp_ms,
             },
+        }
+    }
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct StorageTransactionDetails {
+    pub is_priority: bool,
+    pub initiator_address: Vec<u8>,
+    pub received_at: NaiveDateTime,
+    pub miniblock_number: Option<i64>,
+    pub error: Option<String>,
+}
+
+impl StorageTransactionDetails {
+    fn get_transaction_status(&self) -> TransactionStatus {
+        if self.error.is_some() {
+            TransactionStatus::Failed
+        } else if self.miniblock_number.is_some() {
+            TransactionStatus::Included
+        } else {
+            TransactionStatus::Pending
+        }
+    }
+}
+
+impl From<StorageTransactionDetails> for TransactionDetails {
+    fn from(tx_details: StorageTransactionDetails) -> Self {
+        let status = tx_details.get_transaction_status();
+
+        let initiator_address = H256::from_slice(tx_details.initiator_address.as_slice());
+        let received_at = DateTime::<Utc>::from_naive_utc_and_offset(tx_details.received_at, Utc);
+
+        TransactionDetails {
+            is_l1_originated: tx_details.is_priority,
+            status,
+            fee: U256::default(),
+            gas_per_pubdata: None,
+            initiator_address,
+            received_at,
+            eth_commit_tx_hash: None,
+            eth_prove_tx_hash: None,
+            eth_execute_tx_hash: None,
         }
     }
 }
