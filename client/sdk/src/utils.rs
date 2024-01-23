@@ -28,30 +28,8 @@ pub fn h256_from_hex_be(value: &str) -> anyhow::Result<H256> {
     Ok(H256(parsed_bytes))
 }
 
-pub fn h256_to_u64_array(h: H256) -> Result<[u64; 4], NumberConvertError> {
-    let bytes = h.0;
-    Ok([
-        u64::from_be_bytes(
-            bytes[0..8]
-                .try_into()
-                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
-        ),
-        u64::from_be_bytes(
-            bytes[8..16]
-                .try_into()
-                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
-        ),
-        u64::from_be_bytes(
-            bytes[16..24]
-                .try_into()
-                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
-        ),
-        u64::from_be_bytes(
-            bytes[24..32]
-                .try_into()
-                .map_err(|_| NumberConvertError::H256ToU64ArrayFailed(h.to_string()))?,
-        ),
-    ])
+pub fn h256_to_u64_array(h: H256) -> [u64; 4] {
+    U256::from_big_endian(h.as_bytes()).0
 }
 
 pub fn h512_to_u64_array(h: H512) -> Result<[u64; 8], NumberConvertError> {
@@ -109,10 +87,9 @@ pub fn is_u64_under_felt_order(num: u64) -> bool {
 }
 
 pub fn is_h256_a_valid_ola_hash(h: H256) -> bool {
-    match h256_to_u64_array(h) {
-        Ok(arr) => arr.iter().all(|&num| is_u64_under_felt_order(num)),
-        Err(_) => false,
-    }
+    h256_to_u64_array(h)
+        .iter()
+        .all(|&num| is_u64_under_felt_order(num))
 }
 
 pub fn is_u256_a_valid_ola_hash(n: U256) -> bool {
@@ -142,7 +119,7 @@ mod tests {
         let h =
             H256::from_str("0xAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD")
                 .unwrap();
-        let arr = h256_to_u64_array(h).unwrap();
+        let arr = h256_to_u64_array(h);
         assert_eq!(arr[0], 0xAAAAAAAAAAAAAAAA);
         assert_eq!(arr[1], 0xBBBBBBBBBBBBBBBB);
         assert_eq!(arr[2], 0xCCCCCCCCCCCCCCCC);
