@@ -1,3 +1,4 @@
+use ola_types::api::TransactionDetails;
 use ola_types::H256;
 use ola_types::{
     api::{BlockId, BlockNumber},
@@ -7,6 +8,7 @@ use ola_types::{
 };
 use ola_web3_decl::error::Web3Error;
 
+use crate::api_server::web3::backend::error::internal_error;
 use crate::api_server::web3::state::RpcState;
 
 #[derive(Debug)]
@@ -59,5 +61,25 @@ impl OlaNamespace {
         })?;
 
         Ok(res_bytes.into())
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_transaction_details_impl(
+        &self,
+        hash: H256,
+    ) -> Result<Option<TransactionDetails>, Web3Error> {
+        const METHOD_NAME: &str = "get_transaction_details";
+
+        let mut tx_details = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await
+            .transactions_web3_dal()
+            .get_transaction_details(hash)
+            .await
+            .map_err(|err| internal_error(METHOD_NAME, err));
+
+        tx_details
     }
 }

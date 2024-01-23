@@ -85,7 +85,8 @@ impl TreeUpdater {
 
         for block in new_blocks {
             *next_block_to_seal = block.header.number + 1;
-            self.process_multiple_blocks(&mut storage, vec![block]).await;
+            self.process_multiple_blocks(&mut storage, vec![block])
+                .await;
         }
     }
 
