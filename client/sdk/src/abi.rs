@@ -82,18 +82,25 @@ fn build_entry_point_calldata(
     Ok(input)
 }
 
-pub fn build_call_request(calldata: Vec<u8>, from: Address) -> CallRequest {
-    let contract_address = H256([
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x80, 0x01,
-    ]);
+pub fn build_call_request(
+    abi: &Abi,
+    function_sig: &str,
+    params: Vec<Value>,
+    from: &Address,
+    to: &Address,
+) -> anyhow::Result<CallRequest> {
+    let biz_calldata = abi
+        .encode_input_with_signature(function_sig, &params)
+        .map_err(|_| ClientError::AbiParseError)?;
+    dbg!(biz_calldata.clone());
 
-    CallRequest::builder()
-        .from(from)
-        .to(contract_address)
-        .data(Bytes(calldata))
-        .build()
+    let calldata_bytes = u64s_to_bytes(&biz_calldata);
+
+    Ok(CallRequest::builder()
+        .from(from.clone())
+        .to(to.clone())
+        .data(Bytes(calldata_bytes))
+        .build())
 }
 
 // #[cfg(test)]
