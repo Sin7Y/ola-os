@@ -4,7 +4,7 @@ use anyhow::{bail, Ok, Result};
 use clap::Parser;
 use ola_lang_abi::{Abi, FixedArray4, Param, Type, Value};
 use ola_wallet_sdk::{
-    abi::{build_call_request, create_calldata},
+    abi::build_call_request,
     key_store::OlaKeyPair,
     provider::{ExtendProvider, ProviderParams},
     utils::{h256_from_hex_be, h256_to_u64_array, OLA_FIELD_ORDER},
@@ -77,16 +77,13 @@ impl Call {
             OlaKeyPair::from_random().address
         };
 
-        let calldata = create_calldata(
+        let call_request = build_call_request(
             &abi,
             func.signature().as_str(),
             params,
             &from,
             &contract_address,
-            None,
         )?;
-
-        let call_request = build_call_request(calldata, from);
         println!("call_request: {:?}", call_request);
         let ret: Vec<u8> = provider.call_transaction(call_request).await?.0;
         let ret_data = hex::encode(ret);

@@ -34,7 +34,9 @@ enum Subcommands {
     Deploy(Deploy),
     #[clap(about = "Set public key to default account management contract")]
     SetPubKey(SetPubKey),
-    #[clap(about = "Executes a new message call immediately without creating a transaction on the blockchain")]
+    #[clap(
+        about = "Executes a new message call immediately without creating a transaction on the blockchain"
+    )]
     Call(Call),
 }
 
