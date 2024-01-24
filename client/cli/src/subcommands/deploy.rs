@@ -78,8 +78,8 @@ impl Deploy {
 
         let params = [
             Value::Hash(FixedArray4(salt.0)),
-            Value::Hash(FixedArray4(h256_to_u64_array(prog_hash).unwrap())),
-            Value::Hash(FixedArray4(h256_to_u64_array(bytecode_hash).unwrap())),
+            Value::Hash(FixedArray4(h256_to_u64_array(prog_hash))),
+            Value::Hash(FixedArray4(h256_to_u64_array(bytecode_hash))),
         ];
 
         let from = if let Some(addr) = self.aa {
@@ -134,6 +134,6 @@ impl Deploy {
         while !is_h256_a_valid_ola_hash(salt) {
             salt = H256::random();
         }
-        U256(h256_to_u64_array(salt).unwrap())
+        U256(h256_to_u64_array(salt))
     }
 }
