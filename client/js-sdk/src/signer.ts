@@ -25,7 +25,7 @@ export class OlaSigner {
   readonly publicKey: BytesLike;
   readonly address: string;
 
-  constructor(privateKey: BytesLike) {
+  private constructor(privateKey: BytesLike) {
     this.privateKey = privateKey;
     this.publicKey = computePublicKey(privateKey);
     this.address = keccak256(this.publicKey);

@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "node",
-    "esModuleInterop": true,
-    "strict": true
+    "strict": true,
+    "declaration": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "rollup.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/index.ts", "tests/**/*.ts", "rollup.config.ts"],
+  "exclude": ["node_modules"],
+  "ts-node": { "esm": true }
 }
