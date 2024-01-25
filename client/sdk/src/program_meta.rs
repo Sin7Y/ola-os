@@ -41,7 +41,8 @@ impl ProgramMeta {
             .iter()
             .map(|n| GoldilocksField(*n))
             .collect();
-        let bytecode_hash_u256 = calculate_arbitrary_poseidon(&instructions).map(|fe| fe.0);
+        let mut bytecode_hash_u256 = calculate_arbitrary_poseidon(&instructions).map(|fe| fe.0);
+        bytecode_hash_u256.reverse();
         let bytecode_hash = u256_to_h256(U256(bytecode_hash_u256));
         Ok(Self::new(
             program_bytes,
