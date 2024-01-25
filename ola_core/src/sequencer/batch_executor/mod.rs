@@ -293,6 +293,7 @@ impl BatchExecutor {
         tx_index_in_l1_batch: u32,
     ) -> TxExecutionResult {
         let hash = tx.hash();
+        let calldata = &tx.execute.calldata;
         let result = match &tx.common_data {
             ExecuteTransactionCommon::L2(tx) => {
                 let to_u8_32 = |v: &Vec<u8>| {
@@ -307,7 +308,7 @@ impl BatchExecutor {
                 let tx_info = TxInfo {
                     version: tx.transaction_type as u32,
                     caller_address: tx.initiator_address.to_fixed_bytes(),
-                    calldata: tx.input_data().unwrap_or_default().to_vec(),
+                    calldata: calldata.to_vec(),
                     nonce: tx.nonce.0,
                     signature_r: to_u8_32(&r),
                     signature_s: to_u8_32(&s),
@@ -383,7 +384,7 @@ impl BatchExecutor {
         VmBlockResult {
             full_result,
             block_tip_result: VmPartialExecutionResult::new(
-                &res.storage_queries,
+                &res.block_tip_queries,
                 tx_index_in_l1_batch,
             ),
         }
