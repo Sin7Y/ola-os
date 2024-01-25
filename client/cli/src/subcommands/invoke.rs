@@ -10,10 +10,11 @@ use ola_wallet_sdk::{
     private_key_signer::PrivateKeySigner,
     provider::ProviderParams,
     signer::Signer,
-    utils::{h256_from_hex_be, h256_to_u64_array, OLA_FIELD_ORDER},
+    utils::{h256_from_hex_be, OLA_FIELD_ORDER},
     wallet::Wallet,
 };
 use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
+use ola_utils::convert::h256_to_u64_array;
 
 use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
 
@@ -156,7 +157,7 @@ impl Invoke {
 
     fn parse_hash(input: String) -> Result<Value> {
         let hash = from_hex_be(input.as_str()).expect("invalid contract address");
-        let u256 = h256_to_u64_array(hash);
+        let u256 = h256_to_u64_array(&hash);
         Ok(Value::Hash(FixedArray4(u256)))
     }
 
