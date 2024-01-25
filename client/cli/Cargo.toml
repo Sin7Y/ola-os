@@ -9,6 +9,7 @@ description = "Ola cli tools"
 
 [dependencies]
 ola_types = { path = "../../types" }
+ola_utils = { path = "../../utils" }
 ola_wallet_sdk = { path = "../sdk" }
 clap = { version = "4.4.7", features = ["derive", "env", "string"] }
 clap_complete = "4.4.4"
