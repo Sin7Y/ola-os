@@ -5,6 +5,7 @@ use clap::Parser;
 use ethereum_types::{H256, U256};
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::{L2ChainId, Nonce};
+use ola_utils::convert::h256_to_string;
 use ola_wallet_sdk::{
     abi::create_calldata,
     key_store::OlaKeyPair,
@@ -78,8 +79,12 @@ impl Deploy {
 
         let params = [
             Value::Hash(FixedArray4(salt.0)),
-            Value::Hash(FixedArray4(h256_to_u64_array(prog_hash))),
-            Value::Hash(FixedArray4(h256_to_u64_array(bytecode_hash))),
+            Value::Hash(FixedArray4::from(
+                h256_to_string(&prog_hash).as_str(),
+            )),
+            Value::Hash(FixedArray4::from(
+                h256_to_string(&bytecode_hash).as_str(),
+            )),
         ];
 
         let from = if let Some(addr) = self.aa {
