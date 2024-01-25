@@ -1,18 +1,25 @@
 use ola_basic_types::H256;
+use olavm_core::program::binary_program::BinaryProgram;
 
 use crate::hash::hash_bytes;
 
-const MAX_BYTECODE_LENGTH_IN_WORDS: usize = (1 << 16) - 1;
-const MAX_BYTECODE_LENGTH_BYTES: usize = MAX_BYTECODE_LENGTH_IN_WORDS * 32;
+const MAX_BYTECODE_LENGTH_IN_U64: usize = 1 << 24;
+const MAX_BYTECODE_LENGTH_BYTES: usize = 1 << 25;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum InvalidBytecodeError {
     #[error("Bytecode too long: {0} bytes, while max {1} allowed")]
     BytecodeTooLong(usize, usize),
+    #[error("Bytecode too long: {0} instructions, while max {1} allowed")]
+    BytecodeInstructionsTooLong(usize, usize),
     #[error("Bytecode has even number of 32-byte words")]
     BytecodeLengthInWordsIsEven,
-    #[error("Bytecode length is not divisible by 32")]
-    BytecodeLengthIsNotDivisibleBy32,
+    #[error("Bytecode length is not divisible by 8")]
+    BytecodeLengthIsNotDivisibleBy8,
+    #[error("The factory dep can not be parsed to BinaryProgram")]
+    BytecodeDepParseProgramFailed,
+    #[error("The bytecode can not be parsed to instructions")]
+    BytecodeParseInstructionsFailed,
 }
 
 pub fn hash_bytecode(code: &[u8]) -> H256 {
@@ -20,7 +27,6 @@ pub fn hash_bytecode(code: &[u8]) -> H256 {
 }
 
 pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
-    // TODO: check
     let bytecode_len = code.len();
 
     if bytecode_len > MAX_BYTECODE_LENGTH_BYTES {
@@ -30,14 +36,18 @@ pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
         ));
     }
 
-    if bytecode_len % 32 != 0 {
-        return Err(InvalidBytecodeError::BytecodeLengthIsNotDivisibleBy32);
-    }
+    let reader: &[u8] = code;
+    let program: BinaryProgram = serde_json::from_reader(reader)
+        .map_err(|_| InvalidBytecodeError::BytecodeDepParseProgramFailed)?;
+    let instructions = program
+        .bytecode_u64_array()
+        .map_err(|_| InvalidBytecodeError::BytecodeParseInstructionsFailed)?;
 
-    let bytecode_len_words = bytecode_len / 32;
-
-    if bytecode_len_words % 2 == 0 {
-        return Err(InvalidBytecodeError::BytecodeLengthInWordsIsEven);
+    if instructions.len() > MAX_BYTECODE_LENGTH_IN_U64 {
+        return Err(InvalidBytecodeError::BytecodeInstructionsTooLong(
+            instructions.len(),
+            MAX_BYTECODE_LENGTH_IN_U64,
+        ));
     }
 
     Ok(())

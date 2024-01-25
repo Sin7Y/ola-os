@@ -5,6 +5,7 @@ use clap::Parser;
 use ethereum_types::{H256, U256};
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::{L2ChainId, Nonce};
+use ola_utils::convert::h256_to_string;
 use ola_wallet_sdk::{
     abi::create_calldata,
     key_store::OlaKeyPair,
