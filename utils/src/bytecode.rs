@@ -3,7 +3,7 @@ use ola_basic_types::H256;
 use crate::hash::hash_bytes;
 
 const MAX_BYTECODE_LENGTH_IN_WORDS: usize = (1 << 16) - 1;
-const MAX_BYTECODE_LENGTH_BYTES: usize = MAX_BYTECODE_LENGTH_IN_WORDS * 32;
+const MAX_BYTECODE_LENGTH_BYTES: usize = 1 << 25;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum InvalidBytecodeError {
@@ -11,8 +11,8 @@ pub enum InvalidBytecodeError {
     BytecodeTooLong(usize, usize),
     #[error("Bytecode has even number of 32-byte words")]
     BytecodeLengthInWordsIsEven,
-    #[error("Bytecode length is not divisible by 32")]
-    BytecodeLengthIsNotDivisibleBy32,
+    #[error("Bytecode length is not divisible by 8")]
+    BytecodeLengthIsNotDivisibleBy8,
 }
 
 pub fn hash_bytecode(code: &[u8]) -> H256 {
@@ -30,14 +30,8 @@ pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
         ));
     }
 
-    if bytecode_len % 32 != 0 {
-        return Err(InvalidBytecodeError::BytecodeLengthIsNotDivisibleBy32);
-    }
-
-    let bytecode_len_words = bytecode_len / 32;
-
-    if bytecode_len_words % 2 == 0 {
-        return Err(InvalidBytecodeError::BytecodeLengthInWordsIsEven);
+    if bytecode_len % 8 != 0 {
+        return Err(InvalidBytecodeError::BytecodeLengthIsNotDivisibleBy8);
     }
 
     Ok(())
