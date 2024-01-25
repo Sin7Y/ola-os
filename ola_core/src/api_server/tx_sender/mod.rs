@@ -26,7 +26,10 @@ use super::execution_sandbox::{
     TxSharedArgs, VmConcurrencyLimiter,
 };
 use olavm_core::types::merkle_tree::h256_to_tree_key;
-use olavm_core::types::{storage::u8_arr_to_field_arr, Field, GoldilocksField};
+use olavm_core::types::{
+    storage::{field_arr_to_u8_arr, u8_arr_to_field_arr},
+    Field, GoldilocksField,
+};
 use olavm_core::vm::transaction::TxCtxInfo;
 use web3::types::Bytes;
 use zk_vm::OlaVM;
@@ -213,8 +216,9 @@ impl TxSender {
 
         let caller = h256_to_tree_key(&tx.execute.contract_address);
         let calldata = u8_arr_to_field_arr(&tx.execute.calldata);
-        let ret = vm.execute_tx(caller, caller, calldata, false);
-        Ok(Bytes(vec![0x01]))
+        let _ = vm.execute_tx(caller, caller, calldata, false);
+        let ret = field_arr_to_u8_arr(&vm.ola_state.return_data);
+        Ok(Bytes(ret))
     }
 
     // TODO: add more check

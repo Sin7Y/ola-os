@@ -1,4 +1,5 @@
 use ethereum_types::{H256, H512, U256};
+use ola_utils::convert::h256_to_u64_array;
 use sha2::{Digest, Sha256};
 
 use crate::errors::NumberConvertError;
@@ -26,10 +27,6 @@ pub fn h256_from_hex_be(value: &str) -> anyhow::Result<H256> {
         anyhow::bail!("Key out of range.");
     };
     Ok(H256(parsed_bytes))
-}
-
-pub fn h256_to_u64_array(h: H256) -> [u64; 4] {
-    U256::from_big_endian(h.as_bytes()).0
 }
 
 pub fn h512_to_u64_array(h: H512) -> Result<[u64; 8], NumberConvertError> {
@@ -87,7 +84,7 @@ pub fn is_u64_under_felt_order(num: u64) -> bool {
 }
 
 pub fn is_h256_a_valid_ola_hash(h: H256) -> bool {
-    h256_to_u64_array(h)
+    h256_to_u64_array(&h)
         .iter()
         .all(|&num| is_u64_under_felt_order(num))
 }
@@ -119,7 +116,7 @@ mod tests {
         let h =
             H256::from_str("0xAAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCCDDDDDDDDDDDDDDDD")
                 .unwrap();
-        let arr = h256_to_u64_array(h);
+        let arr = h256_to_u64_array(&h);
         assert_eq!(arr[0], 0xAAAAAAAAAAAAAAAA);
         assert_eq!(arr[1], 0xBBBBBBBBBBBBBBBB);
         assert_eq!(arr[2], 0xCCCCCCCCCCCCCCCC);

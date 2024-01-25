@@ -3,11 +3,12 @@ use std::{fs::File, path::PathBuf};
 use anyhow::{bail, Ok, Result};
 use clap::Parser;
 use ola_lang_abi::{Abi, FixedArray4, Param, Type, Value};
+use ola_utils::convert::h256_to_u64_array;
 use ola_wallet_sdk::{
     abi::build_call_request,
     key_store::OlaKeyPair,
     provider::{ExtendProvider, ProviderParams},
-    utils::{h256_from_hex_be, h256_to_u64_array, OLA_FIELD_ORDER},
+    utils::{h256_from_hex_be, OLA_FIELD_ORDER},
 };
 
 use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
@@ -123,7 +124,7 @@ impl Call {
 
     fn parse_hash(input: String) -> Result<Value> {
         let hash = from_hex_be(input.as_str()).expect("invalid contract address");
-        let u256 = h256_to_u64_array(hash);
+        let u256 = h256_to_u64_array(&hash);
         Ok(Value::Hash(FixedArray4(u256)))
     }
 
