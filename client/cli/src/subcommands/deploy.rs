@@ -129,7 +129,7 @@ impl Deploy {
             .send()
             .await?;
         let new_address = Self::get_new_deployed_address(&from, &salt, &bytecode_hash);
-        println!("New deployed address: 0x{}", hex::encode(&new_address));
+        println!("New Deployed Address: 0x{}", hex::encode(&new_address));
         let tx_hash = hex::encode(&handle.hash());
         println!("tx_hash: {}", tx_hash);
         Ok(())
@@ -144,11 +144,11 @@ impl Deploy {
     }
 
     fn get_new_deployed_address(creator: &H256, salt: &U256, bytecode_hash: &H256) -> H256 {
-        let mut input = vec![];
-        input.clone_from_slice("OlaCreate2".as_bytes());
-        input.clone_from_slice(&creator.to_fixed_bytes());
-        input.clone_from_slice(&u64s_to_bytes(&salt.0));
-        input.clone_from_slice(&bytecode_hash.to_fixed_bytes());
+        let mut input = Vec::new();
+        input.extend_from_slice("OlaCreate2".as_bytes());
+        input.extend_from_slice(&creator.to_fixed_bytes());
+        input.extend_from_slice(&u64s_to_bytes(&salt.0));
+        input.extend_from_slice(&bytecode_hash.to_fixed_bytes());
 
         hash_bytes(&input)
     }
