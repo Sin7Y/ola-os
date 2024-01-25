@@ -6,6 +6,7 @@ pub mod abi;
 pub mod errors;
 pub mod key_store;
 pub mod operation;
+pub mod parser;
 pub mod private_key_signer;
 pub mod program_meta;
 pub mod provider;
