@@ -8,8 +8,10 @@ use governor::{
     Quota, RateLimiter,
 };
 use ola_config::{
-    api::Web3JsonRpcConfig, constants::MAX_NEW_FACTORY_DEPS, database::load_db_config,
-    sequencer::SequencerConfig,
+    api::Web3JsonRpcConfig,
+    constants::MAX_NEW_FACTORY_DEPS,
+    database::load_db_config,
+    sequencer::{load_network_config, SequencerConfig},
 };
 use ola_contracts::BaseSystemContracts;
 use ola_dal::{connection::ConnectionPool, transactions_dal::L2TxSubmissionResult};
@@ -17,7 +19,8 @@ use ola_state::postgres::PostgresStorageCaches;
 use ola_types::{
     fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Nonce, Transaction, H256,
 };
-use ola_utils::time::millis_since_epoch;
+use ola_utils::{time::millis_since_epoch, u64s_to_bytes};
+use ola_web3_decl::error::Web3Error;
 
 use self::{error::SubmitTxError, proxy::TxProxy};
 
@@ -32,7 +35,7 @@ use olavm_core::types::{
 };
 use olavm_core::vm::transaction::TxCtxInfo;
 use web3::types::Bytes;
-use zk_vm::OlaVM;
+use zk_vm::{BlockInfo, CallInfo, OlaVM, VmManager as OlaVmManager};
 
 pub mod error;
 pub mod proxy;
@@ -185,39 +188,33 @@ impl TxSender {
             .replica_connection_pool
             .access_storage_tagged("api")
             .await;
-        let (base_system_contracts, protocol_version) = storage
-            .protocol_versions_dal()
-            .base_system_contracts_by_timestamp(i64::MAX)
-            .await;
 
         let l1_batch_header = storage.blocks_dal().get_newest_l1_batch_header().await;
 
-        let tx_ctx = TxCtxInfo {
-            block_number: GoldilocksField::from_canonical_u32(*l1_batch_header.number + 1),
-            block_timestamp: GoldilocksField::from_canonical_u64(
-                (millis_since_epoch() / 1_000) as u64,
-            ),
-            sequencer_address: h256_to_tree_key(&base_system_contracts.entrypoint.hash),
-            version: GoldilocksField::from_canonical_u64(protocol_version as u64),
-            chain_id: GoldilocksField::from_canonical_u64(1),
-            caller_address: Default::default(),
-            nonce: GoldilocksField::ZERO,
-            signature_r: Default::default(),
-            signature_s: Default::default(),
-            tx_hash: Default::default(),
-        };
-
         let db_config = load_db_config().expect("failed to load database config");
-        let mut vm = OlaVM::new(
-            db_config.merkle_tree.path.as_ref(),
-            db_config.sequencer_db_path.as_ref(),
-            tx_ctx,
-        );
+        let network = load_network_config().expect("failed to load network config");
 
-        let caller = h256_to_tree_key(&tx.execute.contract_address);
-        let calldata = u8_arr_to_field_arr(&tx.execute.calldata);
-        let _ = vm.execute_tx(caller, caller, calldata, false);
-        let ret = field_arr_to_u8_arr(&vm.ola_state.return_data);
+        let call_info = CallInfo {
+            version: tx.common_data.transaction_type as u32,
+            caller_address: tx.common_data.initiator_address.to_fixed_bytes(),
+            calldata: tx.execute.calldata.clone(),
+            to_address: tx.execute.contract_address.to_fixed_bytes(),
+        };
+        let block_info = BlockInfo {
+            block_number: *l1_batch_header.number + 1,
+            block_timestamp: (millis_since_epoch() / 1_000) as u64,
+            sequencer_address: self.0.sender_config.fee_account_addr.to_fixed_bytes(),
+            chain_id: network.ola_network_id,
+        };
+        let mut vm_manager = OlaVmManager::new(
+            block_info,
+            db_config.merkle_tree.path,
+            db_config.sequencer_db_path,
+        );
+        let call_res = vm_manager
+            .call(call_info)
+            .map_err(|e| SubmitTxError::TxCallTxError(e.to_string()))?;
+        let ret = u64s_to_bytes(&call_res);
         Ok(Bytes(ret))
     }
 
