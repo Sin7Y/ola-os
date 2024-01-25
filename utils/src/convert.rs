@@ -138,6 +138,14 @@ pub fn h256_to_u64_array(h: &H256) -> [u64; 4] {
     ]
 }
 
+pub fn u64_array_to_h256(arr: &[u64; 4]) -> H256 {
+    let mut bytes = [0u8; 32];
+    for i in 0..arr.len() {
+        bytes[i..i + 8].clone_from_slice(&arr[i].to_be_bytes());
+    }
+    H256(bytes)
+}
+
 pub fn h256_to_string(h: &H256) -> String {
     let bytes = h.to_fixed_bytes();
     let s = hex::encode(bytes);
