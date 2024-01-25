@@ -93,7 +93,6 @@ pub fn build_call_request(
     let biz_calldata = abi
         .encode_input_with_signature(function_sig, &params)
         .map_err(|_| ClientError::AbiParseError)?;
-    dbg!(biz_calldata.clone());
 
     let calldata_bytes = u64s_to_bytes(&biz_calldata);
 
