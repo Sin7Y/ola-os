@@ -31,8 +31,16 @@ impl BlockContextMode {
         }
     }
 
+    pub fn block_number(&self) -> u32 {
+        self.inner_block_context().context.block_number
+    }
+
     pub fn timestamp(&self) -> u64 {
         self.inner_block_context().context.block_timestamp
+    }
+
+    pub fn operator_address(&self) -> Address {
+        self.inner_block_context().context.operator_address
     }
 }
 

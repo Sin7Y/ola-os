@@ -152,15 +152,9 @@ impl OlaSequencer {
                     .await?;
                 updates_manager.push_miniblock(fictive_miniblock_timestamp);
             }
-            let mut block_result = batch_executor
+            let block_result = batch_executor
                 .finish_batch(updates_manager.pending_executed_transactions_len() as u32)
                 .await;
-            block_result.full_result.storage_log_queries =
-                updates_manager.l1_batch.block_storage_logs.clone();
-            block_result
-                .full_result
-                .storage_log_queries
-                .extend(block_result.block_tip_result.logs.storage_logs.clone());
 
             let sealed_batch_protocol_version = updates_manager.protocol_version();
             self.io
