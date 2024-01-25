@@ -34,3 +34,4 @@ ethereum-types = "0.14.1"
 ola_web3_decl = { path = "../../web3_decl", default-features = false, features = [
     "client",
 ] }
+ola_utils = { path = "../../utils" }

@@ -12,10 +12,11 @@ use ola_wallet_sdk::{
     program_meta::ProgramMeta,
     provider::ProviderParams,
     signer::Signer,
-    utils::{h256_from_hex_be, h256_to_u64_array, is_h256_a_valid_ola_hash},
+    utils::{h256_from_hex_be, is_h256_a_valid_ola_hash},
     wallet::Wallet,
 };
 use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
+use ola_utils::convert::h256_to_u64_array;
 
 use crate::path::ExpandedPathbufParser;
 
@@ -78,8 +79,8 @@ impl Deploy {
 
         let params = [
             Value::Hash(FixedArray4(salt.0)),
-            Value::Hash(FixedArray4(h256_to_u64_array(prog_hash))),
-            Value::Hash(FixedArray4(h256_to_u64_array(bytecode_hash))),
+            Value::Hash(FixedArray4(h256_to_u64_array(&prog_hash))),
+            Value::Hash(FixedArray4(h256_to_u64_array(&bytecode_hash))),
         ];
 
         let from = if let Some(addr) = self.aa {
@@ -134,6 +135,6 @@ impl Deploy {
         while !is_h256_a_valid_ola_hash(salt) {
             salt = H256::random();
         }
-        U256(h256_to_u64_array(salt))
+        U256(h256_to_u64_array(&salt))
     }
 }
