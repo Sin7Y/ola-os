@@ -50,6 +50,8 @@ pub enum SubmitTxError {
     /// Error returned from main node
     #[error("{0}")]
     ProxyError(#[from] ola_web3_decl::jsonrpsee::core::Error),
+    #[error("tx call vm failed: {0}")]
+    TxCallTxError(String),
 }
 
 impl SubmitTxError {
