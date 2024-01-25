@@ -36,8 +36,7 @@ pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
         ));
     }
 
-    let reader: &[u8] = code;
-    let program: BinaryProgram = serde_json::from_reader(reader)
+    let program: BinaryProgram = bincode::deserialize(code)
         .map_err(|_| InvalidBytecodeError::BytecodeDepParseProgramFailed)?;
     let instructions = program
         .bytecode_u64_array()
