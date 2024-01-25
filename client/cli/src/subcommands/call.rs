@@ -3,13 +3,13 @@ use std::{fs::File, path::PathBuf};
 use anyhow::{bail, Ok, Result};
 use clap::Parser;
 use ola_lang_abi::{Abi, FixedArray4, Param, Type, Value};
+use ola_utils::convert::h256_to_u64_array;
 use ola_wallet_sdk::{
     abi::build_call_request,
     key_store::OlaKeyPair,
     provider::{ExtendProvider, ProviderParams},
     utils::{h256_from_hex_be, OLA_FIELD_ORDER},
 };
-use ola_utils::convert::h256_to_u64_array;
 
 use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
 

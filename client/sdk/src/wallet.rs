@@ -137,8 +137,8 @@ mod tests {
     use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
     use crate::signer::Signer;
-    use ola_utils::convert::h256_to_u64_array;
     use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
+    use ola_utils::convert::h256_to_u64_array;
 
     use super::Wallet;
 

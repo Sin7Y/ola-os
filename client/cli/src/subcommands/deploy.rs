@@ -6,6 +6,7 @@ use ethereum_types::{H256, U256};
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::{L2ChainId, Nonce};
 use ola_utils::convert::h256_to_string;
+use ola_utils::convert::h256_to_u64_array;
 use ola_wallet_sdk::{
     abi::create_calldata,
     key_store::OlaKeyPair,
@@ -17,7 +18,6 @@ use ola_wallet_sdk::{
     wallet::Wallet,
 };
 use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
-use ola_utils::convert::h256_to_u64_array;
 
 use crate::path::ExpandedPathbufParser;
 

@@ -1,6 +1,6 @@
 use ethereum_types::{H256, H512, U256};
-use sha2::{Digest, Sha256};
 use ola_utils::convert::h256_to_u64_array;
+use sha2::{Digest, Sha256};
 
 use crate::errors::NumberConvertError;
 

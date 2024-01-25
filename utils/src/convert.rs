@@ -198,6 +198,9 @@ mod tests {
         let bytes = hex::decode(hex_str).expect("failed to decode hex string");
         let h = H256::from_slice(&bytes);
         let s = h256_to_string(&h);
-        assert_eq!(s.as_str(), "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292");
+        assert_eq!(
+            s.as_str(),
+            "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292"
+        );
     }
 }
