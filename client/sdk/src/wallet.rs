@@ -137,8 +137,8 @@ mod tests {
     use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
     use crate::signer::Signer;
-    use crate::utils::h256_to_u64_array;
     use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
+    use ola_utils::convert::h256_to_u64_array;
 
     use super::Wallet;
 
@@ -152,8 +152,8 @@ mod tests {
         let public_key = key_pair.public.clone();
         let public_key_string = hex::encode(&public_key);
         let (x, y) = split_pubkey(public_key.0.as_slice()).unwrap();
-        let x_u256 = h256_to_u64_array(H256(x));
-        let y_u256 = h256_to_u64_array(H256(y));
+        let x_u256 = h256_to_u64_array(&H256(x));
+        let y_u256 = h256_to_u64_array(&H256(y));
         let x_hex = hex::encode(x);
         let y_hex = hex::encode(y);
 
@@ -177,8 +177,8 @@ mod tests {
         s_h256.copy_from_slice(s);
         println!("r: {}", hex::encode(r_h256));
         println!("s: {}", hex::encode(s_h256));
-        let r_u256 = h256_to_u64_array(H256(r_h256));
-        let s_u256 = h256_to_u64_array(H256(s_h256));
+        let r_u256 = h256_to_u64_array(&H256(r_h256));
+        let s_u256 = h256_to_u64_array(&H256(s_h256));
         println!("r fields: {:?}", r_u256);
         println!("s fields: {:?}", s_u256);
 
