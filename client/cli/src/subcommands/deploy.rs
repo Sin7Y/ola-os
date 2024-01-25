@@ -5,8 +5,10 @@ use clap::Parser;
 use ethereum_types::{H256, U256};
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::{L2ChainId, Nonce};
-use ola_utils::convert::h256_to_string;
-use ola_utils::convert::h256_to_u64_array;
+use ola_utils::{
+    convert::{h256_to_u64_array, u64s_to_bytes},
+    hash::hash_bytes,
+};
 use ola_wallet_sdk::{
     abi::create_calldata,
     key_store::OlaKeyPair,
@@ -126,6 +128,8 @@ impl Deploy {
             .raw_code(prog_meta.bytes)
             .send()
             .await?;
+        let new_address = Self::get_new_deployed_address(&from, &salt, &bytecode_hash);
+        println!("New deployed address: 0x{}", hex::encode(&new_address));
         let tx_hash = hex::encode(&handle.hash());
         println!("tx_hash: {}", tx_hash);
         Ok(())
@@ -137,5 +141,15 @@ impl Deploy {
             salt = H256::random();
         }
         U256(h256_to_u64_array(&salt))
+    }
+
+    fn get_new_deployed_address(creator: &H256, salt: &U256, bytecode_hash: &H256) -> H256 {
+        let mut input = vec![];
+        input.clone_from_slice("OlaCreate2".as_bytes());
+        input.clone_from_slice(&creator.to_fixed_bytes());
+        input.clone_from_slice(&u64s_to_bytes(&salt.0));
+        input.clone_from_slice(&bytecode_hash.to_fixed_bytes());
+
+        hash_bytes(&input)
     }
 }
