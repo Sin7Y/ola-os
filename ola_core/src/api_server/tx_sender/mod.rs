@@ -46,7 +46,6 @@ pub struct ApiContracts {
 
 impl ApiContracts {
     pub fn load_from_disk() -> Self {
-        // FIXME: replace playground
         Self {
             eth_call: BaseSystemContracts::playground(),
         }
