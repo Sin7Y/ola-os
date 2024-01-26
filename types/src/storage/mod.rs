@@ -1,7 +1,7 @@
 pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H256, U256};
 use ola_config::constants::contracts::{
     ACCOUNT_CODE_STORAGE_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
-    SYSTEM_CONTEXT_ADDRESS,
+    SYSTEM_CONTEXT_ADDRESS, SYSTEM_CONTEXT_CHAIN_ID_POSITION,
 };
 use ola_utils::{
     convert::address_to_h256,
@@ -10,6 +10,8 @@ use ola_utils::{
 
 use olavm_plonky2::hash::utils::h256_add_offset;
 use serde::{Deserialize, Serialize};
+
+use crate::log::StorageLog;
 
 pub mod log;
 pub mod witness_block_state;
@@ -91,4 +93,11 @@ pub fn get_known_code_key(hash: &H256) -> StorageKey {
 pub fn get_system_context_key(key: H256) -> StorageKey {
     let system_context = AccountTreeId::new(SYSTEM_CONTEXT_ADDRESS);
     StorageKey::new(system_context, key)
+}
+
+pub fn get_system_context_init_logs(chain_id: L2ChainId) -> Vec<StorageLog> {
+    vec![StorageLog::new_write_log(
+        get_system_context_key(SYSTEM_CONTEXT_CHAIN_ID_POSITION),
+        H256::from_low_u64_be(chain_id.0 as u64),
+    )]
 }
