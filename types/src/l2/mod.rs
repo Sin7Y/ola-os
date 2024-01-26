@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use ethabi::ethereum_types::U64;
 pub use ola_basic_types::{bytes8::Bytes8, Address, Nonce, H256};
 use ola_basic_types::{Bytes, U256};
@@ -235,4 +237,29 @@ impl From<L2Tx> for Transaction {
             received_timestamp_ms,
         }
     }
+}
+
+#[test]
+fn foo() {
+    let contract_address = Address::from(&[1u8; 32]);
+    let calldata = vec![1, 2, 3];
+    let nonce = Nonce(4);
+    let initiator_address = Address::from(&[2u8; 32]);
+    let factory_deps = Some(vec![vec![6; 3]; 2]);
+    let paymaster_params = PaymasterParams {
+        paymaster: Address::from(&[3u8; 32]),
+        paymaster_input: vec![5, 6],
+    };
+    let mut tx = L2Tx::new(
+        contract_address,
+        calldata,
+        nonce,
+        initiator_address,
+        factory_deps,
+        paymaster_params,
+    );
+    tx.set_input(vec![4, 4, 4], H256::from(&[5u8; 32]));
+    tx.set_raw_signature(vec![7, 8, 9]);
+    let ser = serde_json::to_string(&tx).unwrap();
+    println!("{}", ser);
 }
