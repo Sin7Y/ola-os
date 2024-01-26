@@ -117,7 +117,7 @@ impl OlaSequencer {
 
         let previous_batch_protocol_version = self.io.load_previous_batch_version_id().await;
 
-        // TODO: @Payne add protocol upgrade logic
+        // TODO: add protocol upgrade logic
         let _version_changed = match previous_batch_protocol_version {
             Some(previous_batch_protocol_version) => {
                 l1_batch_params.protocol_version != previous_batch_protocol_version
