@@ -24,14 +24,14 @@ impl ProviderParams {
 
     pub fn local() -> Self {
         Self {
-            chain_id: 270,
+            chain_id: 1027,
             http_endpoint: "http://localhost:13000".to_string(),
         }
     }
 
     pub fn pub_test() -> Self {
         Self {
-            chain_id: 270,
+            chain_id: 1027,
             http_endpoint: "https://pubtest-api.ola.org".to_string(),
         }
     }

@@ -3,7 +3,7 @@ use olavm_core::program::binary_program::BinaryProgram;
 
 use crate::hash::hash_bytes;
 
-const MAX_BYTECODE_LENGTH_IN_U64: usize = 1 << 24;
+const MAX_BYTECODE_LENGTH_IN_U64: usize = 1 << 22;
 const MAX_BYTECODE_LENGTH_BYTES: usize = 1 << 25;
 
 #[derive(Debug, thiserror::Error, PartialEq)]
@@ -27,11 +27,11 @@ pub fn hash_bytecode(code: &[u8]) -> H256 {
 }
 
 pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
-    let bytecode_len = code.len();
+    let program_len = code.len();
 
-    if bytecode_len > MAX_BYTECODE_LENGTH_BYTES {
+    if program_len > MAX_BYTECODE_LENGTH_BYTES {
         return Err(InvalidBytecodeError::BytecodeTooLong(
-            bytecode_len,
+            program_len,
             MAX_BYTECODE_LENGTH_BYTES,
         ));
     }
