@@ -229,7 +229,7 @@ mod tests {
     //     let eth_private_key = H256::random();
     //     let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
     //     let pk_signer = PrivateKeySigner::new(key_pair.clone());
-    //     let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(270));
+    //     let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(1027));
     //     let client = HttpClientBuilder::default()
     //         .build("http://localhost:13000")
     //         .unwrap();
@@ -267,7 +267,7 @@ mod tests {
     //     //     .unwrap();
     //     // let bytes = wallet.create_tx_raw(l2Tx.clone()).unwrap();
     //     // let b = bytes.0.as_slice();
-    //     // let (decoded_transaction, _) = TransactionRequest::from_bytes(b, 270).unwrap();
+    //     // let (decoded_transaction, _) = TransactionRequest::from_bytes(b, 1027).unwrap();
     //     // let origin_transaction: TransactionRequest = l2Tx.into();
 
     //     // assert_eq!(origin_transaction, decoded_transaction)
