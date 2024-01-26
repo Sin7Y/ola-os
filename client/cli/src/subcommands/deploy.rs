@@ -3,6 +3,7 @@ use std::{fs::File, path::PathBuf};
 use anyhow::Result;
 use clap::Parser;
 use ethereum_types::{H256, U256};
+use ola_lang::codegen::core::ir::function::print;
 use ola_lang_abi::{Abi, FixedArray4, Value};
 use ola_types::{L2ChainId, Nonce};
 use ola_utils::{
@@ -145,7 +146,8 @@ impl Deploy {
 
     fn get_new_deployed_address(creator: &H256, salt: &U256, bytecode_hash: &H256) -> H256 {
         let mut input = Vec::new();
-        input.extend_from_slice("OlaCreate2".as_bytes());
+        let u64_prefix = "OlaCreate2".chars().map(|c| c as u64).collect::<Vec<_>>();
+        input.extend_from_slice(&hash_bytes(&u64s_to_bytes(&u64_prefix)).to_fixed_bytes());
         input.extend_from_slice(&creator.to_fixed_bytes());
         input.extend_from_slice(&u64s_to_bytes(&salt.0));
         input.extend_from_slice(&bytecode_hash.to_fixed_bytes());
