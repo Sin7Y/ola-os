@@ -20,9 +20,8 @@ impl SealCriterion for TxEncodingSizeCriterion {
     ) -> SealResolution {
         let reject_bound =
             (TX_ENCODING_SPACE as f64 * config.reject_tx_at_geometry_percentage).round();
-        let include_and_seal_bound = (TX_ENCODING_SPACE as f64
-            * config.close_block_at_geometry_percentage)
-            .round();
+        let include_and_seal_bound =
+            (TX_ENCODING_SPACE as f64 * config.close_block_at_geometry_percentage).round();
 
         if tx_data.cumulative_size > reject_bound as usize {
             let message = "Transaction cannot be included due to large encoding size";
