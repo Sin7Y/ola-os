@@ -22,6 +22,8 @@ pub use web3::types::{Bytes, U256};
 pub enum SerializationTransactionError {
     #[error("transaction type is not supported")]
     UnknownTransactionFormat,
+    #[error("from address is null")]
+    FromAddressIsNull,
     #[error("to address is null")]
     ToAddressIsNull,
     #[error("invalid paymaster params")]
@@ -473,8 +475,7 @@ impl TransactionRequest {
         let default_signed_message = tx.get_default_signed_message(chain_id);
         tx.from = match tx.from {
             Some(_) => tx.from,
-            // FIXME: can from unset?
-            None => panic!("from must be set"),
+            None => return Err(SerializationTransactionError::FromAddressIsNull),
         };
         let hash = if tx.is_eip712_tx() || tx.is_ola_raw_tx() {
             let digest = [
