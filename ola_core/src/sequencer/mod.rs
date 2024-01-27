@@ -78,7 +78,6 @@ pub(crate) async fn create_sequencer(
         pool,
         &sequencer_config,
         mempool_config.delay_interval(),
-        contracts_config.l2_erc20_bridge_addr,
     )
     .await;
 

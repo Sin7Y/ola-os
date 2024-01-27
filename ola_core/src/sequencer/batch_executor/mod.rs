@@ -2,10 +2,12 @@ use std::path::Path;
 use std::{fmt, time::Instant};
 
 use async_trait::async_trait;
+use ola_config::sequencer::load_network_config;
 use ola_dal::connection::ConnectionPool;
 use ola_state::rocksdb::RocksdbStorage;
-use ola_types::log::StorageLogQuery;
+use ola_types::log::{LogQuery, StorageLogQuery};
 use ola_types::{ExecuteTransactionCommon, Transaction};
+use ola_vm::errors::VmRevertReason;
 use ola_vm::{
     errors::TxRevertReason,
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
@@ -14,7 +16,6 @@ use olavm_core::state::error::StateError;
 use olavm_core::types::merkle_tree::{h256_to_tree_key, u8_arr_to_tree_key, TreeValue};
 use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
 use olavm_core::types::{Field, GoldilocksField};
-use olavm_core::vm::transaction::TxCtxInfo;
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
@@ -23,7 +24,7 @@ use tokio::{
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
 
 use ola_types::tx::tx_execution_info::TxExecutionStatus;
-use zk_vm::OlaVM;
+use zk_vm::{BlockInfo, OlaVM, TxInfo, VmManager as OlaVmManager};
 
 #[derive(Debug)]
 pub struct BatchExecutorHandle {
@@ -57,10 +58,18 @@ impl BatchExecutorHandle {
         }
     }
 
-    pub(super) async fn execute_tx(&self, tx: Transaction) -> TxExecutionResult {
+    pub(super) async fn execute_tx(
+        &self,
+        tx: Transaction,
+        tx_index_in_l1_batch: u32,
+    ) -> TxExecutionResult {
         let (response_sender, response_receiver) = oneshot::channel();
         self.commands
-            .send(Command::ExecuteTx(Box::new(tx), response_sender))
+            .send(Command::ExecuteTx(
+                Box::new(tx),
+                tx_index_in_l1_batch,
+                response_sender,
+            ))
             .await
             .unwrap();
 
@@ -71,10 +80,10 @@ impl BatchExecutorHandle {
         res.unwrap()
     }
 
-    pub(super) async fn finish_batch(self) -> VmBlockResult {
+    pub(super) async fn finish_batch(self, tx_index_in_l1_batch: u32) -> VmBlockResult {
         let (response_sender, response_receiver) = oneshot::channel();
         self.commands
-            .send(Command::FinishBatch(response_sender))
+            .send(Command::FinishBatch(tx_index_in_l1_batch, response_sender))
             .await
             .unwrap();
         let _start = Instant::now();
@@ -86,8 +95,8 @@ impl BatchExecutorHandle {
 
 #[derive(Debug)]
 pub(super) enum Command {
-    ExecuteTx(Box<Transaction>, oneshot::Sender<TxExecutionResult>),
-    FinishBatch(oneshot::Sender<VmBlockResult>),
+    ExecuteTx(Box<Transaction>, u32, oneshot::Sender<TxExecutionResult>),
+    FinishBatch(u32, oneshot::Sender<VmBlockResult>),
 }
 
 #[derive(Debug, Clone)]
@@ -219,124 +228,55 @@ impl BatchExecutor {
                 .block_number
         );
 
-        // TODO: @pierre init vm begin
-        // let mut storage_view = StorageView::new(&secondary_storage);
-        // let block_properties = BlockProperties::new(
-        //     self.vm_version,
-        //     l1_batch_params.properties.default_aa_code_hash,
-        // );
+        let network_config = load_network_config().expect("failed to load network config");
 
-        // let mut vm = match self.vm_gas_limit {
-        //     Some(vm_gas_limit) => init_vm_with_gas_limit(
-        //         self.vm_version,
-        //         &mut oracle_tools,
-        //         l1_batch_params.context_mode,
-        //         &block_properties,
-        //         TxExecutionMode::VerifyExecute,
-        //         &l1_batch_params.base_system_contracts,
-        //         vm_gas_limit,
-        //     ),
-        //     None => init_vm(
-        //         self.vm_version,
-        //         &mut oracle_tools,
-        //         l1_batch_params.context_mode,
-        //         &block_properties,
-        //         TxExecutionMode::VerifyExecute,
-        //         &l1_batch_params.base_system_contracts,
-        //     ),
-        // };
-        // TODO: need roscksdb path for storage merkle tree
-
-        // TODO: @pierre init vm end
-        // secondary_storage.load_factory_dep();
-        let tx_ctx = TxCtxInfo {
-            block_number: GoldilocksField::from_canonical_u32(
-                l1_batch_params
-                    .context_mode
-                    .inner_block_context()
-                    .context
-                    .block_number,
-            ),
-            block_timestamp: GoldilocksField::from_canonical_u64(
-                l1_batch_params
-                    .context_mode
-                    .inner_block_context()
-                    .context
-                    .block_timestamp,
-            ),
-            sequencer_address: h256_to_tree_key(
-                &l1_batch_params.base_system_contracts.entrypoint.hash,
-            ),
-            version: GoldilocksField::from_canonical_u64(l1_batch_params.protocol_version as u64),
-            chain_id: GoldilocksField::from_canonical_u64(1),
-            caller_address: Default::default(),
-            nonce: GoldilocksField::ZERO,
-            signature_r: Default::default(),
-            signature_s: Default::default(),
-            tx_hash: Default::default(),
+        let block_info = BlockInfo {
+            block_number: l1_batch_params.context_mode.block_number(),
+            block_timestamp: l1_batch_params.context_mode.timestamp(),
+            sequencer_address: l1_batch_params
+                .context_mode
+                .operator_address()
+                .to_fixed_bytes(),
+            chain_id: network_config.ola_network_id,
         };
+
+        let mut vm_manager =
+            OlaVmManager::new(block_info, merkle_tree_path, secondary_storage_path);
+
+        // let tx_ctx = TxCtxInfo {
+        //     block_number: GoldilocksField::from_canonical_u32(
+        //         l1_batch_params
+        //             .context_mode
+        //             .inner_block_context()
+        //             .context
+        //             .block_number,
+        //     ),
+        //     block_timestamp: GoldilocksField::from_canonical_u64(
+        //         l1_batch_params
+        //             .context_mode
+        //             .inner_block_context()
+        //             .context
+        //             .block_timestamp,
+        //     ),
+        //     sequencer_address: h256_to_tree_key(
+        //         &l1_batch_params.base_system_contracts.entrypoint.hash,
+        //     ),
+        //     version: GoldilocksField::from_canonical_u64(l1_batch_params.protocol_version as u64),
+        //     chain_id: GoldilocksField::from_canonical_u64(1),
+        //     caller_address: Default::default(),
+        //     nonce: GoldilocksField::ZERO,
+        //     signature_r: Default::default(),
+        //     signature_s: Default::default(),
+        //     tx_hash: Default::default(),
+        // };
         while let Some(cmd) = self.commands.blocking_recv() {
             match cmd {
-                Command::ExecuteTx(tx, resp) => {
-                    let mut tx_ctx_info = tx_ctx.clone();
-                    match tx.common_data {
-                        ExecuteTransactionCommon::L2(tx) => {
-                            let r = tx.signature[0..32].to_vec();
-                            let s = tx.signature[32..64].to_vec();
-                            tx_ctx_info.signature_r = u8_arr_to_tree_key(&r);
-                            tx_ctx_info.signature_s = u8_arr_to_tree_key(&s);
-                            tx_ctx_info.nonce = GoldilocksField::from_canonical_u32(tx.nonce.0);
-                            tx_ctx_info.caller_address = h256_to_tree_key(&tx.initiator_address);
-                        }
-                        _ => panic!("not support now"),
-                    }
-                    let mut vm = OlaVM::new(
-                        merkle_tree_path.as_ref(),
-                        secondary_storage_path.as_ref(),
-                        tx_ctx_info,
-                    );
-                    // FIXME: @pierre
-                    let address = h256_to_tree_key(&tx.execute.contract_address);
-                    let calldata = u8_arr_to_field_arr(&tx.execute.calldata);
-                    let exec_res = self.execute_tx(&mut vm, address, calldata);
-                    if exec_res.is_ok() {
-                        let tx_trace = vm.ola_state.gen_tx_trace();
-                        let ret = field_arr_to_u8_arr(&tx_trace.ret);
-                        let result = TxExecutionResult::Success {
-                            tx_result: Box::new(VmTxExecutionResult {
-                                status: TxExecutionStatus::Success,
-                                result: VmPartialExecutionResult::new(
-                                    &vm.ola_state.storage_queries,
-                                ),
-                                ret,
-                                trace: tx_trace,
-                                call_traces: vec![],
-                                gas_refunded: 0,
-                                operator_suggested_refund: 0,
-                            }),
-                            tx_metrics: ExecutionMetricsForCriteria {
-                                execution_metrics: Default::default(),
-                            },
-                            entrypoint_dry_run_metrics: ExecutionMetricsForCriteria {
-                                execution_metrics: Default::default(),
-                            },
-                            entrypoint_dry_run_result: Box::default(),
-                        };
-                        resp.send(result).unwrap();
-                    } else {
-                        println!("exec tx err: {:?}", exec_res);
-                        let result = TxExecutionResult::BootloaderOutOfGasForBlockTip;
-                        resp.send(result).unwrap();
-                    }
+                Command::ExecuteTx(tx, tx_index_in_l1_batch, resp) => {
+                    let result = self.execute_tx(&mut vm_manager, &tx, tx_index_in_l1_batch);
+                    resp.send(result).unwrap();
                 }
-                Command::FinishBatch(resp) => {
-                    let tx_ctx_info = tx_ctx.clone();
-                    let mut vm = OlaVM::new(
-                        merkle_tree_path.as_ref(),
-                        secondary_storage_path.as_ref(),
-                        tx_ctx_info,
-                    );
-                    resp.send(self.finish_batch(&mut vm, tx_ctx.block_number.0))
+                Command::FinishBatch(tx_index_in_l1_batch, resp) => {
+                    resp.send(self.finish_batch(&mut vm_manager, tx_index_in_l1_batch))
                         .unwrap();
                     return;
                 }
@@ -346,21 +286,108 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
-    fn finish_batch(&self, vm: &mut OlaVM, l1_batch_number: u64) -> VmBlockResult {
-        vm.finish_batch(l1_batch_number as u32).unwrap();
-        VmBlockResult {
-            full_result: VmExecutionResult::default(),
-            block_tip_result: VmPartialExecutionResult::new(&vm.ola_state.storage_queries),
-        }
-    }
-
     fn execute_tx(
         &self,
-        vm: &mut OlaVM,
-        caller: TreeValue,
-        calldata: Vec<GoldilocksField>,
-    ) -> Result<(), StateError> {
-        vm.execute_tx(caller, caller, calldata, false)
+        vm_manager: &mut OlaVmManager,
+        tx: &Transaction,
+        tx_index_in_l1_batch: u32,
+    ) -> TxExecutionResult {
+        let hash = tx.hash();
+        let calldata = &tx.execute.calldata;
+        let result = match &tx.common_data {
+            ExecuteTransactionCommon::L2(tx) => {
+                let to_u8_32 = |v: &Vec<u8>| {
+                    let mut array = [0; 32];
+                    array.copy_from_slice(&v[..32]);
+                    array
+                };
+
+                let r = tx.signature[0..32].to_vec();
+                let s = tx.signature[32..64].to_vec();
+
+                let tx_info = TxInfo {
+                    version: tx.transaction_type as u32,
+                    caller_address: tx.initiator_address.to_fixed_bytes(),
+                    calldata: calldata.to_vec(),
+                    nonce: tx.nonce.0,
+                    signature_r: to_u8_32(&r),
+                    signature_s: to_u8_32(&s),
+                    tx_hash: hash.to_fixed_bytes(),
+                };
+                let exec_res = vm_manager.invoke(tx_info);
+                if exec_res.is_ok() {
+                    let res = exec_res.unwrap();
+                    let ret = field_arr_to_u8_arr(&res.trace.ret);
+                    let result = TxExecutionResult::Success {
+                        tx_result: Box::new(VmTxExecutionResult {
+                            status: TxExecutionStatus::Success,
+                            result: VmPartialExecutionResult::new(
+                                &res.storage_queries,
+                                tx_index_in_l1_batch,
+                            ),
+                            ret,
+                            trace: res.trace,
+                            call_traces: vec![],
+                            gas_refunded: 0,
+                            operator_suggested_refund: 0,
+                        }),
+                        tx_metrics: ExecutionMetricsForCriteria {
+                            execution_metrics: Default::default(),
+                        },
+                        entrypoint_dry_run_metrics: ExecutionMetricsForCriteria {
+                            execution_metrics: Default::default(),
+                        },
+                        entrypoint_dry_run_result: Box::default(),
+                    };
+                    result
+                } else {
+                    let revert_reason = VmRevertReason::General {
+                        msg: exec_res
+                            .err()
+                            .unwrap_or_else(|| {
+                                StateError::VmExecError("vm internal error".to_string())
+                            })
+                            .to_string(),
+                        data: vec![],
+                    };
+                    let result = TxExecutionResult::RejectedByVm {
+                        rejection_reason: TxRevertReason::TxReverted(revert_reason),
+                    };
+                    result
+                }
+            }
+            _ => panic!("not support now"),
+        };
+        result
+    }
+
+    fn finish_batch(
+        &self,
+        vm_manager: &mut OlaVmManager,
+        tx_index_in_l1_batch: u32,
+    ) -> VmBlockResult {
+        let res = vm_manager.finish_batch().unwrap();
+        let storage_logs: Vec<StorageLogQuery> = res
+            .storage_queries
+            .iter()
+            .map(|log| {
+                let mut log_query: LogQuery = log.into();
+                log_query.tx_number_in_block = tx_index_in_l1_batch as u16;
+                StorageLogQuery {
+                    log_query,
+                    log_type: log.kind.into(),
+                }
+            })
+            .collect();
+        let mut full_result = VmExecutionResult::default();
+        full_result.storage_log_queries = storage_logs;
+        VmBlockResult {
+            full_result,
+            block_tip_result: VmPartialExecutionResult::new(
+                &res.block_tip_queries,
+                tx_index_in_l1_batch,
+            ),
+        }
     }
 }
 
@@ -402,8 +429,6 @@ mod tests {
     use std::path::PathBuf;
     use std::str::FromStr;
     use tracing::log::LevelFilter;
-    use web3::ethabi::Address;
-    use web3::types::H160;
 
     pub fn save_contract_map(
         db: &RocksDB,
@@ -623,7 +648,7 @@ mod tests {
         };
         l2_tx.common_data.signature = vec![0; 64];
         let tx = Transaction::from(l2_tx);
-        let exec_result = batch_executor.execute_tx(tx.clone()).await;
+        let exec_result = batch_executor.execute_tx(tx.clone(), 0).await;
         match exec_result {
             TxExecutionResult::Success { tx_result, .. } => {
                 println!("tx ret:{:?}", u8_arr_to_field_arr(&tx_result.ret))

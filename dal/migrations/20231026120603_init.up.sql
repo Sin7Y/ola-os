@@ -134,8 +134,7 @@ ALTER TABLE storage_logs ADD PRIMARY KEY (hashed_key, miniblock_number, operatio
 
 CREATE INDEX storage_logs_miniblock_number_idx ON storage_logs (miniblock_number);
 -- This is the ACCOUNT_CODE_STORAGE address.
--- TODO: replace address
-CREATE INDEX storage_logs_contract_address_tx_hash_idx_upd ON storage_logs (tx_hash) WHERE (address = '\x0000000000000000000000000000000000008002'::bytea);
+CREATE INDEX storage_logs_contract_address_tx_hash_idx_upd ON storage_logs (tx_hash) WHERE (address = '\x0000000000000000000000000000000000000000000000000000000000008002'::bytea);
 
 
 CREATE TABLE transaction_traces

@@ -140,11 +140,11 @@ impl L2TxCommonData {
     pub fn extract_chain_id(&self) -> Option<u16> {
         let bytes = self.input_data()?;
         let chain_id = match bytes.first() {
-            Some(x) if *x == EIP_1559_TX_TYPE => {
+            Some(&EIP_1559_TX_TYPE) => {
                 let rlp = Rlp::new(&bytes[1..]);
                 rlp.val_at(0).ok()?
             }
-            Some(x) if *x == EIP_712_TX_TYPE => {
+            Some(&EIP_712_TX_TYPE) | Some(&OLA_RAW_TX_TYPE) => {
                 let rlp = Rlp::new(&bytes[1..]);
                 rlp.val_at(6).ok()?
             }

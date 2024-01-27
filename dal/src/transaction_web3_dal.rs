@@ -1,10 +1,10 @@
 use ola_types::{
-    api::{BlockId, BlockNumber},
-    Address,
+    api::{BlockId, BlockNumber, TransactionDetails},
+    Address, H256,
 };
 use sqlx::Error;
 
-use crate::{SqlxError, StorageProcessor};
+use crate::{models::storage_transaction::StorageTransactionDetails, SqlxError, StorageProcessor};
 
 #[derive(Debug)]
 pub struct TransactionsWeb3Dal<'a, 'c> {
@@ -71,5 +71,34 @@ impl TransactionsWeb3Dal<'_, '_> {
         }
 
         Ok(pending_nonce)
+    }
+
+    pub async fn get_transaction_details(
+        &mut self,
+        hash: H256,
+    ) -> Result<Option<TransactionDetails>, SqlxError> {
+        {
+            let storage_tx_details: Option<StorageTransactionDetails> = sqlx::query_as!(
+                StorageTransactionDetails,
+                r#"
+                    SELECT transactions.is_priority,
+                        transactions.initiator_address,
+                        transactions.received_at,
+                        transactions.miniblock_number,
+                        transactions.error
+                    FROM transactions
+                    LEFT JOIN miniblocks ON miniblocks.number = transactions.miniblock_number
+                    LEFT JOIN l1_batches ON l1_batches.number = miniblocks.l1_batch_number
+                    WHERE transactions.hash = $1
+                "#,
+                hash.as_bytes()
+            )
+            .fetch_optional(self.storage.conn())
+            .await?;
+
+            let tx = storage_tx_details.map(|tx_details| tx_details.into());
+
+            Ok(tx)
+        }
     }
 }

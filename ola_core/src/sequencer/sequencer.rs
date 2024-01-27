@@ -117,7 +117,7 @@ impl OlaSequencer {
 
         let previous_batch_protocol_version = self.io.load_previous_batch_version_id().await;
 
-        // TODO: @Payne add protocol upgrade logic
+        // TODO: add protocol upgrade logic
         let _version_changed = match previous_batch_protocol_version {
             Some(previous_batch_protocol_version) => {
                 l1_batch_params.protocol_version != previous_batch_protocol_version
@@ -152,7 +152,10 @@ impl OlaSequencer {
                     .await?;
                 updates_manager.push_miniblock(fictive_miniblock_timestamp);
             }
-            let block_result = batch_executor.finish_batch().await;
+            let block_result = batch_executor
+                .finish_batch(updates_manager.pending_executed_transactions_len() as u32)
+                .await;
+
             let sealed_batch_protocol_version = updates_manager.protocol_version();
             self.io
                 .seal_l1_batch(
@@ -184,7 +187,6 @@ impl OlaSequencer {
                 None
             };
         }
-        Err(Error::Canceled)
     }
 
     fn check_if_cancelled(&self) -> Result<(), Error> {
@@ -231,6 +233,8 @@ impl OlaSequencer {
             return Ok(());
         }
 
+        let mut tx_index_in_l1_batch = 0;
+
         for (index, miniblock) in miniblocks_to_reexecute.into_iter().enumerate() {
             // Push any non-first miniblock to updates manager. The first one was pushed when `updates_manager` was initialized.
             if index > 0 {
@@ -243,7 +247,9 @@ impl OlaSequencer {
                 miniblock_number
             );
             for tx in miniblock.txs {
-                let result = batch_executor.execute_tx(tx.clone()).await;
+                let result = batch_executor
+                    .execute_tx(tx.clone(), tx_index_in_l1_batch)
+                    .await;
                 let TxExecutionResult::Success {
                     tx_result,
                     tx_metrics,
@@ -280,6 +286,7 @@ impl OlaSequencer {
                     idx_in_miniblock = updates_manager.miniblock.executed_transactions.len(),
                     block_execution_metrics = updates_manager.pending_execution_metrics()
                 );
+                tx_index_in_l1_batch += 1;
             }
         }
 
@@ -448,7 +455,10 @@ impl OlaSequencer {
         updates_manager: &mut UpdatesManager,
         tx: Transaction,
     ) -> (SealResolution, TxExecutionResult) {
-        let exec_result = batch_executor.execute_tx(tx.clone()).await;
+        let tx_index_in_l1_batch = updates_manager.pending_executed_transactions_len() as u32;
+        let exec_result = batch_executor
+            .execute_tx(tx.clone(), tx_index_in_l1_batch)
+            .await;
         let resolution = match &exec_result {
             TxExecutionResult::BootloaderOutOfGasForTx => SealResolution::ExcludeAndSeal,
             TxExecutionResult::BootloaderOutOfGasForBlockTip => SealResolution::ExcludeAndSeal,

@@ -1,7 +1,7 @@
 use ola_types::{Address, U256};
 
-// TODO: change value
-pub const BOOTLOADER_TX_ENCODING_SPACE: u32 = 1024;
+// 1G = 32M * 32 B
+pub const TX_ENCODING_SPACE: u32 = 1 << 25;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TxExecutionMode {
@@ -31,8 +31,16 @@ impl BlockContextMode {
         }
     }
 
+    pub fn block_number(&self) -> u32 {
+        self.inner_block_context().context.block_number
+    }
+
     pub fn timestamp(&self) -> u64 {
         self.inner_block_context().context.block_timestamp
+    }
+
+    pub fn operator_address(&self) -> Address {
+        self.inner_block_context().context.operator_address
     }
 }
 

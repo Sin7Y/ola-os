@@ -36,13 +36,13 @@ WORKDIR olaos
 COPY --from=builder /olaos/target/release/ola_node ./ola_node
 COPY config/configuration config/configuration
 COPY etc etc
-ENV OLAOS_APP_ENVIRONMENT production
+ENV OLAOS_APP_ENVIRONMENT mainnet
 ENV OLAOS_IN_DOCKER true
 ENV OLAOS_DATABASE_POOL_SIZE 50
 ENV OLAOS_SEQUENCER_FEE_ACCOUNT_ADDR 0xde03a0B5963f75f1C8485B355fF6D30f3093BDE7de03a0B5963f75f1C8485B35
 ENV OLAOS_SEQUENCER_ENTRYPOINT_HASH 0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe
 ENV OLAOS_SEQUENCER_DEFAULT_AA_HASH 0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe
 ENV OLAOS_NETWORK_NETWORK localhost
-ENV OLAOS_NETWORK_OLA_NETWORK_ID 270
-ENV OLAOS_NETWORK_OLA_NETWORK_NAME localhost
+ENV OLAOS_NETWORK_OLA_NETWORK_ID 1027
+ENV OLAOS_NETWORK_OLA_NETWORK_NAME ola-testnet-1
 ENTRYPOINT ["./ola_node"]

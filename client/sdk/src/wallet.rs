@@ -137,8 +137,8 @@ mod tests {
     use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
     use crate::signer::Signer;
-    use crate::utils::h256_to_u64_array;
     use crate::{key_store::OlaKeyPair, private_key_signer::PrivateKeySigner};
+    use ola_utils::convert::h256_to_u64_array;
 
     use super::Wallet;
 
@@ -152,8 +152,8 @@ mod tests {
         let public_key = key_pair.public.clone();
         let public_key_string = hex::encode(&public_key);
         let (x, y) = split_pubkey(public_key.0.as_slice()).unwrap();
-        let x_u256 = h256_to_u64_array(H256(x)).unwrap();
-        let y_u256 = h256_to_u64_array(H256(y)).unwrap();
+        let x_u256 = h256_to_u64_array(&H256(x));
+        let y_u256 = h256_to_u64_array(&H256(y));
         let x_hex = hex::encode(x);
         let y_hex = hex::encode(y);
 
@@ -177,8 +177,8 @@ mod tests {
         s_h256.copy_from_slice(s);
         println!("r: {}", hex::encode(r_h256));
         println!("s: {}", hex::encode(s_h256));
-        let r_u256 = h256_to_u64_array(H256(r_h256)).unwrap();
-        let s_u256 = h256_to_u64_array(H256(s_h256)).unwrap();
+        let r_u256 = h256_to_u64_array(&H256(r_h256));
+        let s_u256 = h256_to_u64_array(&H256(s_h256));
         println!("r fields: {:?}", r_u256);
         println!("s fields: {:?}", s_u256);
 
@@ -229,7 +229,7 @@ mod tests {
     //     let eth_private_key = H256::random();
     //     let key_pair = OlaKeyPair::from_etherum_private_key(eth_private_key).unwrap();
     //     let pk_signer = PrivateKeySigner::new(key_pair.clone());
-    //     let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(270));
+    //     let signer = Signer::new(pk_signer, key_pair.address, L2ChainId(1027));
     //     let client = HttpClientBuilder::default()
     //         .build("http://localhost:13000")
     //         .unwrap();
@@ -267,7 +267,7 @@ mod tests {
     //     //     .unwrap();
     //     // let bytes = wallet.create_tx_raw(l2Tx.clone()).unwrap();
     //     // let b = bytes.0.as_slice();
-    //     // let (decoded_transaction, _) = TransactionRequest::from_bytes(b, 270).unwrap();
+    //     // let (decoded_transaction, _) = TransactionRequest::from_bytes(b, 1027).unwrap();
     //     // let origin_transaction: TransactionRequest = l2Tx.into();
 
     //     // assert_eq!(origin_transaction, decoded_transaction)

@@ -83,9 +83,10 @@ impl TreeUpdater {
             index += 1;
         }
 
-        if let Some(last_block) = new_blocks.last() {
-            *next_block_to_seal = last_block.header.number + 1;
-            self.process_multiple_blocks(&mut storage, new_blocks).await;
+        for block in new_blocks {
+            *next_block_to_seal = block.header.number + 1;
+            self.process_multiple_blocks(&mut storage, vec![block])
+                .await;
         }
     }
 

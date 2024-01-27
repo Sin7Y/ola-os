@@ -9,13 +9,15 @@ description = "Ola cli tools"
 
 [dependencies]
 ola_types = { path = "../../types" }
+ola_utils = { path = "../../utils" }
 ola_wallet_sdk = { path = "../sdk" }
 clap = { version = "4.4.7", features = ["derive", "env", "string"] }
 clap_complete = "4.4.4"
 thiserror = "1.0"
-ola_assembler = { git = "https://github.com/Sin7Y/olavm.git", branch = "dev/debug-sys", package = "assembler" }
+# ola_assembler = { git = "https://github.com/Sin7Y/olavm.git", branch = "dev/debug-sys", package = "assembler" }
+ola_assembler = { path = "../../../olavm/assembler", package = "assembler" }
 ola-lang = { git = "https://github.com/Sin7Y/ola-lang.git", branch = "develop" }
-ola-lang-abi = "1.0.4"
+ola-lang-abi = "1.0.5"
 num-bigint = { version = "0.4", features = ["rand"] }
 num-traits = "0.2"
 num-integer = "0.1.44"
@@ -26,7 +28,7 @@ inkwell = "0.2.0"
 shellexpand = "3.1.0"
 anyhow = "1.0.75"
 colored = "2.0.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "=1.35.0", features = ["full"] }
 rpassword = "7.2.0"
 hex = "0.4.3"
 ethereum-types = "0.14.1"

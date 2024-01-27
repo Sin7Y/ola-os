@@ -31,17 +31,16 @@ impl ProgramMeta {
     }
 
     pub fn from_file(path: PathBuf) -> anyhow::Result<Self> {
-        let mut program_file = File::open(path.clone())?;
         let program: BinaryProgram = serde_json::from_reader(File::open(path)?)?;
-        let mut program_bytes = Vec::new();
-        let _ = program_file.read_to_end(&mut program_bytes)?;
+        let program_bytes = bincode::serialize(&program)?;
         let program_hash = program_bytes.hash_bytes();
         let instructions_u64 = program.bytecode_u64_array()?;
         let instructions: Vec<GoldilocksField> = instructions_u64
             .iter()
             .map(|n| GoldilocksField(*n))
             .collect();
-        let bytecode_hash_u256 = calculate_arbitrary_poseidon(&instructions).map(|fe| fe.0);
+        let mut bytecode_hash_u256 = calculate_arbitrary_poseidon(&instructions).map(|fe| fe.0);
+        bytecode_hash_u256.reverse();
         let bytecode_hash = u256_to_h256(U256(bytecode_hash_u256));
         Ok(Self::new(
             program_bytes,
