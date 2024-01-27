@@ -187,7 +187,6 @@ impl OlaSequencer {
                 None
             };
         }
-        Err(Error::Canceled)
     }
 
     fn check_if_cancelled(&self) -> Result<(), Error> {
