@@ -102,38 +102,19 @@ impl TxSender {
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
 
-        // TODO: @Pierre begin
-        let (_, tx_metrics) = execute_tx_with_pending_state(
-            vm_permit.clone(),
+        let res = execute_tx_with_pending_state(
+            vm_permit,
             shared_args.clone(),
-            TxExecutionArgs::for_validation(&tx),
             self.0.replica_connection_pool.clone(),
             tx.clone().into(),
-            &mut HashMap::new(),
         )
         .await;
 
-        olaos_logs::info!(
-            "Submit tx {:?} with execution metrics {:?}",
-            tx.hash(),
-            tx_metrics
-        );
+        olaos_logs::info!("Submit tx {:?} with execution", tx.hash(),);
 
-        let validation_result = shared_args
-            .validate_tx_with_pending_state(
-                vm_permit,
-                self.0.replica_connection_pool.clone(),
-                tx.clone(),
-            )
-            .await;
-
-        if let Err(err) = validation_result {
-            return Err(SubmitTxError::ValidationFailed(err));
+        if let Some(e) = res.err() {
+            return Err(SubmitTxError::PreExecutionReverted(e.to_string(), vec![]));
         }
-
-        self.ensure_tx_executable(tx.clone().into(), &tx_metrics, true)?;
-
-        // TODO: @Pierre end
 
         if let Some(proxy) = &self.0.proxy {
             // We're running an external node: we have to proxy the transaction to the main node.
@@ -164,7 +145,7 @@ impl TxSender {
             .access_storage_tagged("api")
             .await
             .transactions_dal()
-            .insert_transaction_l2(tx, tx_metrics)
+            .insert_transaction_l2(tx, TransactionExecutionMetrics::default())
             .await;
 
         match submission_res_handle {
@@ -223,7 +204,6 @@ impl TxSender {
         Ok(Bytes(ret))
     }
 
-    // TODO: add more check
     async fn validate_tx(&self, tx: &L2Tx) -> Result<(), SubmitTxError> {
         if tx.execute.factory_deps_length() > MAX_NEW_FACTORY_DEPS {
             return Err(SubmitTxError::TooManyFactoryDependencies(
@@ -288,40 +268,6 @@ impl TxSender {
 
     pub(crate) fn storage_caches(&self) -> PostgresStorageCaches {
         self.0.storage_caches.clone()
-    }
-
-    fn ensure_tx_executable(
-        &self,
-        transaction: Transaction,
-        tx_metrics: &TransactionExecutionMetrics,
-        log_message: bool,
-    ) -> Result<(), SubmitTxError> {
-        let Some(sk_config) = &self.0.sequencer_config else {
-            // No config provided, so we can't check if transaction satisfies the seal criteria.
-            // We assume that it's executable, and if it's not, it will be caught by the main server
-            // (where this check is always performed).
-            return Ok(());
-        };
-
-        // Hash is not computable for the provided `transaction` during gas estimation (it doesn't have
-        // its input data set). Since we don't log a hash in this case anyway, we just use a dummy value.
-        let tx_hash = if log_message {
-            transaction.hash()
-        } else {
-            H256::zero()
-        };
-
-        let seal_data = SealData::for_transaction(transaction, tx_metrics);
-        if let Some(reason) = ConditionalSealer::find_unexecutable_reason(sk_config, &seal_data) {
-            let message = format!(
-                "Tx is Unexecutable because of {reason}; inputs for decision: {seal_data:?}"
-            );
-            if log_message {
-                olaos_logs::info!("{tx_hash:#?} {message}");
-            }
-            return Err(SubmitTxError::Unexecutable(message));
-        }
-        Ok(())
     }
 }
 
