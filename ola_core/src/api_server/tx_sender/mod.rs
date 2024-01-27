@@ -102,19 +102,20 @@ impl TxSender {
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
 
-        let res = execute_tx_with_pending_state(
-            vm_permit,
-            shared_args.clone(),
-            self.0.replica_connection_pool.clone(),
-            tx.clone().into(),
-        )
-        .await;
-
         olaos_logs::info!("Submit tx {:?} with execution", tx.hash(),);
 
-        if let Some(e) = res.err() {
-            return Err(SubmitTxError::PreExecutionReverted(e.to_string(), vec![]));
-        }
+        // let res = execute_tx_with_pending_state(
+        //     vm_permit,
+        //     shared_args.clone(),
+        //     self.0.replica_connection_pool.clone(),
+        //     tx.clone().into(),
+        // )
+        // .await;
+
+
+        // if let Some(e) = res.err() {
+        //     return Err(SubmitTxError::PreExecutionReverted(e.to_string(), vec![]));
+        // }
 
         if let Some(proxy) = &self.0.proxy {
             // We're running an external node: we have to proxy the transaction to the main node.
@@ -148,6 +149,8 @@ impl TxSender {
             .insert_transaction_l2(tx, TransactionExecutionMetrics::default())
             .await;
 
+        drop(vm_permit);
+        
         match submission_res_handle {
             L2TxSubmissionResult::AlreadyExecuted => Err(SubmitTxError::NonceIsTooLow(
                 expected_nonce.0,

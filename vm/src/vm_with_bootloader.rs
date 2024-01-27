@@ -1,5 +1,6 @@
 use ola_types::{Address, U256};
 
+// 1G = 32M * 32 B
 pub const TX_ENCODING_SPACE: u32 = 1 << 25;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
