@@ -29,7 +29,7 @@ pub enum BlockNumber {
     /// Alias for BlockNumber::Latest.
     Committed,
     /// Last block that was finalized on L1.
-    Finalized,
+    // Finalized,
     /// Latest sealed block
     Latest,
     /// Earliest block (genesis)
@@ -54,7 +54,7 @@ impl Serialize for BlockNumber {
         match *self {
             BlockNumber::Number(ref x) => serializer.serialize_str(&format!("0x{:x}", x)),
             BlockNumber::Committed => serializer.serialize_str("committed"),
-            BlockNumber::Finalized => serializer.serialize_str("finalized"),
+            // BlockNumber::Finalized => serializer.serialize_str("finalized"),
             BlockNumber::Latest => serializer.serialize_str("latest"),
             BlockNumber::Earliest => serializer.serialize_str("earliest"),
             BlockNumber::Pending => serializer.serialize_str("pending"),
@@ -76,7 +76,7 @@ impl<'de> Deserialize<'de> for BlockNumber {
             fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
                 let result = match value {
                     "committed" => BlockNumber::Committed,
-                    "finalized" => BlockNumber::Finalized,
+                    // "finalized" => BlockNumber::Finalized,
                     "latest" => BlockNumber::Latest,
                     "earliest" => BlockNumber::Earliest,
                     "pending" => BlockNumber::Pending,

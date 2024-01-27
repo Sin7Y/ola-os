@@ -11,6 +11,8 @@ pub enum SubmitTxError {
     #[error("{0}")]
     IncorrectTx(#[from] TxCheckError),
     #[error("execution reverted{}{}" , if .0.is_empty() { "" } else { ": " }, .0)]
+    PreExecutionReverted(String, Vec<u8>),
+    #[error("execution reverted{}{}" , if .0.is_empty() { "" } else { ": " }, .0)]
     ExecutionReverted(String, Vec<u8>),
     #[error("{0}")]
     Unexecutable(String),

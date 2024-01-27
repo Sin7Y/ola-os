@@ -1,12 +1,12 @@
 use std::ops;
 
 use ola_types::{
-    get_nonce_key, storage::StorageKey, utils::decompose_full_nonce, Address, MiniblockNumber,
-    H256, U256,
+    get_nonce_key, storage::StorageKey, utils::decompose_full_nonce, Address, L1BatchNumber,
+    MiniblockNumber, H256, U256,
 };
 use ola_utils::convert::h256_to_u256;
 
-use crate::{SqlxError, StorageProcessor};
+use crate::{models::storage_block::ResolvedL1BatchForMiniblock, SqlxError, StorageProcessor};
 
 #[derive(Debug)]
 pub struct StorageWeb3Dal<'a, 'c> {
@@ -75,5 +75,27 @@ impl StorageWeb3Dal<'_, '_> {
         .into_iter()
         .map(|row| H256::from_slice(&row.hashed_key))
         .collect()
+    }
+
+    /// Provides information about the L1 batch that the specified miniblock is a part of.
+    /// Assumes that the miniblock is present in the DB; this is not checked, and if this is false,
+    /// the returned value will be meaningless.
+    pub async fn resolve_l1_batch_number_of_miniblock(
+        &mut self,
+        miniblock_number: MiniblockNumber,
+    ) -> Result<ResolvedL1BatchForMiniblock, SqlxError> {
+        let row = sqlx::query!(
+            "SELECT \
+                (SELECT l1_batch_number FROM miniblocks WHERE number = $1) as \"block_batch?\", \
+                (SELECT MAX(number) + 1 FROM l1_batches) as \"max_batch?\"",
+            miniblock_number.0 as i64
+        )
+        .fetch_one(self.storage.conn())
+        .await?;
+
+        Ok(ResolvedL1BatchForMiniblock {
+            miniblock_l1_batch: row.block_batch.map(|n| L1BatchNumber(n as u32)),
+            pending_l1_batch: L1BatchNumber(row.max_batch.unwrap_or(0) as u32),
+        })
     }
 }
