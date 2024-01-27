@@ -1,4 +1,4 @@
-import { OlaSigner, encodeAbi, TransactionType, L2Tx, parseTx, encodeTransaction } from "../src";
+import { OlaSigner, encodeAbi, TransactionType, L2Tx, parseTx, encodeTransaction, H256, U256 } from "../src";
 import { ethers } from "ethers";
 import { expect } from "chai";
 
@@ -40,10 +40,31 @@ import { expect } from "chai";
 //   });
 // });
 
+describe("H256/U256 encode Test", () => {
+  it("H256/U256 encode", async () => {
+    const from = H256.from(BigInt(908173248920127022929968509872062022378588115024631874819275168689514742274n));
+    console.log("from: ", from);
+
+    const x = BigInt(908173248920127022929968509872062022378588115024631874819275168689514742274n);
+    console.log(x);
+    console.log(x.toString(16));
+    const newArray = Array.from({ length: 32 }, () => 2);
+    console.log(newArray);
+    const bigIntValue = newArray.reduce((acc, byte, index) => acc | (BigInt(byte) << BigInt((31 - index) * 8)), BigInt(0));
+    console.log(bigIntValue.toString(16));
+  });
+});
+
 describe("L2TX encode Test", () => {
   it("L2TX encode", async () => {
-    const tx = encodeTransaction(100, "0x0202020202020202020202020202020202020202020202020202020202020202", {nonce: 1}, [2, 3, 4], null);
-  console.log(tx);
+    const pk = "0xead3c88c32e5938420ae67d7e180005512aee9eb7ab4ebedff58f95f4ef06504";
+    const ethWallet = new ethers.Wallet(pk);
+    // console.log("random wallet", ethWallet.address);
+    const olaSigner = await OlaSigner.fromETHSignature(ethWallet);
+
+    const tx = encodeTransaction(olaSigner, 100, H256.from("0x202020202020202020202020202020202020202020202020202020202020202"), U256.from(1), [2, 3, 4], null);
+    console.log(tx);
+    console.log("from: ", tx.common_data.initiator_address);
   });
 });
 
