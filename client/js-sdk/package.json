@@ -28,6 +28,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@ethereumjs/rlp": "^5.0.1",
     "axios": "^1.6.5",
     "wasm-test-01": "^0.0.7"
   },
