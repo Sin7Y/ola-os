@@ -5,8 +5,7 @@ use clap::Parser;
 use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
     abi::create_set_public_key_calldata, key_store::OlaKeyPair,
-    private_key_signer::PrivateKeySigner, provider::ProviderParams, signer::Signer,
-    utils::h256_from_hex_be, wallet::Wallet,
+    private_key_signer::PrivateKeySigner, provider::ProviderParams, signer::Signer, wallet::Wallet,
 };
 use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
@@ -53,7 +52,7 @@ impl SetPubKey {
         let nonce = if let Some(n) = self.nonce {
             n
         } else {
-            wallet.get_addr_nonce(from).await.unwrap() + 1
+            wallet.get_addr_nonce(from).await.unwrap()
         };
         let calldata = create_set_public_key_calldata(&from, public_key)?;
         let handle = wallet

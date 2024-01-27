@@ -65,7 +65,8 @@ impl FromKey {
             "Created new encrypted keystore file: {}",
             std::fs::canonicalize(self.file)?.display()
         );
-
+        println!("Public key: 0x{}", key.public_key_str());
+        println!("Address: 0x{}", key.address_str());
         Ok(())
     }
 

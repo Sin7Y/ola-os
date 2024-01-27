@@ -2,7 +2,11 @@ use ola_basic_types::H256;
 use ola_utils::{bytecode::hash_bytecode, program_bytecode_to_bytes};
 use olavm_core::program::binary_program::BinaryProgram;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::BufReader, path::Path};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+    path::Path,
+};
 
 #[derive(Debug, Clone)]
 pub struct SystemContractCode {

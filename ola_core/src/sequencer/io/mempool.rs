@@ -31,7 +31,6 @@ pub(crate) struct MempoolIO {
     current_l1_batch_number: L1BatchNumber,
     fee_account: Address,
     delay_interval: Duration,
-    l2_erc20_bridge_addr: Address,
 }
 
 impl MempoolIO {
@@ -41,7 +40,6 @@ impl MempoolIO {
         pool: ConnectionPool,
         config: &SequencerConfig,
         delay_interval: Duration,
-        l2_erc20_bridge_addr: Address,
     ) -> Self {
         let mut storage = pool.access_storage_tagged("sequencer").await;
         let last_sealed_l1_batch_header = storage.blocks_dal().get_newest_l1_batch_header().await;
@@ -56,7 +54,6 @@ impl MempoolIO {
             current_miniblock_number: last_miniblock_number + 1,
             fee_account: config.fee_account_addr,
             delay_interval,
-            l2_erc20_bridge_addr,
         }
     }
 }
@@ -112,7 +109,7 @@ impl SequencerIO for MempoolIO {
             let mut storage = self.pool.access_storage().await;
             let (base_system_contracts, protocol_version) = storage
                 .protocol_versions_dal()
-                .base_system_contracts_by_timestamp(current_timestamp)
+                .base_system_contracts_by_timestamp(current_timestamp as i64)
                 .await;
             return Some(l1_batch_params(
                 self.current_l1_batch_number,

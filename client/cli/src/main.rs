@@ -6,7 +6,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 
 use compile::Compile;
-use subcommands::{Deploy, Invoke, SetPubKey, Signer};
+use subcommands::{Call, Deploy, Invoke, SetPubKey, Signer};
 pub mod compile;
 pub mod errors;
 pub mod path;
@@ -34,6 +34,10 @@ enum Subcommands {
     Deploy(Deploy),
     #[clap(about = "Set public key to default account management contract")]
     SetPubKey(SetPubKey),
+    #[clap(
+        about = "Executes a new message call immediately without creating a transaction on the blockchain"
+    )]
+    Call(Call),
 }
 
 #[tokio::main]
@@ -57,6 +61,7 @@ async fn run_command(cli: Cli) -> Result<()> {
             Subcommands::Invoke(cmd) => cmd.run().await,
             Subcommands::Deploy(cmd) => cmd.run().await,
             Subcommands::SetPubKey(cmd) => cmd.run().await,
+            Subcommands::Call(cmd) => cmd.run().await,
         },
     }
 }

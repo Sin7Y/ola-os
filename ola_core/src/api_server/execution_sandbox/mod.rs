@@ -22,6 +22,12 @@ pub struct VmPermit {
     _permit: Arc<tokio::sync::OwnedSemaphorePermit>,
 }
 
+impl VmPermit {
+    fn rt_handle(&self) -> &Handle {
+        &self.rt_handle
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct VmConcurrencyBarrier {
     limiter: Arc<tokio::sync::Semaphore>,

@@ -1,13 +1,15 @@
 pub enum Environment {
     Local,
-    Production,
+    Testnet1,
+    Mainnet,
 }
 
 impl Environment {
     pub fn as_str(&self) -> &'static str {
         match self {
             Environment::Local => "local",
-            Environment::Production => "production",
+            Environment::Testnet1 => "testnet1",
+            Environment::Mainnet => "mainnet",
         }
     }
 }
@@ -17,9 +19,10 @@ impl TryFrom<String> for Environment {
     fn try_from(s: String) -> Result<Self, Self::Error> {
         match s.to_lowercase().as_str() {
             "local" => Ok(Self::Local),
-            "production" => Ok(Self::Production),
+            "testnet1" => Ok(Self::Testnet1),
+            "mainnet" => Ok(Self::Mainnet),
             other => Err(format!(
-                "{} is not a supported environment. Use either `local` or `production`.",
+                "{} is not a supported environment. Use either `local`、`testnet1` or `mainnet`.",
                 other
             )),
         }
