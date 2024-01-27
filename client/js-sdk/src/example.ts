@@ -1,16 +1,18 @@
-import { Signature } from "ethers";
+import { BigNumberish, BytesLike, ethers } from "ethers";
 import { encode_input_from_js } from "./crypto/ola_lang_abi"
 import { U256, H256 } from "./types";
 import { OlaSigner } from "./signer";
-import { RLP } from "@ethereumjs/rlp";
 
-type Address = H256;
+export type AddressLike = string | Promise<string>;
 
-const ENTRYPOINT_ADDRESS: H256 = H256.from("0x8001");
+export type Address = [number, number, number, number];
+export type Signature = string;
+
+const ENTRYPOINT_ADDRESS: Address = [0, 0, 0, 0x8001];
 
 interface Execute {
     contract_address: Address;
-    calldata: number[];
+    calldata: string;
     factory_deps?: number[][] | null;
 }
 
@@ -28,7 +30,7 @@ export enum TransactionType {
 }
 
 interface L2TxCommonData {
-    nonce: U256;
+    nonce: number;
     initiator_address: Address;
     signature: number[];
     transaction_type: TransactionType;
@@ -41,38 +43,34 @@ export interface L2Tx {
     received_timestamp_ms: number;
 }
 
-type U64 = [number];
-
-type Option<T> = T | null;
-
-type SignatureTuple = [Option<U64>, Option<U256>, Option<U256>];
-
-interface Eip712Meta {
-    factory_deps?: number[][] | null;
-    custom_signature?: number[] | null;
-    paymaster_params?: PaymasterParams | null;
-}
-
-interface PaymasterParams {
+export type PaymasterParams = {
     paymaster: Address;
-    paymaster_input: number[];
+    paymasterInput: BytesLike;
+};
+
+export type Eip712Meta = {
+    factoryDeps?: BytesLike[];
+    customSignature?: BytesLike;
+    paymasterParams?: PaymasterParams;
+};
+
+export interface TransactionRequest {
+    type?: null | number;
+    to?: null | AddressLike;
+    from?: null | AddressLike;
+    nonce?: number;
+    input?: null | string;
+    chainId?: null | BigNumberish;
+    customData?: null | Eip712Meta;
+};
+
+export async function sendTransaction(tx: string): Promise<string> {
+    // let tx_hash = await provider.send_raw_transaction(tx)?;
+    // return tx_hash;
+    return "";
 }
 
-interface TransactionRequest {
-    nonce: U256;
-    from?: Address | null;
-    to?: Address | null;
-    input: number[];
-    v?: U64 | null;
-    r?: U256 | null;
-    s?: U256 | null;
-    raw?: number[] | null;
-    transaction_type?: TransactionType | null;
-    eip712_meta?: Eip712Meta | null;
-    chain_id?: number | null;
-}
-
-export function createTransactionRaw(l2tx: L2Tx, signer: OlaSigner): number[] {
+export function createTransactionRaw(l2tx: L2Tx, signer: OlaSigner) {
     // TODO: chainid should be extract from common_data
     let chain_id = 1027;
     let tx_type = l2tx.common_data.transaction_type;
@@ -82,7 +80,7 @@ export function createTransactionRaw(l2tx: L2Tx, signer: OlaSigner): number[] {
         nonce: l2tx.common_data.nonce,
         from: l2tx.common_data.initiator_address,
         input: l2tx.execute.calldata,
-        v: [0],
+        v: 27,
         r: U256.from(r),
         s: U256.from(s),
         transaction_type: tx_type,
@@ -110,15 +108,54 @@ export function createTransactionRaw(l2tx: L2Tx, signer: OlaSigner): number[] {
     }
 
     let signature = signTransactionRequest(signer, tx_req);
+    let signed_bytes = rlp_tx(tx_req, signature, chain_id);
 
-    let tobeEncode: Buffer[] = [];
-    switch (tx_type) {
-        case TransactionType.EIP1559Transaction:
-            // tobeEncode.push(Buffer.from(chain_id));
-            break;
+    return signed_bytes;
+}
+
+function rlp_tx(tx: TransactionRequest, signature: ethers.SignatureLike, chain_id: number) {
+    const fields: any[] = [];
+
+    if (tx.type == TransactionType.EIP1559Transaction) {
+        fields.push(ethers.toBeArray(chain_id));
+    }
+    fields.push(ethers.toBeArray(tx.nonce));
+    if (tx.to != null) {
+        fields.push(ethers.toBeArray(tx.to));
+    } 
+    fields.push(ethers.toBeArray(tx.input));
+    
+    // Signature
+    fields.push(ethers.toBeArray(signature.v));
+    fields.push(ethers.toBeArray(signature.r));
+    fields.push(ethers.toBeArray(signature.s));
+
+    // EIP712 || OLA
+    if (tx.type == TransactionType.EIP712Transaction || tx.type == TransactionType.OlaRawTransaction) {
+        fields.push(ethers.toBeArray(chain_id));
+        if (tx.from != null) {
+            fields.push(ethers.toBeArray(tx.from));
+        }
+
+        if (tx.customData != null) {
+            fields.push((tx.customData.factoryDeps ?? []).map((dep) => ethers.hexlify(dep)));
+            if (tx.customData.customSignature && ethers.getBytes(tx.customData.customSignature).length == 0) {
+                throw new Error("Empty signatures are not supported");
+            }
+            fields.push(tx.customData.customSignature || "0x");
+
+            if (tx.customData.paymasterParams) {
+                fields.push([
+                    tx.customData.paymasterParams.paymaster,
+                    ethers.hexlify(tx.customData.paymasterParams.paymasterInput),
+                ]);
+            } else {
+                fields.push([]);
+            }
+        }
     }
 
-    return [1]
+    return ethers.concat([new Uint8Array([TransactionType.OlaRawTransaction]), ethers.encodeRlp(fields)]);
 }
 
 // TODO: use ECDSA sign the TransactionRequest.
@@ -126,17 +163,13 @@ function signTransactionRequest(signer: OlaSigner, transaction_request: Transact
     return [1, 2];
 }
 
-export function encodeTransaction(signer: OlaSigner, chain_id: number, from: Address, nonce: U256, calldata: number[], factory_deps: number[][] | null): L2Tx {
+export function encodeTransaction(signer: OlaSigner, chain_id: number, from: Address, nonce: number, calldata: string, factory_deps: number[][] | null): L2Tx {
     let req: TransactionRequest = {
         nonce: nonce,
         from: from,
         to: ENTRYPOINT_ADDRESS,
         input: calldata,
-        transaction_type: TransactionType.OlaRawTransaction,
-        eip712_meta: {
-            factory_deps: factory_deps
-        },
-        chain_id: chain_id
+        chainId: chain_id
     };
     let signature = signTransactionRequest(signer, req);
 
@@ -158,22 +191,25 @@ export function encodeTransaction(signer: OlaSigner, chain_id: number, from: Add
     return tx;
 }
 
-export function createCalldata(from: Uint8Array, to: Uint8Array, abi: string, method: string, params: Record<string, any>[], codes: number[] | null) {
+export function createCalldata(from: Address, to: Address, abi: string, method: string, params: Record<string, any>[], codes: number[] | null) {
     const abiJson = JSON.parse(abi);
     let biz_calldata = encode_input_from_js(abiJson, method, params);
     let entrypoint_calldata = createEntrypointCalldata(from, to, biz_calldata, codes);
+    // entrypoint_calldata is Vec<u64>, should convert to Vec<u8>
     return entrypoint_calldata;
 }
 
-function createEntrypointCalldata(from: Uint8Array, to: Uint8Array, calldata: Array<number>, codes: number[] | null) {
-    const entrypointAbiStr = "xxxx";
-    const entrypointAbiJson = JSON.parse(entrypointAbiStr);
+function createEntrypointCalldata(from: Address, to: Address, calldata: Array<number>, codes: number[] | null) {
+    const entrypointAbiJson = require("./Entrypoint_abi.json");
     const method = "system_entrance";
-    const params = [
-        { Address: from },
-        { Address: to },
-        { Fields: calldata },
-        { Fields: codes },
+    const params = [{
+            tuple: [
+                { Address: from },
+                { Address: to },
+                { Fields: calldata },
+                { Fields: codes }
+        ]},
+        { Bool: false }
     ];
 
     let data = encode_input_from_js(entrypointAbiJson, method, params);
