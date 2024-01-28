@@ -1,4 +1,4 @@
-import { OlaSigner, encodeAbi, TransactionType, L2Tx, parseTx, encodeTransaction, H256, U256, createCalldata, createTransactionRaw, Address as OlaAddress } from "../src";
+import { OlaSigner, createCalldata, createTransaction, Address as OlaAddress, encodeAbi } from "../src";
 import { ethers } from "ethers";
 // import { expect } from "chai";
 
@@ -65,13 +65,17 @@ import { ethers } from "ethers";
 //     const tx = encodeTransaction(olaSigner, 100, H256.from("0x202020202020202020202020202020202020202020202020202020202020202"), U256.from(1), [2, 3, 4], null);
 //     console.log(tx);
 //     console.log("from: ", tx.common_data.initiator_address);
+
 //   });
 // });
 
 describe("Transaction Encode Test", () => {
   it("encode", async () => {
-    const from: OlaAddress = [123, 123, 123, 123];
-    const to: OlaAddress = [456, 456, 456, 456];
+    // await init();
+    const from_raw = [123, 123, 123, 123];
+    const to_raw = [456n, 456n, 456n, 456n];
+    const from: OlaAddress = new BigUint64Array([123n, 123n, 123n, 123n]);
+    const to: OlaAddress = new BigUint64Array(to_raw);
     const abi = `[
       {
         "name": "setVote",
@@ -96,69 +100,71 @@ describe("Transaction Encode Test", () => {
       }
     ]`;
     const params = [
-      { Address: from },
-      { U32: 100 }
-    ];
+      { Address: [10, 10, 10, 10] },
+      { U32: 123 },
+  ];
+    const method = "setVote(address,u32)";
     const pk = "0xead3c88c32e5938420ae67d7e180005512aee9eb7ab4ebedff58f95f4ef06504";
     const ethWallet = new ethers.Wallet(pk);
     const olaSigner = await OlaSigner.fromETHSignature(ethWallet);
     
-    const calldata = createCalldata(from, to, abi, "setVote", params, null);
-    const l2tx = encodeTransaction(olaSigner, 1027, from, 1, calldata, null);
-    const raw = createTransactionRaw(l2tx, olaSigner);
+    const encoder = new TextEncoder();
+    const uint8Array = encoder.encode(abi);
+    const jsonString = JSON.stringify([...uint8Array]);
+    const calldata = await createCalldata(from, to, jsonString, method, params, null);
+    const raw = createTransaction(olaSigner, 1027, from, 1, calldata, null);
     console.log("raw tx: ", raw);
     // Now we can use provider to send the raw transaction
   });
-
 });
 
 // describe("ABI Test", async () => {
 //   it("encode", async () => {
-//     // const abi = [
-//     //   {
-//     //     name: "createBook",
-//     //     type: "function",
-//     //     inputs: [
-//     //       {
-//     //         name: "id",
-//     //         type: "u32",
-//     //         internalType: "u32",
-//     //       },
-//     //       {
-//     //         name: "name",
-//     //         type: "string",
-//     //         internalType: "string",
-//     //       },
-//     //     ],
-//     //     outputs: [
-//     //       {
-//     //         name: "",
-//     //         type: "tuple",
-//     //         internalType: "struct BookExample.Book",
-//     //         components: [
-//     //           {
-//     //             name: "book_id",
-//     //             type: "u32",
-//     //             internalType: "u32",
-//     //           },
-//     //           {
-//     //             name: "book_name",
-//     //             type: "string",
-//     //             internalType: "string",
-//     //           },
-//     //         ],
-//     //       },
-//     //     ],
-//     //   },
-//     // ];
-//     // const method = "createBook(u32,string)";
-//     // const params = [{ U32: 60 }, { String: "olavm" }];
-//     // const result = await encodeAbi(abi, method, params);
-//     // console.log(result);
-//     const url = new URL("index.test.ts", import.meta.url);
-//     console.log(url);
-//     const res = await fetch(url.href);
-//     console.log(res);
+//     const abi = [
+//       {
+//         name: "createBook",
+//         type: "function",
+//         inputs: [
+//           {
+//             name: "id",
+//             type: "u32",
+//             internalType: "u32",
+//           },
+//           {
+//             name: "name",
+//             type: "string",
+//             internalType: "string",
+//           },
+//         ],
+//         outputs: [
+//           {
+//             name: "",
+//             type: "tuple",
+//             internalType: "struct BookExample.Book",
+//             components: [
+//               {
+//                 name: "book_id",
+//                 type: "u32",
+//                 internalType: "u32",
+//               },
+//               {
+//                 name: "book_name",
+//                 type: "string",
+//                 internalType: "string",
+//               },
+//             ],
+//           },
+//         ],
+//       },
+//     ];
+//     const method = "createBook(u32,string)";
+//     const params = [{ U32: 60 }, { String: "olavm" }];
+//     const result = await encodeAbi(abi, method, params);
+//     console.log(result);
+//     // const url = new URL("index.test.ts", import.meta.url);
+//     // console.log(url);
+//     // const res = await fetch(url.href);
+//     // console.log(res);
 //   });
 // });
 
