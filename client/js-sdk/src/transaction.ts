@@ -140,11 +140,12 @@ function l2txToTransactionRequest(l2tx: L2Tx) {
     let tx_type = l2tx.common_data.transaction_type;
     let r = uint8ArrayToUint64Arrays(l2tx.common_data.signature.slice(0,32));
     let s = uint8ArrayToUint64Arrays(l2tx.common_data.signature.slice(32,64));
+    let v = l2tx.common_data.signature[64];
     let tx_req: TransactionRequest = {
         nonce: l2tx.common_data.nonce,
         from: l2tx.common_data.initiator_address,
         input: l2tx.execute.calldata,
-        v: 27,
+        v: v,
         r: r,
         s: s,
         type: tx_type,
@@ -271,11 +272,6 @@ function transactionRequestToBytes(tx: TransactionRequest) {
     let pos_biz_calldata_end = pos_biz_calldata_start + biz_calldata_len + 1;
     let biz_input = input.slice(pos_biz_calldata_start, pos_biz_calldata_end);
     let biz_addr = input.slice(4, 8);
-    
-    let have_paymaster = 0;
-    if (tx.eip712_meta.paymaster_params != null) {
-        have_paymaster = 1;
-    }
 
     let paymaster_address = null;
     let paymaster_input_len = null;
