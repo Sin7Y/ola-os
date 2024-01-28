@@ -1,8 +1,9 @@
 import { BigNumberish, BytesLike, ethers } from "ethers";
-import init, { encode_input_from_js } from "./crypto/ola_lang_abi";
+import init_abi, { encode_input_from_js } from "./crypto/ola_lang_abi";
+import init_poseidon, { poseidon_u64_bytes_for_bytes_wrapper } from "./crypto/mini_goldilocks";
 // import { U256, H256 } from "./types";
 import { OlaSigner } from "./signer";
-import { Sign } from "crypto";
+import { secp256k1 } from "@noble/curves/secp256k1";
 
 export type Address = BigUint64Array;
 
@@ -62,7 +63,7 @@ export type Eip712Meta = {
 };
 
 export interface TransactionRequest {
-    nonce?: number;
+    nonce: number;
     from?: null | Address;
     to?: null | Address;
     input: Uint8Array;
@@ -84,6 +85,25 @@ function uint64ArrayToBytes(uint64Array: BigUint64Array) {
         // Set values in big-endian order
         dataView.setBigUint64(i * 8, uint64Array[i], false);
     }
+    return new Uint8Array(buffer);
+}
+
+// Function to convert an array of Bigint values to bytes
+function bigintArrayToBytes(uint64Array: bigint[]) {
+    const buffer = new ArrayBuffer(uint64Array.length * 8); // 8 bytes per Uint64
+    const dataView = new DataView(buffer);
+
+    for (let i = 0; i < uint64Array.length; i++) {
+        // Set values in big-endian order
+        dataView.setBigUint64(i * 8, uint64Array[i], false);
+    }
+    return new Uint8Array(buffer);
+}
+
+function bigintToUint8Array(b: bigint) {
+    const buffer = new ArrayBuffer(8);
+    const dataView = new DataView(buffer);
+    dataView.setBigUint64(0, b, false);
     return new Uint8Array(buffer);
 }
 
@@ -118,8 +138,6 @@ function l2txToTransactionRequest(l2tx: L2Tx) {
     // TODO: chainid should be extract from common_data
     let chain_id = 1027;
     let tx_type = l2tx.common_data.transaction_type;
-    // let r = l2tx.common_data.signature.slice(0,32).map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    // let s = l2tx.common_data.signature.slice(32,64).map((byte) => byte.toString(16).padStart(2, "0")).join("");
     let r = uint8ArrayToUint64Arrays(l2tx.common_data.signature.slice(0,32));
     let s = uint8ArrayToUint64Arrays(l2tx.common_data.signature.slice(32,64));
     let tx_req: TransactionRequest = {
@@ -212,9 +230,79 @@ function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: number)
 }
 
 // TODO: use ECDSA sign the TransactionRequest.
-function signTransactionRequest(signer: OlaSigner, transaction_request: TransactionRequest): Uint8Array {
+function signTransactionRequest(signer: OlaSigner, tx: TransactionRequest): Uint8Array {
     // TODO: TransactionRequest convert to Uint8Array and then use Secp256k1 sign it.
-    return new Uint8Array(65);
+    let message = transactionRequestToBytes(tx);
+    let msg_hash = poseidon_u64_bytes_for_bytes_wrapper(message);
+    const signature = secp256k1.sign(msg_hash, signer.privateKey, {
+        lowS: true
+    });
+    const r = bigintToUint8Array(signature.r);
+    const s = bigintToUint8Array(signature.s);
+    const v = signature.recovery ? 0x1c: 0x1b;
+    let sig = new Uint8Array(65);
+    sig.set(r, 0);
+    sig.set(s, 32);
+    sig[64] = v;
+    return sig;
+}
+
+// Convert TransactionRequest to Uint8Array
+function transactionRequestToBytes(tx: TransactionRequest) {
+    if (tx.eip712_meta == null) {
+        throw new Error("We can sign transaction only with meta");
+    }
+    if (tx.eip712_meta.paymaster_params != null && tx.eip712_meta.paymaster_params.paymaster_input.length % 8 != 0) {
+        throw new Error("Paymaster input must be 8-byte aligned");
+    }
+    if (tx.input.length % 8 != 0) {
+        throw new Error("Transaction data must be 8-byte aligned");
+    }
+    if (tx.chain_id == null) {
+        throw new Error("Chain id must be set when perform sign");
+    }
+    if (tx.from == undefined || tx.from == null) {
+        throw new Error("We can only sign transactions with known sender");
+    }
+
+    let input = uint8ArrayToUint64Arrays(tx.input);
+    let pos_biz_calldata_start = 8;
+    let biz_calldata_len = Number(input[pos_biz_calldata_start]);
+    let pos_biz_calldata_end = pos_biz_calldata_start + biz_calldata_len + 1;
+    let biz_input = input.slice(pos_biz_calldata_start, pos_biz_calldata_end);
+    let biz_addr = input.slice(4, 8);
+    
+    let have_paymaster = 0;
+    if (tx.eip712_meta.paymaster_params != null) {
+        have_paymaster = 1;
+    }
+
+    let paymaster_address = null;
+    let paymaster_input_len = null;
+    let paymaster_input = null;
+    if (tx.eip712_meta.paymaster_params != null) {
+        paymaster_address = tx.eip712_meta.paymaster_params.paymaster;
+        paymaster_input_len = Math.floor(tx.eip712_meta.paymaster_params.paymaster_input.length / 8);
+        paymaster_input = uint8ArrayToUint64Arrays(tx.eip712_meta.paymaster_params.paymaster_input);
+    }
+
+    let data: bigint[] = [];
+    data.push(BigInt(tx.chain_id));
+    data.push(BigInt(tx.type ?? TransactionType.OlaRawTransaction));
+    data.push(BigInt(tx.nonce));
+    data.push(...tx.from);
+    data.push(...biz_addr);
+    data.push(...biz_input);
+    if (paymaster_address != null) {
+        data.push(...paymaster_address);
+    }
+    if (paymaster_input_len != null) {
+        data.push(BigInt(paymaster_input_len));
+    }
+    if (paymaster_input != null) {
+        data.push(...paymaster_input);
+    }
+    return bigintArrayToBytes(data);
 }
 
 function econstructL2Tx(signer: OlaSigner, chain_id: number, from: Address, nonce: number, calldata: Uint8Array, factory_deps: null | Array<Uint8Array>): L2Tx {
@@ -267,11 +355,8 @@ function createEntrypointCalldata(from: Address, to: Address, calldata: any, cod
 }
 
 export async function createCalldata(from: Address, to: Address, abi: string, method: string, params: any, codes: number[] | null) {
-    await init();
+    await init_abi();
     const abiJson = JSON.parse(abi);
-    console.log("abiJson: ", abiJson);
-    console.log("method: ", method);
-    console.log("params: ", params);
     let biz_calldata = encode_input_from_js(abiJson, method, params);
     let entrypoint_calldata = createEntrypointCalldata(from, to, biz_calldata, codes);
     let calldata = uint64ArrayToBytes(entrypoint_calldata);
