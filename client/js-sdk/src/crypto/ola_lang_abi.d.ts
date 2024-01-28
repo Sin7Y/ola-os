@@ -15,6 +15,20 @@ export function decode_input_from_js(file_content: Uint8Array, data: BigUint64Ar
 /**
 * @param {Uint8Array} file_content
 * @param {string} signature
+* @param {BigUint64Array} data
+* @returns {any}
+*/
+export function decode_output_wrapper(file_content: Uint8Array, signature: string, data: BigUint64Array): any;
+/**
+* @param {Uint8Array} file_content
+* @param {string} signature
+* @param {BigUint64Array} data
+* @returns {any}
+*/
+export function decode_output_from_js(file_content: Uint8Array, signature: string, data: BigUint64Array): any;
+/**
+* @param {Uint8Array} file_content
+* @param {string} signature
 * @param {any} params
 * @returns {any}
 */
@@ -26,6 +40,8 @@ export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly decode_abi_wrapper: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly decode_input_from_js: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly decode_output_wrapper: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
+  readonly decode_output_from_js: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly encode_input_from_js: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
