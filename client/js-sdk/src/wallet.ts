@@ -33,7 +33,8 @@ export class OlaWallet {
   }
 
   changePubKey() {
-    return this.invoke([], "", "", "", []);
+    const defaultAccountAbiJson = require("./system_contract/DefaultAccount_abi.json");
+    return this.invoke(defaultAccountAbiJson, "setPubkey(fields)", "", "", []);
   }
 
   static async fromETHSignature(ethSigner: ethers.Signer, rpcUrl?: string): Promise<OlaWallet> {

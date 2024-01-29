@@ -168,10 +168,10 @@ function l2txToTransactionRequest(l2tx: L2Tx) {
     return tx_req;
 }
 
-function createSignedTransactionRaw(l2tx: L2Tx, signer: OlaSigner) {
+async function createSignedTransactionRaw(l2tx: L2Tx, signer: OlaSigner) {
     let chain_id = 1027;
     let tx_req =l2txToTransactionRequest(l2tx);
-    let signature = signTransactionRequest(signer, tx_req);
+    let signature = await signTransactionRequest(signer, tx_req);
     let signed_bytes = rlp_tx(tx_req, signature, chain_id);
 
     return signed_bytes;
@@ -231,7 +231,8 @@ function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: number)
 }
 
 // TODO: use ECDSA sign the TransactionRequest.
-function signTransactionRequest(signer: OlaSigner, tx: TransactionRequest): Uint8Array {
+async function signTransactionRequest(signer: OlaSigner, tx: TransactionRequest): Promise<Uint8Array> {
+    await init_poseidon();
     // TODO: TransactionRequest convert to Uint8Array and then use Secp256k1 sign it.
     let message = transactionRequestToBytes(tx);
     let msg_hash = poseidon_u64_bytes_for_bytes_wrapper(message);
@@ -301,7 +302,7 @@ function transactionRequestToBytes(tx: TransactionRequest) {
     return bigintArrayToBytes(data);
 }
 
-function econstructL2Tx(signer: OlaSigner, chain_id: number, from: Address, nonce: number, calldata: Uint8Array, factory_deps: null | Array<Uint8Array>): L2Tx {
+async function econstructL2Tx(signer: OlaSigner, chain_id: number, from: Address, nonce: number, calldata: Uint8Array, factory_deps: null | Array<Uint8Array>): Promise<L2Tx> {
     let req: TransactionRequest = {
         nonce: nonce,
         from: from,
@@ -313,7 +314,7 @@ function econstructL2Tx(signer: OlaSigner, chain_id: number, from: Address, nonc
         },
         chain_id: chain_id
     };
-    let signature = signTransactionRequest(signer, req);
+    let signature = await signTransactionRequest(signer, req);
 
     let tx: L2Tx = {
         execute: {
@@ -334,7 +335,7 @@ function econstructL2Tx(signer: OlaSigner, chain_id: number, from: Address, nonc
 }
 
 function createEntrypointCalldata(from: Address, to: Address, calldata: any, codes: number[] | null) {
-    const entrypointAbiJson = require("./Entrypoint_abi.json");
+    const entrypointAbiJson = require("./ssystem_contract/Entrypoint_abi.json");
     const method = "system_entrance";
     const params = [{
             Tuple: [
@@ -359,9 +360,9 @@ export async function createCalldata(from: Address, to: Address, abi: string, me
     return calldata;
 }
 
-export function createTransaction(signer: OlaSigner, chain_id: number, from: Address, nonce: number, calldata: Uint8Array, factory_deps: Uint8Array[] | null) {
-    let l2tx = econstructL2Tx(signer, chain_id, from, nonce, calldata, factory_deps);
-    let raw_tx = createSignedTransactionRaw(l2tx, signer);
+export async function createTransaction(signer: OlaSigner, chain_id: number, from: Address, nonce: number, calldata: Uint8Array, factory_deps: Uint8Array[] | null) {
+    let l2tx = await econstructL2Tx(signer, chain_id, from, nonce, calldata, factory_deps);
+    let raw_tx = await createSignedTransactionRaw(l2tx, signer);
     return raw_tx;
 }
 
