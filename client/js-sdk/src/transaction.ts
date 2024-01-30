@@ -170,7 +170,7 @@ function l2txToTransactionRequest(l2tx: L2Tx) {
 
 async function createSignedTransactionRaw(l2tx: L2Tx, signer: OlaSigner) {
     let chain_id = 1027;
-    let tx_req =l2txToTransactionRequest(l2tx);
+    let tx_req = l2txToTransactionRequest(l2tx);
     let signature = await signTransactionRequest(signer, tx_req);
     let signed_bytes = rlp_tx(tx_req, signature, chain_id);
 
@@ -336,7 +336,7 @@ async function econstructL2Tx(signer: OlaSigner, chain_id: number, from: Address
 
 function createEntrypointCalldata(from: Address, to: Address, calldata: any, codes: number[] | null) {
     const entrypointAbiJson = require("./ssystem_contract/Entrypoint_abi.json");
-    const method = "system_entrance";
+    const method = "system_entrance((address,address,fields,fields),bool)";
     const params = [{
             Tuple: [
                 ["address", { Address: from }],
