@@ -1,0 +1,1 @@
+export const ENTRYPOINT_ADDRESS = [0x0n, 0x0n, 0x0n, 0x8001n];
