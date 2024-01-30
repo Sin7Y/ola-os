@@ -15,7 +15,7 @@ use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
 
 #[derive(Debug, Parser)]
 pub struct Invoke {
-    #[clap(long, help = "network name")]
+    #[clap(long, help = "network name, can be local or pre-alpha")]
     network: Option<String>,
     #[clap(long, help = "AA Address")]
     aa: Option<String>,
@@ -37,13 +37,13 @@ impl Invoke {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "test" => ProviderParams::pub_test(),
+                "pre-alpha" => ProviderParams::pre_alpha(),
                 _ => {
                     bail!("invalid network name")
                 }
             }
         } else {
-            ProviderParams::pub_test()
+            ProviderParams::pre_alpha()
         };
 
         let keystore_path = PathBuf::from(self.keystore);
@@ -116,7 +116,7 @@ impl Invoke {
             .send()
             .await?;
         let tx_hash = hex::encode(&handle.hash());
-        println!("tx_hash: {}", tx_hash);
+        println!("tx_hash: 0x{}", tx_hash);
 
         Ok(())
     }

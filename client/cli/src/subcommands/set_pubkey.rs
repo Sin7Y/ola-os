@@ -11,7 +11,7 @@ use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
 #[derive(Debug, Parser)]
 pub struct SetPubKey {
-    #[clap(long, help = "network name")]
+    #[clap(long, help = "network name, can be local or pre-alpha")]
     network: Option<String>,
     #[clap(long, help = "Provide transaction nonce manually")]
     nonce: Option<u32>,
@@ -24,13 +24,13 @@ impl SetPubKey {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "test" => ProviderParams::pub_test(),
+                "pre_alpha" => ProviderParams::pre_alpha(),
                 _ => {
                     bail!("invalid network name")
                 }
             }
         } else {
-            ProviderParams::pub_test()
+            ProviderParams::pre_alpha()
         };
 
         let keystore_path = PathBuf::from(self.keystore);
