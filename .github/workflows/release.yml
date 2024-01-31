@@ -30,7 +30,7 @@ jobs:
       with:
         version: 15    
     - name: Build
-      run: cargo build --release
+      run: SQLX_OFFLINE=true cargo build --release
     - name: Upload Ola node binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -62,7 +62,7 @@ jobs:
       with:
         version: 15      
     - name: Build
-      run: cargo build --release
+      run: SQLX_OFFLINE=true cargo build --release
     - name: Upload Ola node binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -96,7 +96,7 @@ jobs:
     - name: Add LLVM to Path
       run: echo "$(pwd)/llvm15.0/bin" >> $GITHUB_PATH 
     - name: Build
-      run: cargo build --release
+      run: SQLX_OFFLINE=true cargo build --release
     - name: Upload Ola node binary
       uses: svenstaro/upload-release-action@v2
       with:
@@ -130,7 +130,7 @@ jobs:
     - name: Add LLVM to Path
       run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
     - name: Build
-      run: cargo build --release
+      run: SQLX_OFFLINE=true cargo build --release
     - name: Upload Ola node binary
       uses: svenstaro/upload-release-action@v2
       with:
