@@ -129,8 +129,10 @@ jobs:
       run: unzip c:\llvm.zip -d c:/
     - name: Add LLVM to Path
       run: echo "c:\llvm15.0\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8
+    - name: Set SQLX_OFFLINE environment variable
+      run: $env:SQLX_OFFLINE="true"
     - name: Build
-      run: $env:SQLX_OFFLINE=true && cargo build --release
+      run: cargo build --release
     - name: Upload Ola node binary
       uses: svenstaro/upload-release-action@v2
       with:
