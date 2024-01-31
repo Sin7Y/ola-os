@@ -24,7 +24,7 @@ COPY . .
 # Copy over the cached dependencies
 COPY --from=cacher /olaos/target target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
-ENV DATABASE_URL postgres://admin:admin123@host.docker.internal:5432/olaos
+ENV DATABASE_URL postgres://admin:admin123@host.docker.internal:5434/olaos
 ENV SQLX_OFFLINE true
 RUN apt-get update && apt-get install -y clang
 RUN rustup install nightly

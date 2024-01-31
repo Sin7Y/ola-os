@@ -6,7 +6,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use colored::Colorize;
 
 use compile::Compile;
-use subcommands::{Call, Deploy, Invoke, SetPubKey, Signer};
+use subcommands::{Call, Deploy, Invoke, SetPubKey, Signer, Transaction};
 pub mod compile;
 pub mod errors;
 pub mod path;
@@ -38,6 +38,8 @@ enum Subcommands {
         about = "Executes a new message call immediately without creating a transaction on the blockchain"
     )]
     Call(Call),
+    #[clap(alias = "tx", about = "Get Ola transaction by hash")]
+    Transaction(Transaction),
 }
 
 #[tokio::main]
@@ -62,6 +64,7 @@ async fn run_command(cli: Cli) -> Result<()> {
             Subcommands::Deploy(cmd) => cmd.run().await,
             Subcommands::SetPubKey(cmd) => cmd.run().await,
             Subcommands::Call(cmd) => cmd.run().await,
+            Subcommands::Transaction(cmd) => cmd.run().await,
         },
     }
 }

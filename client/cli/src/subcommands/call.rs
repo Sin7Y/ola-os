@@ -16,7 +16,7 @@ use crate::{path::ExpandedPathbufParser, utils::from_hex_be};
 
 #[derive(Debug, Parser)]
 pub struct Call {
-    #[clap(long, help = "network name")]
+    #[clap(long, help = "network name, can be local or pre-alpha")]
     network: Option<String>,
     #[clap(long, help = "AA Address")]
     aa: Option<String>,
@@ -34,13 +34,13 @@ impl Call {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "test" => ProviderParams::pub_test(),
+                "pre-alpha" => ProviderParams::pre_alpha(),
                 _ => {
                     bail!("invalid network name")
                 }
             }
         } else {
-            ProviderParams::pub_test()
+            ProviderParams::pre_alpha()
         };
 
         let mut arg_iter = self.calls.into_iter();
