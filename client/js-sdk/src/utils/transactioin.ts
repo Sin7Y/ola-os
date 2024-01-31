@@ -119,7 +119,8 @@ export async function getL2Tx(signer: OlaSigner, chain_id: number, from: string,
 
   console.log("txRequest", txRequest);
 
-  const signature = await signTransactionRequest(signer, txRequest);
+  // signature in common_data should be 64 bytes.
+  const signature = (await signTransactionRequest(signer, txRequest)).slice(0, 64);
 
   const tx: L2Tx = {
     execute: {
@@ -148,6 +149,7 @@ function l2txToTransactionRequest(l2tx: L2Tx) {
   let txRequest: TransactionRequest = {
     nonce: l2tx.common_data.nonce,
     from: l2tx.common_data.initiator_address,
+    to: l2tx.execute.contract_address,
     input: l2tx.execute.calldata,
     v,
     r,
