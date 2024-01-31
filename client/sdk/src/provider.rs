@@ -2,7 +2,8 @@ use crate::{
     errors::ClientError,
     operation::{execute_contract::ExecuteContractBuilder, SyncTransactionHandle},
 };
-use ola_types::{l2::L2Tx, request::CallRequest, Address, Bytes};
+use ethereum_types::H256;
+use ola_types::{api::TransactionDetails, l2::L2Tx, request::CallRequest, Address, Bytes};
 use ola_web3_decl::{
     jsonrpsee::http_client::{HttpClient, HttpClientBuilder},
     namespaces::{eth::EthNamespaceClient, ola::OlaNamespaceClient},
@@ -29,10 +30,10 @@ impl ProviderParams {
         }
     }
 
-    pub fn pub_test() -> Self {
+    pub fn pre_alpha() -> Self {
         Self {
             chain_id: 1027,
-            http_endpoint: "https://pubtest-api.ola.org".to_string(),
+            http_endpoint: "https://pre-alpha-api.olavm.com:13000".to_string(),
         }
     }
 }
@@ -51,6 +52,14 @@ impl ExtendProvider {
 
     pub async fn call_transaction(&self, call_request: CallRequest) -> Result<Bytes, ClientError> {
         let ret = self.provider.call_transaction(call_request).await?;
+        Ok(ret)
+    }
+
+    pub async fn get_transaction_detail(
+        &self,
+        hash: H256,
+    ) -> Result<Option<TransactionDetails>, ClientError> {
+        let ret = self.provider.get_transaction_details(hash).await?;
         Ok(ret)
     }
 }

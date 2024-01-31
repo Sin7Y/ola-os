@@ -21,7 +21,7 @@ DB_USER=${POSTGRES_USER:=admin}
 DB_PASSWORD="${POSTGRES_PASSWORD:=admin123}"
 # Check if a custom database name has been set, otherwise default to 'olaos'
 DB_NAME="${POSTGRES_DB:=olaos_replica}"
-# Check if a custom port has been set, otherwise default to '5432'
+# Check if a custom port has been set, otherwise default to '5433'
 DB_PORT="${POSTGRES_PORT:=5433}"
 
 if [[ -z "${SKIP_DOCKER}" ]]

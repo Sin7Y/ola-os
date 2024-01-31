@@ -24,14 +24,9 @@ use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
 use crate::path::ExpandedPathbufParser;
 
-// pub const CONTRACT_DEPLOYER_ADDRESS: Address = H256([
-//     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x05,
-// ]);
-
 #[derive(Debug, Parser)]
 pub struct Deploy {
-    #[clap(long, help = "network name")]
+    #[clap(long, help = "network name, can be local or pre-alpha")]
     network: Option<String>,
     #[clap(long, help = "AA Address")]
     aa: Option<String>,
@@ -51,13 +46,13 @@ impl Deploy {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "test" => ProviderParams::pub_test(),
+                "pre-alpha" => ProviderParams::pre_alpha(),
                 _ => {
                     anyhow::bail!("invalid network name")
                 }
             }
         } else {
-            ProviderParams::pub_test()
+            ProviderParams::pre_alpha()
         };
 
         let keystore_path = PathBuf::from(self.keystore);
@@ -132,7 +127,7 @@ impl Deploy {
         let new_address = Self::get_new_deployed_address(&from, &salt, &bytecode_hash);
         println!("New Deployed Address: 0x{}", hex::encode(&new_address));
         let tx_hash = hex::encode(&handle.hash());
-        println!("tx_hash: {}", tx_hash);
+        println!("tx_hash: 0x{}", tx_hash);
         Ok(())
     }
 
