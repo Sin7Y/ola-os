@@ -144,6 +144,6 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/release/olatte
+        file: target/release/olatte.exe
         asset_name: olatte-windows.exe
         tag: ${{ github.ref }}   
