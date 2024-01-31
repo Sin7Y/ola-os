@@ -1,40 +1,61 @@
-import { ethers } from "ethers";
+import { ethers, hexlify } from "ethers";
 import { OlaSigner } from "./signer";
 import { OlaProvider } from "./provider";
+import { DEFAULT_ACCOUNT_ADDRESS, DEFAULT_CHAIN_ID } from "./constants";
+import {
+  createEntrypointCalldata,
+  encodeAbi,
+  toBigintArray,
+  toUint64Array,
+  toUint8Array,
+} from "./utils";
+import { ACCOUNT_ABI } from "./abi";
 
 const DEFAULT_RPC_URL = "/";
 
 export class OlaWallet {
+  public chainId: number = DEFAULT_CHAIN_ID;
+
   private constructor(public signer: OlaSigner, public provider: OlaProvider) {}
 
   get address() {
     return this.signer.address;
   }
 
-  connect(rpcUrl: string) {
-    this.provider = new OlaProvider(rpcUrl);
+  connect(rpcUrl: string, chainId?: number) {
+    this.chainId = chainId ?? DEFAULT_CHAIN_ID;
+    this.provider = new OlaProvider(rpcUrl, chainId);
   }
 
   async getNonce() {
     return this.provider.getNonce(this.address);
   }
 
-  async invoke(abi: Array<any>, method: string, from: string, to: string, params: Array<any>) {
+  async invoke(abi: Array<any>, method: string, to: string, params: Array<any>) {
     const nonce = await this.getNonce();
     console.log("nonce", nonce);
 
-    const tx = await this.provider.request("ola_sendRawTransaction", { tx_bytes: "" });
-    console.log("tx", tx);
+    const bizCalldata = await encodeAbi(abi, method, params);
+    const entryCalldata = await createEntrypointCalldata(this.address, to, bizCalldata);
+    const calldata = toUint8Array(entryCalldata);
+    const txRaw = this.signer.createTransaction(this.chainId, nonce, calldata, null);
+    const txHash = await this.provider.request("ola_sendRawTransaction", { tx_bytes: txRaw });
+    console.log("tx", txHash);
   }
 
-  async call(abi: Array<any>, method: string, from: string, to: string, params: Array<any>) {
-    const tx = await this.provider.request("ola_sendRawTransaction", { tx_bytes: "" });
+  // @todo: call function
+  async call(abi: Array<any>, method: string, to: string, params: Array<any>) {
+    const tx = await this.provider.request("ola_callTransaction", { tx_bytes: "" });
     console.log("tx", tx);
   }
 
   changePubKey() {
-    const defaultAccountAbiJson = require("./system_contract/DefaultAccount_abi.json");
-    return this.invoke(defaultAccountAbiJson, "setPubkey(fields)", "", "", []);
+    return this.invoke(
+      ACCOUNT_ABI,
+      "setPubkey(fields)",
+      hexlify(toUint8Array(DEFAULT_ACCOUNT_ADDRESS)),
+      [{ Fields: toBigintArray(this.signer.publicKey) }]
+    );
   }
 
   static async fromETHSignature(ethSigner: ethers.Signer, rpcUrl?: string): Promise<OlaWallet> {

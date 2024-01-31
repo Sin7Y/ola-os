@@ -28,7 +28,6 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@noble/curves": "^1.3.0",
     "@sin7y/ola-abi-wasm": "^0.0.3",
     "@sin7y/ola-crypto": "^0.0.3",
     "axios": "^1.6.7"
