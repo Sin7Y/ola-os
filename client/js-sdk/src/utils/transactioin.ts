@@ -1,11 +1,9 @@
 import { ENTRYPOINT_ADDRESS } from "../constants";
 import { OlaSigner } from "../signer";
 import { encodeAbi } from "./abi";
-import { toUint64Array, toUint8Array, hexToBytes } from "./index";
+import { toUint64Array, toUint8Array, hexToBytes, poseidonHash } from "./index";
 import { L2Tx, TransactionRequest, TransactionType } from "../types";
-import { ethers, getBytes, hexlify, toBeArray, toBigInt, SigningKey } from "ethers";
-import { poseidon_u64_bytes_for_bytes_wrapper } from "@sin7y/ola-crypto";
-// import { secp256k1 } from "@noble/curves/secp256k1";
+import { ethers, getBytes, hexlify, toBeArray } from "ethers";
 import { ENTRYPOINT_ABI } from "../abi/entrypoint";
 
 export function createEntrypointCalldata(from: string, to: string, calldata: BigUint64Array, codes: number[] = []) {
@@ -26,12 +24,7 @@ export function createEntrypointCalldata(from: string, to: string, calldata: Big
   return data;
 }
 
-function debugConsole(data: bigint[]) {
-  console.log(hexlify(toUint8Array(data)));
-}
-
-function txToBytes(tx: TransactionRequest) {
-  console.log("------------ txToBytes -------------");
+export function txRequestToBytes(tx: TransactionRequest) {
   if (tx.eip712_meta == null) {
     throw new Error("We can sign transaction only with meta");
   }
@@ -49,13 +42,11 @@ function txToBytes(tx: TransactionRequest) {
   }
 
   let input = toUint64Array(tx.input);
-  console.log("input", input);
   let pos_biz_calldata_start = 8;
   let biz_calldata_len = Number(input[pos_biz_calldata_start]);
   let pos_biz_calldata_end = pos_biz_calldata_start + biz_calldata_len + 1;
   let biz_input = input.slice(pos_biz_calldata_start, pos_biz_calldata_end);
   let biz_addr = input.slice(4, 8);
-  console.log("biz_addr", biz_addr);
 
   let paymaster_address = null;
   let paymaster_input_len = null;
@@ -86,29 +77,17 @@ function txToBytes(tx: TransactionRequest) {
 }
 
 async function signTransactionRequest(signer: OlaSigner, tx: TransactionRequest) {
-  console.log("------------------- signTransactionRequest");
-  const message = txToBytes(tx);
-  const messageHash = await poseidon_u64_bytes_for_bytes_wrapper(message);
-  console.log("message", hexlify(message));
-  console.log("messageHash", hexlify(Uint8Array.from(messageHash)));
-  const privKey = new SigningKey(signer.privateKey);
-  const signature = privKey.sign(hexlify(Uint8Array.from(messageHash)));
-  // const signature = secp256k1.sign(Uint8Array.from(messageHash), toBigInt(signer.privateKey), { lowS: true });
-  console.log("r ", signature.r);
-  const r = hexToBytes(signature.r);
-  const s = hexToBytes(signature.s);
-  const v = signature.v;
-  let sig = new Uint8Array(65);
-  // sig.set(r, 0);
-  // sig.set(s, 32);
-  // sig[64] = v;
-  // return sig;
-  return sig.fill(1);
+  const message = txRequestToBytes(tx);
+  const messageHash = poseidonHash(message);
+  const signature = signer.signMessage(Uint8Array.from(messageHash));
+  const sigBytes = new Uint8Array(65);
+  sigBytes.set(toBeArray(signature.r), 0);
+  sigBytes.set(toBeArray(signature.s), 32);
+  sigBytes[64] = signature.v;
+  return sigBytes;
 }
 
 export async function getL2Tx(signer: OlaSigner, chain_id: number, from: string, nonce: number, calldata: Uint8Array, factory_deps: Array<Uint8Array> | null = null) {
-  console.log("------------------- getL2Tx");
-
   const fromAddress = Array.from(toUint64Array(from));
   const txRequest: TransactionRequest = {
     nonce,
@@ -120,10 +99,8 @@ export async function getL2Tx(signer: OlaSigner, chain_id: number, from: string,
     chain_id,
   };
 
-  console.log("txRequest", txRequest);
-
   // signature in common_data should be 64 bytes.
-  const signature = (await signTransactionRequest(signer, txRequest)).slice(0, 64);
+  const signature = signer.signTransactionRequest(txRequest).slice(0, 64);
 
   const tx: L2Tx = {
     execute: {
@@ -143,7 +120,7 @@ export async function getL2Tx(signer: OlaSigner, chain_id: number, from: string,
   return tx;
 }
 
-function l2txToTransactionRequest(l2tx: L2Tx) {
+export function l2txToTransactionRequest(l2tx: L2Tx) {
   let chain_id = 1027;
   let tx_type = l2tx.common_data.transaction_type;
   let r = toUint64Array(l2tx.common_data.signature.slice(0, 32));
@@ -176,7 +153,14 @@ function l2txToTransactionRequest(l2tx: L2Tx) {
   }
   return txRequest;
 }
-function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: number) {
+/**
+ * encode TransactionRequest
+ * @param tx
+ * @param signature
+ * @param chain_id
+ * @returns RLP-encoded HexDataString
+ */
+export function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: number) {
   if (signature.length != 65) {
     throw Error("Signature length must be 65");
   }
@@ -226,18 +210,16 @@ function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: number)
   return ethers.concat([new Uint8Array([TransactionType.OlaRawTransaction]), ethers.encodeRlp(fields)]);
 }
 async function createSignedTransactionRaw(l2tx: L2Tx, signer: OlaSigner, chainId: number) {
-  console.log("------------------- createSignedTransactionRaw");
+  const txRequest = l2txToTransactionRequest(l2tx);
 
-  let txRequest = l2txToTransactionRequest(l2tx);
-  console.log("txRequest", txRequest);
-  let signature = await signTransactionRequest(signer, txRequest);
-  let signed_bytes = rlp_tx(txRequest, signature, chainId);
+  const signature = await signTransactionRequest(signer, txRequest);
+  const signed_bytes = rlp_tx(txRequest, signature, chainId);
 
   return signed_bytes;
 }
 
 export async function createTransaction(signer: OlaSigner, chainId: number, from: string, nonce: number, calldata: Uint8Array, factory_deps: Array<Uint8Array> | null = null) {
   const l2tx = await getL2Tx(signer, chainId, from, nonce, calldata, factory_deps);
-  let raw_tx = await createSignedTransactionRaw(l2tx, signer, chainId);
+  const raw_tx = await createSignedTransactionRaw(l2tx, signer, chainId);
   return raw_tx;
 }

@@ -1,46 +1,34 @@
-import { BigNumberish, toBigInt, toBeArray } from "ethers";
+import { BigNumberish, toBigInt, toBeArray, zeroPadBytes, BytesLike } from "ethers";
+import { poseidon_u64_bytes_for_bytes_wrapper } from "@sin7y/ola-crypto";
 
 /**
- * HexString -> BigUint64Array
+ * BigNumberish / Uint8Array -> BigUint64Array
  * @param value
  * @returns
  */
 export function toUint64Array(value: Uint8Array | BigNumberish) {
-  if (value instanceof Uint8Array) {
-    if (value.length % 8 != 0) {
-      throw new Error("Input must have exactly 8 elements.");
-    }
-
-    let chunkLenth = Math.floor(value.length / 8);
-    const out = new BigUint64Array(chunkLenth);
-    for (let i = 0; i < chunkLenth; i++) {
-      const buff = Buffer.from(value.slice(8 * i, 8 * (i + 1)));
-      out[i] = buff.readBigUInt64BE(0);
-    }
-    return out;
+  let bytes = value instanceof Uint8Array ? value : toBeArray(value);
+  if (bytes.length % 8 !== 0) {
+    const remain = 8 - (bytes.length % 8);
+    const padding = new Uint8Array(remain).fill(0);
+    bytes = new Uint8Array([...padding, ...bytes]);
   }
-
-  const bigIntValue = toBigInt(value);
-  const mask64 = 2n ** 64n - 1n;
-  const parts: bigint[] = [];
-  for (let i = 0; i < 4; i++) {
-    const part = (bigIntValue >> (BigInt(i) * 64n)) & mask64;
-    // console.log("part", part);
-    parts.unshift(part);
+  const chunkLength = Math.ceil(bytes.length / 8);
+  const result = new BigUint64Array(chunkLength);
+  for (let i = 0; i < chunkLength; i++) {
+    const value = toBigInt(bytes.slice(i * 8, 8 * (i + 1)));
+    result[i] = value;
   }
-  // console.log("....", parts);
+  return result;
+}
 
-  // let index = 0;
-  // while (true) {
-  //   const part = (bigIntValue >> (BigInt(index) * 64n)) & mask64;
-  //   console.log("part", part);
-  //   if (!part) break;
-  //   parts.unshift(part);
-  //   index++;
-  // }
-  // console.log("....", parts);
-
-  return BigUint64Array.from(parts);
+/**
+ * convert HexString address -> bigint[]
+ * @param address
+ * @returns
+ */
+export function toBigintArray(address: BytesLike) {
+  return Array.from(toUint64Array(address));
 }
 
 const maxKeyBoundary = 2n ** 64n - 2n ** 32n + 1n;
@@ -68,10 +56,13 @@ export function toUint8Array(value: BigUint64Array | bigint[] | bigint) {
 
 // Convert a hex string to a byte array
 export function hexToBytes(hex: string) {
-    let bytes = [];
-    for (let c = 0; c < hex.length; c += 2)
-        bytes.push(parseInt(hex.substr(c, 2), 16));
-    return bytes;
+  let bytes = [];
+  for (let c = 0; c < hex.length; c += 2) bytes.push(parseInt(hex.substr(c, 2), 16));
+  return bytes;
+}
+
+export function poseidonHash(data: Uint8Array) {
+  return Uint8Array.from(poseidon_u64_bytes_for_bytes_wrapper(data));
 }
 
 export * from "./abi";

@@ -1,8 +1,10 @@
 import axios from "axios";
+import { DEFAULT_CHAIN_ID } from "./constants";
 
 export class OlaProvider {
   public baseURL: string;
-  constructor(url: string) {
+
+  constructor(url: string, public chainId: number = DEFAULT_CHAIN_ID) {
     this.baseURL = url.replace(/\/$/, "");
   }
 
@@ -11,7 +13,7 @@ export class OlaProvider {
     console.log(res);
   }
 
-  async request(method: string, params: Record<string, any> | null) {
+  async request<T>(method: string, params: Record<string, any> | null) {
     const requestBody = {
       id: 1,
       jsonrpc: "2.0",
@@ -19,14 +21,12 @@ export class OlaProvider {
       params,
     };
 
-    const response = await axios.post(this.baseURL, requestBody).then((res) => {
-      return res.data;
-    });
-
-    console.log("response", response);
+    const { data } = await axios.post(this.baseURL, requestBody);
+    console.log("response data", data);
+    return data as T;
   }
 
   async getNonce(address: string) {
-    return this.request("eth_getTransactionCount", { address });
+    return this.request<number>("eth_getTransactionCount", { address });
   }
 }
