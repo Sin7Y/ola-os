@@ -66,5 +66,13 @@ export function toUint8Array(value: BigUint64Array | bigint[] | bigint) {
   return new Uint8Array(buffer);
 }
 
+// Convert a hex string to a byte array
+export function hexToBytes(hex: string) {
+    let bytes = [];
+    for (let c = 0; c < hex.length; c += 2)
+        bytes.push(parseInt(hex.substr(c, 2), 16));
+    return bytes;
+}
+
 export * from "./abi";
 export * from "./transactioin";

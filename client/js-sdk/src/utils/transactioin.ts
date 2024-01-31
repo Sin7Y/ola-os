@@ -1,11 +1,11 @@
 import { ENTRYPOINT_ADDRESS } from "../constants";
 import { OlaSigner } from "../signer";
 import { encodeAbi } from "./abi";
-import { toUint64Array, toUint8Array } from "./index";
+import { toUint64Array, toUint8Array, hexToBytes } from "./index";
 import { L2Tx, TransactionRequest, TransactionType } from "../types";
-import { ethers, getBytes, hexlify, toBeArray, toBigInt } from "ethers";
+import { ethers, getBytes, hexlify, toBeArray, toBigInt, SigningKey } from "ethers";
 import { poseidon_u64_bytes_for_bytes_wrapper } from "@sin7y/ola-crypto";
-import { secp256k1 } from "@noble/curves/secp256k1";
+// import { secp256k1 } from "@noble/curves/secp256k1";
 import { ENTRYPOINT_ABI } from "../abi/entrypoint";
 
 export function createEntrypointCalldata(from: string, to: string, calldata: BigUint64Array, codes: number[] = []) {
@@ -91,10 +91,13 @@ async function signTransactionRequest(signer: OlaSigner, tx: TransactionRequest)
   const messageHash = await poseidon_u64_bytes_for_bytes_wrapper(message);
   console.log("message", hexlify(message));
   console.log("messageHash", hexlify(Uint8Array.from(messageHash)));
-  const signature = secp256k1.sign(Uint8Array.from(messageHash), toBigInt(signer.privateKey), { lowS: true });
-  const r = toUint8Array(signature.r);
-  const s = toUint8Array(signature.s);
-  const v = signature.recovery ? 0x1c : 0x1b;
+  const privKey = new SigningKey(signer.privateKey);
+  const signature = privKey.sign(hexlify(Uint8Array.from(messageHash)));
+  // const signature = secp256k1.sign(Uint8Array.from(messageHash), toBigInt(signer.privateKey), { lowS: true });
+  console.log("r ", signature.r);
+  const r = hexToBytes(signature.r);
+  const s = hexToBytes(signature.s);
+  const v = signature.v;
   let sig = new Uint8Array(65);
   // sig.set(r, 0);
   // sig.set(s, 32);
