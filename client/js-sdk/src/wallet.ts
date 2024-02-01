@@ -10,6 +10,7 @@ import {
   toUint8Array,
 } from "./utils";
 import { ACCOUNT_ABI } from "./abi";
+import { OlaAddress } from "./libs/address";
 
 const DEFAULT_RPC_URL = "/";
 
@@ -54,7 +55,7 @@ export class OlaWallet {
       ACCOUNT_ABI,
       "setPubkey(fields)",
       hexlify(toUint8Array(DEFAULT_ACCOUNT_ADDRESS)),
-      [{ Fields: toBigintArray(this.signer.publicKey) }]
+      [{ Fields: OlaAddress.toBigintArray(this.signer.publicKey) }]
     );
   }
 
