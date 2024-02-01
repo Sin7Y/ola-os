@@ -10,4 +10,20 @@ export const ACCOUNT_ABI = [
     ],
     outputs: [],
   },
+  {
+    "name": "getPubkey",
+    "type": "function",
+    "inputs": [
+      {
+        "name": "_address",
+        "type": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "fields"
+      }
+    ]
+  }
 ];
