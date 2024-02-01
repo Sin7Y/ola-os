@@ -121,9 +121,9 @@ impl RequestProcessor {
     pub(crate) async fn submit_proof(
         &self,
         Path(l1_batch_number): Path<u32>,
-        Json(payload): Json<SubmitProofRequest>,
+        Json(_payload): Json<SubmitProofRequest>,
     ) -> Result<Json<SubmitProofResponse>, RequestProcessorError> {
-        let l1_batch_number = L1BatchNumber(l1_batch_number);
+        let _l1_batch_number = L1BatchNumber(l1_batch_number);
         Ok(Json(SubmitProofResponse::Success))
     }
 }

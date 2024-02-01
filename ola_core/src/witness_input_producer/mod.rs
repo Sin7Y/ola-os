@@ -29,11 +29,11 @@ impl WitnessInputProducer {
     }
 
     fn process_job_impl(
-        rt_handle: Handle,
-        l1_batch_number: L1BatchNumber,
-        started_at: Instant,
-        connection_pool: ConnectionPool,
-        l2_chain_id: L2ChainId,
+        _rt_handle: Handle,
+        _l1_batch_number: L1BatchNumber,
+        _started_at: Instant,
+        _connection_pool: ConnectionPool,
+        _l2_chain_id: L2ChainId,
     ) -> anyhow::Result<WitnessBlockState> {
         // TODO:
         Ok(WitnessBlockState::default())
@@ -48,12 +48,12 @@ impl JobProcessor for WitnessInputProducer {
     const SERVICE_NAME: &'static str = "witness_input_producer";
 
     async fn get_next_job(&self) -> anyhow::Result<Option<(Self::JobId, Self::Job)>> {
-        let mut connection = self.connection_pool.access_storage().await;
+        let _connection = self.connection_pool.access_storage().await;
         // TODO:
         Ok(Some((L1BatchNumber(0), L1BatchNumber(0))))
     }
 
-    async fn save_failure(&self, job_id: Self::JobId, started_at: Instant, error: String) {
+    async fn save_failure(&self, _job_id: Self::JobId, _started_at: Instant, _error: String) {
         todo!()
     }
 
@@ -78,9 +78,9 @@ impl JobProcessor for WitnessInputProducer {
 
     async fn save_result(
         &self,
-        job_id: Self::JobId,
-        started_at: Instant,
-        artifacts: Self::JobArtifacts,
+        _job_id: Self::JobId,
+        _started_at: Instant,
+        _artifacts: Self::JobArtifacts,
     ) -> anyhow::Result<()> {
         // TODO:
         Ok(())
@@ -91,7 +91,7 @@ impl JobProcessor for WitnessInputProducer {
         0 as u32
     }
 
-    async fn get_job_attempts(&self, job_id: &L1BatchNumber) -> anyhow::Result<u32> {
+    async fn get_job_attempts(&self, _job_id: &L1BatchNumber) -> anyhow::Result<u32> {
         // TODO:
         Ok(0)
     }

@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    time::Instant,
-};
+use std::{collections::HashSet, time::Instant};
 
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{l2::L2Tx, Address, Transaction, U256};
