@@ -122,7 +122,7 @@ impl MetadataCalculator {
             l1_batch_header.base_system_contracts_hashes.default_aa,
         );
         let block_commitment_hash = block_commitment.hash();
-        olaos_logs::trace!("L1 batch commitment {:?}", &block_commitment);
+        olaos_logs::info!("L1 batch commitment {:?}", &block_commitment);
 
         let metadata = L1BatchMetadata {
             root_hash: merkle_root_hash,
@@ -137,7 +137,7 @@ impl MetadataCalculator {
             pass_through_data_hash: block_commitment_hash.pass_through_data,
         };
 
-        olaos_logs::trace!("Block metadata {:?}", metadata);
+        olaos_logs::info!("Block metadata {:?}", metadata);
         metadata
     }
 }

@@ -13,7 +13,9 @@ use ola_config::{
         load_api_config, load_healthcheck_config, load_web3_json_rpc_config, ApiConfig,
         Web3JsonRpcConfig,
     },
-    chain::{load_mempool_config, MempoolConfig, OperationsManagerConfig},
+    chain::{
+        load_mempool_config, load_operation_manager_config, MempoolConfig, OperationsManagerConfig,
+    },
     contracts::{load_contracts_config, ContractsConfig},
     database::{load_db_config, DBConfig},
     object_store::load_object_store_config,
@@ -366,8 +368,9 @@ async fn add_trees_to_task_futures(
     _components: &[Component],
     stop_receiver: watch::Receiver<bool>,
 ) {
-    let db_config = DBConfig::from_env();
-    let operation_config = OperationsManagerConfig::from_env();
+    let db_config = load_db_config().expect("failed to load db config");
+    let operation_config =
+        load_operation_manager_config().expect("failed to load operation config");
     let (future, tree_health_check) = run_tree(&db_config, &operation_config, stop_receiver).await;
     task_futures.push(future);
     healthchecks.push(Box::new(tree_health_check));

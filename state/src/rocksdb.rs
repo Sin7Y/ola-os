@@ -57,7 +57,7 @@ impl RocksdbStorage {
     pub async fn update_from_postgres(&mut self, conn: &mut StorageProcessor<'_>) {
         let _stage_started_at: Instant = Instant::now();
         let latest_l1_batch_number = conn.blocks_dal().get_sealed_l1_batch_number().await;
-        olaos_logs::debug!(
+        olaos_logs::info!(
             "loading storage for l1 batch number {}",
             latest_l1_batch_number.0
         );
@@ -70,14 +70,14 @@ impl RocksdbStorage {
         );
 
         while current_l1_batch_number <= latest_l1_batch_number.0 {
-            olaos_logs::debug!("loading state changes for l1 batch {current_l1_batch_number}");
+            olaos_logs::info!("loading state changes for l1 batch {current_l1_batch_number}");
             let storage_logs = conn
                 .storage_logs_dal()
                 .get_touched_slots_for_l1_batch(L1BatchNumber(current_l1_batch_number))
                 .await;
             self.process_transaction_logs(&storage_logs);
 
-            olaos_logs::debug!("loading factory deps for l1 batch {current_l1_batch_number}");
+            olaos_logs::info!("loading factory deps for l1 batch {current_l1_batch_number}");
             let factory_deps = conn
                 .blocks_dal()
                 .get_l1_batch_factory_deps(L1BatchNumber(current_l1_batch_number))

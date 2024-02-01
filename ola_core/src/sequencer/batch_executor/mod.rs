@@ -58,6 +58,7 @@ impl BatchExecutorHandle {
         }
     }
 
+    #[olaos_logs::instrument(skip(self))]
     pub(super) async fn execute_tx(
         &self,
         tx: Transaction,
@@ -74,12 +75,15 @@ impl BatchExecutorHandle {
             .unwrap();
 
         let res = response_receiver.await;
+        olaos_logs::info!("receive result {:?}", res);
         if res.is_err() {
+            olaos_logs::error!("ret err:{:?}", res);
             panic!("ret err:{:?}", res)
         }
         res.unwrap()
     }
 
+    #[olaos_logs::instrument(skip(self))]
     pub(super) async fn finish_batch(self, tx_index_in_l1_batch: u32) -> VmBlockResult {
         let (response_sender, response_receiver) = oneshot::channel();
         self.commands
@@ -88,6 +92,7 @@ impl BatchExecutorHandle {
             .unwrap();
         let _start = Instant::now();
         let resp = response_receiver.await.unwrap();
+        olaos_logs::info!("receive resp {:?}", resp);
         self.handle.await.unwrap();
         resp
     }
@@ -181,6 +186,7 @@ impl MainBatchExecutorBuilder {
 
 #[async_trait]
 impl L1BatchExecutorBuilder for MainBatchExecutorBuilder {
+    #[olaos_logs::instrument(skip(self))]
     async fn init_batch(&self, l1_batch_params: L1BatchParams) -> BatchExecutorHandle {
         let mut secondary_storage = RocksdbStorage::new(self.sequencer_db_path.as_ref());
         let mut conn = self.pool.access_storage_tagged("sequencer").await;
@@ -213,6 +219,7 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
+    #[olaos_logs::instrument(fields(l1_batch_params))]
     pub(super) fn run(
         mut self,
         secondary_storage_path: String,
@@ -243,41 +250,21 @@ impl BatchExecutor {
         let mut vm_manager =
             OlaVmManager::new(block_info, merkle_tree_path, secondary_storage_path);
 
-        // let tx_ctx = TxCtxInfo {
-        //     block_number: GoldilocksField::from_canonical_u32(
-        //         l1_batch_params
-        //             .context_mode
-        //             .inner_block_context()
-        //             .context
-        //             .block_number,
-        //     ),
-        //     block_timestamp: GoldilocksField::from_canonical_u64(
-        //         l1_batch_params
-        //             .context_mode
-        //             .inner_block_context()
-        //             .context
-        //             .block_timestamp,
-        //     ),
-        //     sequencer_address: h256_to_tree_key(
-        //         &l1_batch_params.base_system_contracts.entrypoint.hash,
-        //     ),
-        //     version: GoldilocksField::from_canonical_u64(l1_batch_params.protocol_version as u64),
-        //     chain_id: GoldilocksField::from_canonical_u64(1),
-        //     caller_address: Default::default(),
-        //     nonce: GoldilocksField::ZERO,
-        //     signature_r: Default::default(),
-        //     signature_s: Default::default(),
-        //     tx_hash: Default::default(),
-        // };
         while let Some(cmd) = self.commands.blocking_recv() {
             match cmd {
                 Command::ExecuteTx(tx, tx_index_in_l1_batch, resp) => {
                     let result = self.execute_tx(&mut vm_manager, &tx, tx_index_in_l1_batch);
+                    olaos_logs::info!("execute tx {:?} finished, result {:?}", tx.hash(), result);
                     resp.send(result).unwrap();
                 }
                 Command::FinishBatch(tx_index_in_l1_batch, resp) => {
-                    resp.send(self.finish_batch(&mut vm_manager, tx_index_in_l1_batch))
-                        .unwrap();
+                    let block_result = self.finish_batch(&mut vm_manager, tx_index_in_l1_batch);
+                    olaos_logs::info!(
+                        "finish batch finished, tx_index_in_l1_batch {:?}, result {:?}",
+                        tx_index_in_l1_batch,
+                        block_result
+                    );
+                    resp.send(block_result).unwrap();
                     return;
                 }
             }
@@ -286,6 +273,7 @@ impl BatchExecutor {
         olaos_logs::info!("Sequencer exited with an unfinished batch");
     }
 
+    #[olaos_logs::instrument(skip_all)]
     fn execute_tx(
         &self,
         vm_manager: &mut OlaVmManager,
@@ -293,6 +281,13 @@ impl BatchExecutor {
         tx_index_in_l1_batch: u32,
     ) -> TxExecutionResult {
         let hash = tx.hash();
+
+        olaos_logs::info!(
+            "execute tx {:?}, index_in_l1_batch {:?}",
+            hash,
+            tx_index_in_l1_batch
+        );
+
         let calldata = &tx.execute.calldata;
         let result = match &tx.common_data {
             ExecuteTransactionCommon::L2(tx) => {
@@ -361,6 +356,7 @@ impl BatchExecutor {
         result
     }
 
+    #[olaos_logs::instrument(skip_all)]
     fn finish_batch(
         &self,
         vm_manager: &mut OlaVmManager,

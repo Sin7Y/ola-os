@@ -85,7 +85,7 @@ impl VmConcurrencyLimiter {
         let elapsed = start.elapsed();
         // We don't want to emit too many logs.
         if elapsed > Duration::from_millis(10) {
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "Permit is obtained. Available permits: {available_permits}. Took {elapsed:?}"
             );
         }

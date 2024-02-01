@@ -90,19 +90,25 @@ impl Debug for TxSender {
 impl TxSender {
     #[tracing::instrument(skip(self, tx))]
     pub async fn submit_tx(&self, tx: L2Tx) -> Result<L2TxSubmissionResult, SubmitTxError> {
+        olaos_logs::info!("Start submit tx {:?}", tx.hash());
+
         if let Some(rate_limiter) = &self.0.rate_limiter {
             if rate_limiter.check().is_err() {
+                olaos_logs::info!("return RateLimitExceeded");
                 return Err(SubmitTxError::RateLimitExceeded);
             }
         }
 
+        olaos_logs::info!("start validate tx");
+
         self.validate_tx(&tx).await?;
 
-        let shared_args = self.shared_args();
+        olaos_logs::info!("validate tx succeeded");
+
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
 
-        olaos_logs::info!("Submit tx {:?} with execution", tx.hash(),);
+        olaos_logs::info!("Acquired vm_permit");
 
         // let res = execute_tx_with_pending_state(
         //     vm_permit,
@@ -112,12 +118,12 @@ impl TxSender {
         // )
         // .await;
 
-
         // if let Some(e) = res.err() {
         //     return Err(SubmitTxError::PreExecutionReverted(e.to_string(), vec![]));
         // }
 
         if let Some(proxy) = &self.0.proxy {
+            olaos_logs::error!("proxy not supported");
             // We're running an external node: we have to proxy the transaction to the main node.
             // But before we do that, save the tx to cache in case someone will request it
             // Before it reaches the main node.
@@ -138,6 +144,13 @@ impl TxSender {
         let nonce = tx.common_data.nonce.0;
         let hash = tx.hash();
         let expected_nonce = self.get_expected_nonce(&tx).await;
+
+        olaos_logs::info!(
+            "Got nonce {:?} and expected nonce {:?}",
+            nonce,
+            expected_nonce
+        );
+
         let submission_res_handle = self
             .0
             .master_connection_pool
@@ -149,9 +162,11 @@ impl TxSender {
             .insert_transaction_l2(tx, TransactionExecutionMetrics::default())
             .await;
 
+        olaos_logs::info!("Try to insert tx into db");
+
         drop(vm_permit);
-        
-        match submission_res_handle {
+
+        let res = match submission_res_handle {
             L2TxSubmissionResult::AlreadyExecuted => Err(SubmitTxError::NonceIsTooLow(
                 expected_nonce.0,
                 expected_nonce.0 + self.0.sender_config.max_nonce_ahead,
@@ -161,7 +176,11 @@ impl TxSender {
                 ola_types::l2::error::TxCheckError::TxDuplication(hash),
             )),
             _ => Ok(submission_res_handle),
-        }
+        };
+
+        olaos_logs::info!("Insert tx into db result {:?}", res);
+
+        res
     }
 
     #[tracing::instrument(skip(self, tx))]
