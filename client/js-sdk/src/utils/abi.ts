@@ -13,7 +13,7 @@ function getAbiBytes(abi: any[]) {
  * @param params params array
  * @returns BigUint64Array
  */
-export async function encodeAbi(abi: any[], method: string, params: Record<string, any>[]) {
+export function encodeAbi(abi: any[], method: string, params: Record<string, any>[]) {
   const result = encode_input_from_js(getAbiBytes(abi), method, params) as string[];
   return BigUint64Array.from(result.map((item) => BigInt(item)));
 }

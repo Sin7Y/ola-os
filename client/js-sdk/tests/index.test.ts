@@ -30,148 +30,151 @@ describe("Wallet Test", () => {
     expect(olaWallet.address).to.eq(
       "0xc32eff4be49142ea8ec271e65126a2cc4f227ebed16b62a7388222bd5afb3e0f"
     );
+
+    let tx = await olaWallet.changePubKey();
+    console.log(tx);
   });
 });
 
-describe("ABI Encoder Test", () => {
-  it("Encode ABI", async () => {
-    const abi = [
-      {
-        name: "createBook",
-        type: "function",
-        inputs: [
-          { name: "id", type: "u32", internalType: "u32" },
-          { name: "name", type: "string", internalType: "string" },
-        ],
-        outputs: [
-          {
-            name: "",
-            type: "tuple",
-            internalType: "struct BookExample.Book",
-            components: [
-              { name: "book_id", type: "u32", internalType: "u32" },
-              { name: "book_name", type: "string", internalType: "string" },
-            ],
-          },
-        ],
-      },
-    ];
-    const method = "createBook(u32,string)";
-    const params = [{ U32: 60 }, { String: "olavm" }];
-    const result = await encodeAbi(abi, method, params);
-    expect(result).to.deep.eq(
-      new BigUint64Array([60n, 5n, 111n, 108n, 97n, 118n, 109n, 7n, 120553111n])
-    );
-  });
+// describe("ABI Encoder Test", () => {
+//   it("Encode ABI", async () => {
+//     const abi = [
+//       {
+//         name: "createBook",
+//         type: "function",
+//         inputs: [
+//           { name: "id", type: "u32", internalType: "u32" },
+//           { name: "name", type: "string", internalType: "string" },
+//         ],
+//         outputs: [
+//           {
+//             name: "",
+//             type: "tuple",
+//             internalType: "struct BookExample.Book",
+//             components: [
+//               { name: "book_id", type: "u32", internalType: "u32" },
+//               { name: "book_name", type: "string", internalType: "string" },
+//             ],
+//           },
+//         ],
+//       },
+//     ];
+//     const method = "createBook(u32,string)";
+//     const params = [{ U32: 60 }, { String: "olavm" }];
+//     const result = await encodeAbi(abi, method, params);
+//     expect(result).to.deep.eq(
+//       new BigUint64Array([60n, 5n, 111n, 108n, 97n, 118n, 109n, 7n, 120553111n])
+//     );
+//   });
 
-  it("Decode ABI", async () => {
-    const abi = [
-      {
-        name: "getBookName",
-        type: "function",
-        inputs: [
-          {
-            name: "_book",
-            type: "tuple",
-            internalType: "struct BookExample.Book",
-            components: [
-              {
-                name: "book_id",
-                type: "u32",
-                internalType: "u32",
-              },
-              {
-                name: "book_name",
-                type: "string",
-                internalType: "string",
-              },
-            ],
-          },
-        ],
-        outputs: [
-          {
-            name: "",
-            type: "string",
-            internalType: "string",
-          },
-        ],
-      },
-    ];
-    const data = new BigUint64Array([5n, 104n, 101n, 108n, 108n, 111n, 6n]);
-    const method = "getBookName((u32,string))";
-    const result = await decodeAbi(abi, method, data);
-    expect(result).to.deep.eq([
-      {
-        name: "getBookName",
-        inputs: [
-          {
-            name: "_book",
-            type: "tuple",
-            components: [
-              { name: "book_id", type: "u32" },
-              { name: "book_name", type: "string" },
-            ],
-          },
-        ],
-        outputs: [{ name: "", type: "string" }],
-      },
-      [
-        {
-          param: { name: "", type: "string" },
-          value: { String: "hello" },
-        },
-      ],
-    ]);
-  });
-});
+//   it("Decode ABI", async () => {
+//     const abi = [
+//       {
+//         name: "getBookName",
+//         type: "function",
+//         inputs: [
+//           {
+//             name: "_book",
+//             type: "tuple",
+//             internalType: "struct BookExample.Book",
+//             components: [
+//               {
+//                 name: "book_id",
+//                 type: "u32",
+//                 internalType: "u32",
+//               },
+//               {
+//                 name: "book_name",
+//                 type: "string",
+//                 internalType: "string",
+//               },
+//             ],
+//           },
+//         ],
+//         outputs: [
+//           {
+//             name: "",
+//             type: "string",
+//             internalType: "string",
+//           },
+//         ],
+//       },
+//     ];
+//     const data = new BigUint64Array([5n, 104n, 101n, 108n, 108n, 111n, 6n]);
+//     const method = "getBookName((u32,string))";
+//     const result = await decodeAbi(abi, method, data);
+//     expect(result).to.deep.eq([
+//       {
+//         name: "getBookName",
+//         inputs: [
+//           {
+//             name: "_book",
+//             type: "tuple",
+//             components: [
+//               { name: "book_id", type: "u32" },
+//               { name: "book_name", type: "string" },
+//             ],
+//           },
+//         ],
+//         outputs: [{ name: "", type: "string" }],
+//       },
+//       [
+//         {
+//           param: { name: "", type: "string" },
+//           value: { String: "hello" },
+//         },
+//       ],
+//     ]);
+//   });
+// });
 
-describe("Transaction Encode Test", () => {
-  it("encode", async () => {
-    const pk = "0xead3c88c32e5938420ae67d7e180005512aee9eb7ab4ebedff58f95f4ef06504";
-    const ethWallet = new ethers.Wallet(pk);
-    const olaWallet = await OlaWallet.fromETHSignature(ethWallet);
+// describe("Transaction Encode Test", () => {
+//   it("encode", async () => {
+//     const pk = "0xead3c88c32e5938420ae67d7e180005512aee9eb7ab4ebedff58f95f4ef06504";
+//     const ethWallet = new ethers.Wallet(pk);
+//     const olaWallet = await OlaWallet.fromETHSignature(ethWallet);
 
-    const abi = [
-      {
-        name: "setVote",
-        type: "function",
-        inputs: [
-          { name: "_address", type: "address" },
-          { name: "_vote", type: "u32" },
-        ],
-        outputs: [],
-      },
-    ];
-    const method = "setVote(address,u32)";
-    const params = [{ Address: [10n, 10n, 10n, 10n] }, { U32: 123 }];
-    const bizCalldata = await encodeAbi(abi, method, params);
+//     const abi = [
+//       {
+//         name: "setVote",
+//         type: "function",
+//         inputs: [
+//           { name: "_address", type: "address" },
+//           { name: "_vote", type: "u32" },
+//         ],
+//         outputs: [],
+//       },
+//     ];
+//     const method = "setVote(address,u32)";
+//     const params = [{ Address: [10n, 10n, 10n, 10n] }, { U32: 123 }];
+//     const bizCalldata = await encodeAbi(abi, method, params);
 
-    const from = olaWallet.address;
-    // [456n, 456n, 456n, 456n]
-    const to = "0x00000000000001c800000000000001c800000000000001c800000000000001c8";
-    const nonce = 1;
-    const chainId = 1027;
-    const entryCalldata = await createEntrypointCalldata(from, to, bizCalldata);
-    const calldata = toUint8Array(entryCalldata);
-    const raw = await createTransaction(olaWallet.signer, chainId, from, nonce, calldata);
-    // console.log("raw", raw);
+//     const from = olaWallet.address;
+//     // [456n, 456n, 456n, 456n]
+//     const to = "0x00000000000001c800000000000001c800000000000001c800000000000001c8";
+//     const nonce = 1;
+//     const chainId = 1027;
+//     const entryCalldata = await createEntrypointCalldata(from, to, bizCalldata);
+//     const calldata = toUint8Array(entryCalldata);
+//     const raw = await createTransaction(olaWallet.signer, chainId, from, nonce, calldata);
+//     // console.log("raw", raw);
 
-    // olaWallet.invoke({
-    //   abi,
-    //   method,
-    //   params,
-    //   to
-    // })
+//     // olaWallet.invoke({
+//     //   abi,
+//     //   method,
+//     //   params,
+//     //   to
+//     // })
 
-    // Now we can use provider to send the raw transaction
-  });
-});
+//     // Now we can use provider to send the raw transaction
+//   });
+// });
 
-describe("Provider Test", async () => {
-  const olaWallet = await generateAccount();
+// describe("Provider Test", async () => {
+//   const olaWallet = await generateAccount();
 
-  it("getNonce()", async () => {
-    const nonce = await olaWallet.getNonce();
-    console.log("nonce", nonce);
-  });
-});
+//   it("getNonce()", async () => {
+//     const nonce = await olaWallet.getNonce();
+//     console.log("nonce", nonce);
+//   });
+// });

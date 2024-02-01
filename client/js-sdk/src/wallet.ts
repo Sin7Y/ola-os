@@ -11,6 +11,7 @@ import {
 } from "./utils";
 import { ACCOUNT_ABI } from "./abi";
 import { OlaAddress } from "./libs/address";
+import { TransactionType } from "./types";
 
 const DEFAULT_RPC_URL = "/";
 
@@ -34,28 +35,35 @@ export class OlaWallet {
 
   async invoke(abi: Array<any>, method: string, to: string, params: Array<any>) {
     const nonce = await this.getNonce();
-    console.log("nonce", nonce);
 
-    const bizCalldata = await encodeAbi(abi, method, params);
-    const entryCalldata = await createEntrypointCalldata(this.address, to, bizCalldata);
+    const bizCalldata = encodeAbi(abi, method, params);
+    const entryCalldata = createEntrypointCalldata(this.address, to, bizCalldata);
     const calldata = toUint8Array(entryCalldata);
-    const txRaw = this.signer.createTransaction(this.chainId, nonce, calldata, null);
+    const txRaw = this.signer.createTransaction(this.chainId, nonce.result, calldata, null);
     const txHash = await this.provider.request("ola_sendRawTransaction", { tx_bytes: txRaw });
     console.log("tx", txHash);
   }
 
   // @todo: call function
   async call(abi: Array<any>, method: string, to: string, params: Array<any>) {
-    const tx = await this.provider.request("ola_callTransaction", { tx_bytes: "" });
+    const nonce = await this.getNonce();
+    const callRequest = {
+      from: this.address,
+      to: to,
+      data: params,
+      nonce: nonce.result,
+      transaction_type: TransactionType.OlaRawTransaction,
+    };
+    const tx = await this.provider.request("ola_callTransaction", { call_request: callRequest });
     console.log("tx", tx);
   }
 
-  changePubKey() {
+  async changePubKey() {
     return this.invoke(
       ACCOUNT_ABI,
       "setPubkey(fields)",
       hexlify(toUint8Array(DEFAULT_ACCOUNT_ADDRESS)),
-      [{ Fields: OlaAddress.toBigintArray(this.signer.publicKey) }]
+      [{ Fields: toBigintArray(this.signer.publicKey) }]
     );
   }
 
