@@ -1,11 +1,6 @@
 use ola_types::api::TransactionDetails;
 use ola_types::H256;
-use ola_types::{
-    api::{BlockId, BlockNumber},
-    l2::L2Tx,
-    request::{CallRequest, TransactionRequest},
-    Bytes,
-};
+use ola_types::{l2::L2Tx, request::CallRequest, Bytes};
 use ola_web3_decl::error::Web3Error;
 
 use crate::api_server::web3::backend::error::internal_error;

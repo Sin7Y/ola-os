@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use ola_types::{
-    events::extract_bytecodes_marked_as_known,
     log::StorageLogQuery,
     tx::{
         tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
