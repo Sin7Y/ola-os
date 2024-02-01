@@ -13,9 +13,7 @@ use ola_vm::{
     vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
 };
 use olavm_core::state::error::StateError;
-use olavm_core::types::merkle_tree::{h256_to_tree_key, u8_arr_to_tree_key, TreeValue};
-use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
-use olavm_core::types::{Field, GoldilocksField};
+use olavm_core::types::storage::field_arr_to_u8_arr;
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
@@ -24,7 +22,7 @@ use tokio::{
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
 
 use ola_types::tx::tx_execution_info::TxExecutionStatus;
-use zk_vm::{BlockInfo, OlaVM, TxInfo, VmManager as OlaVmManager};
+use zk_vm::{BlockInfo, TxInfo, VmManager as OlaVmManager};
 
 #[derive(Debug)]
 pub struct BatchExecutorHandle {
@@ -162,7 +160,8 @@ impl MainBatchExecutorBuilder {
         }
     }
 
-    async fn init_batch_mock(&self, l1_batch_params: L1BatchParams) -> BatchExecutorHandle {
+    #[allow(unused)]
+    fn init_batch_mock(&self, l1_batch_params: L1BatchParams) -> BatchExecutorHandle {
         let secondary_storage = RocksdbStorage::new(self.sequencer_db_path.as_ref());
 
         let batch_number = l1_batch_params
@@ -389,33 +388,24 @@ impl BatchExecutor {
 
 #[cfg(test)]
 mod tests {
-    use crate::sequencer::batch_executor::{
-        L1BatchExecutorBuilder, MainBatchExecutorBuilder, TxExecutionResult,
-    };
-    use crate::sequencer::io::common::l1_batch_params;
+    use crate::sequencer::batch_executor::{MainBatchExecutorBuilder, TxExecutionResult};
     use crate::sequencer::io::L1BatchParams;
-    use crate::sequencer::updates::l1_batch_updates::L1BatchUpdates;
-    use crate::sequencer::updates::UpdatesManager;
-    use ola_config::database::{load_db_config, DBConfig, MerkleTreeConfig};
+    use ola_config::database::{DBConfig, MerkleTreeConfig};
     use ola_config::sequencer::SequencerConfig;
     use ola_contracts::{BaseSystemContracts, BaseSystemContractsHashes, SystemContractCode};
     use ola_dal::connection::{ConnectionPool, DbVariant};
-    use ola_types::block::L1BatchHeader;
     use ola_types::l2::L2Tx;
     use ola_types::protocol_version::{ProtocolVersion, ProtocolVersionId};
     use ola_types::tx::execute::Execute;
-    use ola_types::{L1BatchNumber, Transaction, H256, U256};
+    use ola_types::{Transaction, H256, U256};
     use ola_vm::vm_with_bootloader::{BlockContext, BlockContextMode, BlockProperties};
     use olavm_core::crypto::hash::Hasher;
     use olavm_core::crypto::poseidon::PoseidonHasher;
     use olavm_core::program::binary_program::BinaryProgram;
     use olavm_core::state::error::StateError;
-    use olavm_core::storage::db::{
-        Database, RocksDB, SequencerColumnFamily as VM_SequencerColumnFamily, SequencerColumnFamily,
-    };
+    use olavm_core::storage::db::{Database, RocksDB, SequencerColumnFamily};
     use olavm_core::types::merkle_tree::{
-        h160_to_tree_key, h256_to_tree_key, tree_key_to_h256, tree_key_to_u8_arr, u256_to_tree_key,
-        TreeValue,
+        h256_to_tree_key, tree_key_to_h256, tree_key_to_u8_arr, TreeValue,
     };
     use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
     use olavm_core::types::{Field, GoldilocksField};
@@ -536,7 +526,7 @@ mod tests {
             entrypoint: sequencer_config.entrypoint_hash,
             default_aa: sequencer_config.default_aa_hash,
         };
-        let version = ProtocolVersion {
+        let _version = ProtocolVersion {
             id: ProtocolVersionId::latest(),
             timestamp: 0,
             base_system_contracts_hashes: base_system_contracts_hashes,
@@ -546,7 +536,7 @@ mod tests {
         // mock deploy contract
         let contract_address = contract_addresses.first().unwrap().clone();
         for (file_name, addr) in binary_files.iter().zip(contract_addresses) {
-            let mut sequencer_db = RocksDB::new(
+            let sequencer_db = RocksDB::new(
                 Database::Sequencer,
                 db_config.sequencer_db_path.clone(),
                 false,
@@ -555,7 +545,7 @@ mod tests {
             let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             path.push("src/sequencer/test_data/");
             path.push(*file_name);
-            manual_deploy_contract(
+            let _ = manual_deploy_contract(
                 &sequencer_db,
                 path.to_str().unwrap(),
                 &h256_to_tree_key(&addr),
@@ -564,8 +554,8 @@ mod tests {
         // pg database
         let pool_builder = ConnectionPool::singleton(DbVariant::Master);
         let sequencer_pool = pool_builder.build().await;
-        let mut storage = sequencer_pool.access_storage_tagged("sequencer").await;
-        let mut transaction = storage.start_transaction().await;
+        // let mut storage = sequencer_pool.access_storage_tagged("sequencer").await;
+        // let mut transaction = storage.start_transaction().await;
 
         // init version
         // transaction
@@ -579,16 +569,16 @@ mod tests {
         //     .insert_l1_batch(&l1_batch, &initial_bootloader_contents)
         //     .await;
 
-        let l1_batch = L1BatchHeader {
-            number: L1BatchNumber(block_numner),
-            is_finished: true,
-            timestamp,
-            l1_tx_count: 0 as u16,
-            l2_tx_count: 1 as u16,
-            used_contract_hashes: vec![],
-            base_system_contracts_hashes,
-            protocol_version: Some(ProtocolVersionId::latest()),
-        };
+        // let l1_batch = L1BatchHeader {
+        //     number: L1BatchNumber(block_numner),
+        //     is_finished: true,
+        //     timestamp,
+        //     l1_tx_count: 0 as u16,
+        //     l2_tx_count: 1 as u16,
+        //     used_contract_hashes: vec![],
+        //     base_system_contracts_hashes,
+        //     protocol_version: Some(ProtocolVersionId::latest()),
+        // };
 
         let context = BlockContext {
             block_number: block_numner,
@@ -596,12 +586,12 @@ mod tests {
             operator_address: H256::zero(),
         };
 
-        let block_context_properties =
-            BlockContextMode::NewBlock(context.into(), U256::from_dec_str("1234567").unwrap());
-        let initial_bootloader_contents = UpdatesManager::initial_bootloader_memory(
-            &L1BatchUpdates::new(),
-            block_context_properties,
-        );
+        // let block_context_properties =
+        //     BlockContextMode::NewBlock(context.into(), U256::from_dec_str("1234567").unwrap());
+        // let initial_bootloader_contents = UpdatesManager::initial_bootloader_memory(
+        //     &L1BatchUpdates::new(),
+        //     block_context_properties,
+        // );
 
         let batch_executor_base = MainBatchExecutorBuilder::new(
             db_config.sequencer_db_path.clone(),
@@ -630,7 +620,7 @@ mod tests {
             },
             protocol_version: ProtocolVersionId::latest(),
         };
-        let batch_executor = batch_executor_base.init_batch_mock(l1_batch_params).await;
+        let batch_executor = batch_executor_base.init_batch_mock(l1_batch_params);
 
         //construct tx
         let mut l2_tx = L2Tx {
@@ -663,7 +653,7 @@ mod tests {
         let _ = env_logger::builder()
             .filter_level(LevelFilter::Info)
             .try_init();
-        let mut addr = tree_key_to_h256(&[
+        let addr = tree_key_to_h256(&[
             GoldilocksField::ONE,
             GoldilocksField::ONE,
             GoldilocksField::ZERO,

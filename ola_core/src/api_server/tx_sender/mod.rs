@@ -1,6 +1,5 @@
-use std::{collections::HashMap, fmt::Debug, num::NonZeroU32, sync::Arc, time::Instant};
+use std::{fmt::Debug, num::NonZeroU32, sync::Arc, time::Instant};
 
-use crate::sequencer::{seal_criteria::conditional_sealer::ConditionalSealer, SealData};
 use governor::{
     clock::MonotonicClock,
     middleware::NoOpMiddleware,
@@ -16,26 +15,15 @@ use ola_config::{
 use ola_contracts::BaseSystemContracts;
 use ola_dal::{connection::ConnectionPool, transactions_dal::L2TxSubmissionResult};
 use ola_state::postgres::PostgresStorageCaches;
-use ola_types::{
-    fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Nonce, Transaction, H256,
-};
+use ola_types::{fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Nonce, H256};
 use ola_utils::{time::millis_since_epoch, u64s_to_bytes};
-use ola_web3_decl::error::Web3Error;
 
 use self::{error::SubmitTxError, proxy::TxProxy};
 
-use super::execution_sandbox::{
-    execute::{execute_tx_with_pending_state, TxExecutionArgs},
-    TxSharedArgs, VmConcurrencyLimiter,
-};
-use olavm_core::types::merkle_tree::h256_to_tree_key;
-use olavm_core::types::{
-    storage::{field_arr_to_u8_arr, u8_arr_to_field_arr},
-    Field, GoldilocksField,
-};
-use olavm_core::vm::transaction::TxCtxInfo;
+use super::execution_sandbox::{TxSharedArgs, VmConcurrencyLimiter};
+
 use web3::types::Bytes;
-use zk_vm::{BlockInfo, CallInfo, OlaVM, VmManager as OlaVmManager};
+use zk_vm::{BlockInfo, CallInfo, VmManager as OlaVmManager};
 
 pub mod error;
 pub mod proxy;

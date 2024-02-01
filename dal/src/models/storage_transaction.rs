@@ -1,6 +1,3 @@
-use std::str::FromStr;
-
-use bigdecimal::BigDecimal;
 use ola_types::{
     api::{TransactionDetails, TransactionStatus},
     l2::{L2TxCommonData, TransactionType},
@@ -9,7 +6,6 @@ use ola_types::{
     Address, ExecuteTransactionCommon, Nonce, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE, H256,
     OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256,
 };
-use ola_utils::bigdecimal_to_u256;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
 
 #[derive(Debug, Clone, sqlx::FromRow)]

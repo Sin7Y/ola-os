@@ -68,8 +68,11 @@ impl OlaSequencer {
         match self.run_inner().await {
             Ok(_) => unreachable!(),
             Err(Error::Fatal(err)) => Err(err).context("state_keeper failed"),
-            Err(Cancelled) => {
-                olaos_logs::info!("Stop signal received, sequencer is shutting down");
+            Err(cancelled) => {
+                olaos_logs::info!(
+                    "Stop signal received, sequencer is shutting down. {:?}",
+                    cancelled.context("sequencer cancelled")
+                );
                 Ok(())
             }
         }

@@ -2,7 +2,6 @@ use ola_types::{
     api::{BlockId, BlockNumber, TransactionDetails},
     Address, H256,
 };
-use sqlx::Error;
 
 use crate::{models::storage_transaction::StorageTransactionDetails, SqlxError, StorageProcessor};
 
