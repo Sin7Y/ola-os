@@ -1,4 +1,4 @@
-import { ethers, hexlify } from "ethers";
+import { ethers, hexlify, toBeHex } from "ethers";
 import { OlaSigner } from "./signer";
 import { OlaProvider } from "./provider";
 import { DEFAULT_ACCOUNT_ADDRESS, DEFAULT_CHAIN_ID } from "./constants";
@@ -9,6 +9,7 @@ import {
   toBigintArray,
   toUint64Array,
   toUint8Array,
+  capitalize,
 } from "./utils";
 import { ACCOUNT_ABI } from "./abi";
 import { OlaAddress } from "./libs/address";
@@ -34,36 +35,55 @@ export class OlaWallet {
     return this.provider.getNonce(this.address);
   }
 
-  async invoke(abi: Array<any>, method: string, to: string, params: Array<any>) {
-    const nonce = await this.getNonce();
+  /**
+   *
+   * @param abi
+   * @param method
+   * @param to DataHexString
+   * @param params
+   * @param options nonce
+   * @returns
+   */
+  async invoke(
+    abi: Array<any>,
+    method: string,
+    to: string,
+    params: Array<any>,
+    options?: { nonce: number }
+  ) {
+    const nonce = options?.nonce ?? (await this.getNonce());
 
     const bizCalldata = encodeAbi(abi, method, params);
     const entryCalldata = createEntrypointCalldata(this.address, to, bizCalldata);
     const calldata = toUint8Array(entryCalldata);
-    const txRaw = this.signer.createTransaction(this.chainId, nonce.result, calldata, null);
-    const txHash = await this.provider.request("ola_sendRawTransaction", { tx_bytes: txRaw });
-    console.log("tx", txHash);
+    const txRaw = this.signer.createTransaction(this.chainId, nonce, calldata, null);
+    const txHash = await this.provider.request<string>("ola_sendRawTransaction", {
+      tx_bytes: txRaw,
+    });
+    return txHash;
   }
 
-
-  // @todo: call function
-  async call(abi: Array<any>, method: string, to: string, params: Array<any>) {
+  async call<T>(abi: Array<any>, method: string, to: string, params: Array<any>) {
     const nonce = await this.getNonce();
 
     const bizCalldata = encodeAbi(abi, method, params);
     // All fields in CallRequest should be hex string.
-    const callRequest = {
+    const call_request = {
       from: this.address,
       to: to,
       data: hexlify(toUint8Array(bizCalldata)),
-      nonce: '0x' + nonce.result,
-      transaction_type: TransactionType.OlaRawTransaction.toString(16),
+      nonce: toBeHex(nonce),
+      transaction_type: toBeHex(TransactionType.OlaRawTransaction),
     };
 
-    console.log(callRequest);
-    const tx = await this.provider.request<CallResponse>("ola_callTransaction", { call_request: callRequest });
-    const decoded = decodeAbi(abi, method, toUint64Array(tx.result));
-    console.log("tx", JSON.stringify(decoded));
+    const tx = await this.provider.request<string>("ola_callTransaction", {
+      call_request,
+    });
+    const decoded = decodeAbi(abi, method, toUint64Array(tx));
+    const outputs = decoded[1][0];
+    const outputType = outputs.param.type;
+    const outputsValue = outputs.value[capitalize(outputType)];
+    return outputsValue as T;
   }
 
   async setPubKey() {
@@ -71,7 +91,8 @@ export class OlaWallet {
       ACCOUNT_ABI,
       "setPubkey(fields)",
       hexlify(toUint8Array(DEFAULT_ACCOUNT_ADDRESS)),
-      [{ Fields: toBigintArray(this.signer.publicKey) }]
+      [{ Fields: toBigintArray(this.signer.publicKey) }],
+      { nonce: 0 }
     );
   }
 

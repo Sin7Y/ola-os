@@ -1,13 +1,18 @@
 import { ENTRYPOINT_ADDRESS } from "../constants";
 import { OlaSigner } from "../signer";
 import { encodeAbi } from "./abi";
-import { toUint64Array, toUint8Array, hexToBytes, poseidonHash } from "./index";
+import { toUint64Array, toUint8Array, poseidonHash } from "./crypto";
 import { L2Tx, TransactionRequest, TransactionType } from "../types";
 import { ethers, getBytes, hexlify, toBeArray } from "ethers";
 import { ENTRYPOINT_ABI } from "../abi/entrypoint";
 import { OlaAddress } from "../libs/address";
 
-export function createEntrypointCalldata(from: string, to: string, calldata: BigUint64Array, codes: number[] = []) {
+export function createEntrypointCalldata(
+  from: string,
+  to: string,
+  calldata: BigUint64Array,
+  codes: number[] = []
+) {
   const method = "system_entrance((address,address,fields,fields),bool)";
   const params = [
     {
@@ -29,7 +34,10 @@ export function txRequestToBytes(tx: TransactionRequest) {
   if (tx.eip712_meta == null) {
     throw new Error("We can sign transaction only with meta");
   }
-  if (tx.eip712_meta.paymaster_params != null && tx.eip712_meta.paymaster_params.paymaster_input.length % 8 != 0) {
+  if (
+    tx.eip712_meta.paymaster_params != null &&
+    tx.eip712_meta.paymaster_params.paymaster_input.length % 8 != 0
+  ) {
     throw new Error("Paymaster input must be 8-byte aligned");
   }
   if (tx.input.length % 8 != 0) {
@@ -88,7 +96,14 @@ async function signTransactionRequest(signer: OlaSigner, tx: TransactionRequest)
   return sigBytes;
 }
 
-export async function getL2Tx(signer: OlaSigner, chain_id: number, from: string, nonce: number, calldata: Uint8Array, factory_deps: Array<Uint8Array> | null = null) {
+export async function getL2Tx(
+  signer: OlaSigner,
+  chain_id: number,
+  from: string,
+  nonce: number,
+  calldata: Uint8Array,
+  factory_deps: Array<Uint8Array> | null = null
+) {
   const fromAddress = Array.from(toUint64Array(from));
   const txRequest: TransactionRequest = {
     nonce,
@@ -165,7 +180,11 @@ export function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: 
   if (signature.length != 65) {
     throw Error("Signature length must be 65");
   }
-  if (tx.type != TransactionType.EIP1559Transaction && tx.type != TransactionType.EIP712Transaction && tx.type != TransactionType.OlaRawTransaction) {
+  if (
+    tx.type != TransactionType.EIP1559Transaction &&
+    tx.type != TransactionType.EIP712Transaction &&
+    tx.type != TransactionType.OlaRawTransaction
+  ) {
     throw Error("Unknown transaction type");
   }
 
@@ -187,7 +206,10 @@ export function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: 
   fields.push(signature.slice(32, 64));
 
   // EIP712 || OLA
-  if (tx.type == TransactionType.EIP712Transaction || tx.type == TransactionType.OlaRawTransaction) {
+  if (
+    tx.type == TransactionType.EIP712Transaction ||
+    tx.type == TransactionType.OlaRawTransaction
+  ) {
     fields.push(toBeArray(chain_id));
     if (tx.from != null) {
       fields.push(toUint8Array(tx.from));
@@ -195,20 +217,29 @@ export function rlp_tx(tx: TransactionRequest, signature: Uint8Array, chain_id: 
 
     if (tx.eip712_meta != null) {
       fields.push((tx.eip712_meta.factory_deps ?? []).map((dep) => hexlify(dep)));
-      if (tx.eip712_meta.custom_signature && getBytes(tx.eip712_meta.custom_signature).length == 0) {
+      if (
+        tx.eip712_meta.custom_signature &&
+        getBytes(tx.eip712_meta.custom_signature).length == 0
+      ) {
         throw new Error("Empty signatures are not supported");
       }
       fields.push(tx.eip712_meta.custom_signature || "0x");
 
       if (tx.eip712_meta.paymaster_params) {
-        fields.push([tx.eip712_meta.paymaster_params.paymaster, hexlify(tx.eip712_meta.paymaster_params.paymaster_input)]);
+        fields.push([
+          tx.eip712_meta.paymaster_params.paymaster,
+          hexlify(tx.eip712_meta.paymaster_params.paymaster_input),
+        ]);
       } else {
         fields.push([]);
       }
     }
   }
 
-  return ethers.concat([new Uint8Array([TransactionType.OlaRawTransaction]), ethers.encodeRlp(fields)]);
+  return ethers.concat([
+    new Uint8Array([TransactionType.OlaRawTransaction]),
+    ethers.encodeRlp(fields),
+  ]);
 }
 async function createSignedTransactionRaw(l2tx: L2Tx, signer: OlaSigner, chainId: number) {
   const txRequest = l2txToTransactionRequest(l2tx);
@@ -219,7 +250,14 @@ async function createSignedTransactionRaw(l2tx: L2Tx, signer: OlaSigner, chainId
   return signed_bytes;
 }
 
-export async function createTransaction(signer: OlaSigner, chainId: number, from: string, nonce: number, calldata: Uint8Array, factory_deps: Array<Uint8Array> | null = null) {
+export async function createTransaction(
+  signer: OlaSigner,
+  chainId: number,
+  from: string,
+  nonce: number,
+  calldata: Uint8Array,
+  factory_deps: Array<Uint8Array> | null = null
+) {
   const l2tx = await getL2Tx(signer, chainId, from, nonce, calldata, factory_deps);
   const raw_tx = await createSignedTransactionRaw(l2tx, signer, chainId);
   return raw_tx;
