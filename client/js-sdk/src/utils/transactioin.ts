@@ -5,14 +5,15 @@ import { toUint64Array, toUint8Array, hexToBytes, poseidonHash } from "./index";
 import { L2Tx, TransactionRequest, TransactionType } from "../types";
 import { ethers, getBytes, hexlify, toBeArray } from "ethers";
 import { ENTRYPOINT_ABI } from "../abi/entrypoint";
+import { OlaAddress } from "../libs/address";
 
 export function createEntrypointCalldata(from: string, to: string, calldata: BigUint64Array, codes: number[] = []) {
   const method = "system_entrance((address,address,fields,fields),bool)";
   const params = [
     {
       Tuple: [
-        ["address", { Address: Array.from(toUint64Array(from)) }],
-        ["address", { Address: Array.from(toUint64Array(to)) }],
+        ["address", { Address: Array.from(OlaAddress.toBigintArray(from)) }],
+        ["address", { Address: Array.from(OlaAddress.toBigintArray(to)) }],
         ["fields", { Fields: calldata }],
         ["fields", { Fields: codes }],
       ],

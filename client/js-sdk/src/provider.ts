@@ -27,6 +27,6 @@ export class OlaProvider {
   }
 
   async getNonce(address: string) {
-    return this.request<number>("eth_getTransactionCount", { address });
+    return this.request<any>("eth_getTransactionCount", { address });
   }
 }
