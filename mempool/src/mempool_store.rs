@@ -73,7 +73,7 @@ impl MempoolStore {
             .expect("mempool size can't be negative");
         olaos_logs::info!(
             "get next transaction {:?} mempool size {:?}",
-            transaction,
+            transaction.hash(),
             self.size
         );
         Some(transaction.into())
