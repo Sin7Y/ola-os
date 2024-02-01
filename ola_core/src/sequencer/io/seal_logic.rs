@@ -83,7 +83,7 @@ impl SealProgress {
         let elapsed = self.stage_start.elapsed();
         if elapsed > MIN_STAGE_DURATION_TO_REPORT {
             let target = self.metric_names.target;
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "{target} execution stage {stage} took {elapsed:?} with count {count:?}"
             );
         }
@@ -197,7 +197,7 @@ impl MiniblockSealCommand {
 
         transaction.commit().await;
         // progress.end_stage("commit_miniblock", None);
-        olaos_logs::debug!(
+        olaos_logs::info!(
             "Sealed miniblock {miniblock_number} in {:?}",
             started_at.elapsed()
         );
@@ -301,6 +301,10 @@ impl UpdatesManager {
     /// Persists an L1 batch in the storage.
     /// This action includes a creation of an empty "fictive" miniblock that contains
     /// the events generated during the bootloader "tip phase".
+    #[olaos_logs::instrument(
+        skip_all,
+        fields(current_miniblock_number, current_l1_batch_number, block_context)
+    )]
     pub(crate) async fn seal_l1_batch(
         mut self,
         storage: &mut StorageProcessor<'_>,

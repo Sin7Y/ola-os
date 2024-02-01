@@ -29,7 +29,7 @@ pub async fn ensure_genesis_state(
 
     // return if genesis block was already processed
     if !transaction.blocks_dal().is_genesis_needed().await {
-        olaos_logs::debug!("genesis is not needed!");
+        olaos_logs::info!("genesis is not needed!");
         return transaction
             .blocks_dal()
             .get_l1_batch_state_root(L1BatchNumber(0))

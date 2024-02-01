@@ -142,8 +142,12 @@ impl OlaSequencer {
             self.process_l1_batch(&batch_executor, &mut updates_manager, protocol_upgrade_tx)
                 .await?;
 
+            olaos_logs::info!("start finish current batch");
+
             // Finish current batch.
             if !updates_manager.miniblock.executed_transactions.is_empty() {
+                olaos_logs::info!("executed transactions not empty");
+
                 self.io.seal_miniblock(&updates_manager).await;
                 // We've sealed the miniblock that we had, but we still need to setup the timestamp
                 // for the fictive miniblock.
@@ -152,6 +156,9 @@ impl OlaSequencer {
                     .await?;
                 updates_manager.push_miniblock(fictive_miniblock_timestamp);
             }
+
+            olaos_logs::info!("finish batch {:?}", l1_batch_params);
+
             let block_result = batch_executor
                 .finish_batch(updates_manager.pending_executed_transactions_len() as u32)
                 .await;
@@ -167,6 +174,8 @@ impl OlaSequencer {
 
             // Start the new batch.
             l1_batch_params = self.wait_for_new_batch_params().await?;
+
+            olaos_logs::info!("get new batch params {:?}", l1_batch_params);
 
             updates_manager = UpdatesManager::new(
                 &l1_batch_params.context_mode,
@@ -196,6 +205,7 @@ impl OlaSequencer {
         Ok(())
     }
 
+    #[olaos_logs::instrument(skip(self), fields(params))]
     async fn wait_for_new_batch_params(&mut self) -> Result<L1BatchParams, Error> {
         let params = loop {
             if let Some(params) = self.io.wait_for_new_batch_params(POLL_WAIT_DURATION).await {
@@ -206,6 +216,7 @@ impl OlaSequencer {
         Ok(params)
     }
 
+    #[olaos_logs::instrument(skip(self), fields(params))]
     async fn wait_for_new_miniblock_params(
         &mut self,
         prev_miniblock_timestamp: u64,
@@ -223,6 +234,7 @@ impl OlaSequencer {
         Ok(params)
     }
 
+    #[olaos_logs::instrument(skip(self))]
     async fn restore_state(
         &mut self,
         batch_executor: &BatchExecutorHandle,
@@ -276,7 +288,7 @@ impl OlaSequencer {
                     *tx_result,
                     tx_execution_metrics,
                 );
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "Finished re-executing tx {tx_hash} by {initiator_account}, \
                      #{idx_in_l1_batch} in L1 batch {l1_batch_number}, #{idx_in_miniblock} in miniblock {miniblock_number}); \
                      status: {exec_result_status:?}. \
@@ -299,6 +311,7 @@ impl OlaSequencer {
         Ok(())
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn process_l1_batch(
         &mut self,
         batch_executor: &BatchExecutorHandle,
@@ -316,7 +329,7 @@ impl OlaSequencer {
                 .sealer
                 .should_seal_l1_batch_unconditionally(updates_manager)
             {
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "L1 batch #{} should be sealed unconditionally as per sealing rules",
                     self.io.current_l1_batch_number()
                 );
@@ -324,7 +337,7 @@ impl OlaSequencer {
             }
 
             if self.sealer.should_seal_miniblock(updates_manager) {
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "Miniblock #{} (L1 batch #{}) should be sealed as per sealing rules",
                     self.io.current_miniblock_number(),
                     self.io.current_l1_batch_number()
@@ -334,7 +347,7 @@ impl OlaSequencer {
                 let new_timestamp = self
                     .wait_for_new_miniblock_params(updates_manager.miniblock.timestamp)
                     .await?;
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "Initialized new miniblock #{} (L1 batch #{}) with timestamp {}",
                     self.io.current_miniblock_number(),
                     self.io.current_l1_batch_number(),
@@ -344,7 +357,7 @@ impl OlaSequencer {
             }
 
             let Some(tx) = self.io.wait_for_next_tx(POLL_WAIT_DURATION).await else {
-                olaos_logs::trace!("No new transactions. Waiting!");
+                olaos_logs::info!("No new transactions. Waiting!");
                 continue;
             };
 
@@ -383,7 +396,7 @@ impl OlaSequencer {
             };
 
             if seal_resolution.should_seal() {
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "L1 batch #{} should be sealed with resolution {seal_resolution:?} after executing \
                      transaction {tx_hash}",
                     self.io.current_l1_batch_number()
@@ -393,6 +406,7 @@ impl OlaSequencer {
         }
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn process_upgrade_tx(
         &mut self,
         batch_executor: &BatchExecutorHandle,
@@ -449,6 +463,7 @@ impl OlaSequencer {
         };
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn process_one_tx(
         &mut self,
         batch_executor: &BatchExecutorHandle,
@@ -459,6 +474,11 @@ impl OlaSequencer {
         let exec_result = batch_executor
             .execute_tx(tx.clone(), tx_index_in_l1_batch)
             .await;
+        olaos_logs::info!(
+            "tx {:?} executed by batch_executor, exec_result {:?}",
+            tx.hash(),
+            exec_result
+        );
         let resolution = match &exec_result {
             TxExecutionResult::BootloaderOutOfGasForTx => SealResolution::ExcludeAndSeal,
             TxExecutionResult::BootloaderOutOfGasForBlockTip => SealResolution::ExcludeAndSeal,
@@ -478,7 +498,7 @@ impl OlaSequencer {
                     execution_metrics: tx_execution_metrics,
                 } = *tx_metrics;
 
-                olaos_logs::trace!(
+                olaos_logs::info!(
                     "finished tx {:?} by {:?} (is_l1: {}) (#{} in l1 batch {}) (#{} in miniblock {}) \
                     status: {:?}. \
                     Tx execution metrics: {:?}, block execution metrics: {:?}",
@@ -531,6 +551,11 @@ impl OlaSequencer {
                 )
             }
         };
+        olaos_logs::info!(
+            "process resolution {:?}, exec_result {:?}",
+            resolution,
+            exec_result
+        );
         (resolution, exec_result)
     }
 }

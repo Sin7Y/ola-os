@@ -17,6 +17,7 @@ async fn main() -> anyhow::Result<()> {
         let network = load_network_config().expect("failed to load network config");
         let contracts = load_contracts_config().expect("failed to laod contract config");
         genesis_init(&network, &contracts).await;
+        olaos_logs::info!("genesis_init finished");
     }
 
     let components = vec![Component::HttpApi, Component::Sequencer, Component::Tree];

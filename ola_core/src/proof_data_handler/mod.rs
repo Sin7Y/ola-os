@@ -19,7 +19,7 @@ pub(crate) async fn run_server(
     mut stop_receiver: watch::Receiver<bool>,
 ) -> anyhow::Result<()> {
     let bind_address = SocketAddr::from(([0, 0, 0, 0], config.http_port));
-    olaos_logs::debug!("Starting proof data handler server on {bind_address}");
+    olaos_logs::info!("Starting proof data handler server on {bind_address}");
     let get_proof_gen_processor = RequestProcessor::new(blob_store, pool, config);
     let submit_proof_processor = get_proof_gen_processor.clone();
     let app = Router::new()

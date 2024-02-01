@@ -157,7 +157,7 @@ impl TreeUpdater {
                 };
                 health_updater.update(health.into());
 
-                olaos_logs::trace!(
+                olaos_logs::info!(
                     "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) made progress from #{next_block_snapshot}"
                 );
                 future_ready(()).right_future()

@@ -207,7 +207,7 @@ impl TransactionsDal<'_, '_> {
                     panic!("{}", err);
                 }
             };
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "{:?} l2 transaction {:?} to DB. init_acc {:?} nonce {:?} returned option {:?}",
                 l2_tx_insertion_result,
                 tx_hash,
@@ -544,6 +544,7 @@ impl TransactionsDal<'_, '_> {
         }
     }
 
+    #[olaos_logs::instrument(skip(self))]
     pub async fn reset_mempool(&mut self) {
         {
             sqlx::query!("UPDATE transactions SET in_mempool = FALSE WHERE in_mempool = TRUE")
