@@ -113,8 +113,8 @@ install_ola() {
     echo "Detected host triple: ${cyan}${TRIPLE}${normal}"
     TEMP_DIR="$(mktemp -d)"
 
-    BINARIES=("olac" "mini-ola")
-    URLS=("${OLAC_BIN_URL}" "${MINIOLA_BIN_URL}")
+    BINARIES=("ola_node" "olatte" "olac" "mini-ola")
+    URLS=("${OLA_OS_BIN_URL}" "${OLATTE_BIN_URL}" "${OLAC_BIN_URL}" "${MINIOLA_BIN_URL}")
 
     for i in "${!BINARIES[@]}"; do
         BASE_FILE_NAME="${BINARIES[i]}"
