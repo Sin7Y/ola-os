@@ -38,53 +38,8 @@ async function generateAccount() {
 //   });
 // });
 
-// describe("Wallet & Invoke Test", () => {
-//   it("Create Account", async () => {
-//     const olaWallet = await generateAccount();
-//     expect(olaWallet.signer.publicKey).to.eq(
-//       "0x4dfe4a76a9260db664a4b7c8a3b5293364507c3857e9457ac84f9ca36a9c9c7c4243c6405ca2c8a5b1e62766dc77f2f90ff54e70bb49995d28fb8f98782e005c"
-//     );
-//     expect(olaWallet.address).to.eq(
-//       "0xc32eff4be49142ea8ec271e65126a2cc4f227ebed16b62a7388222bd5afb3e0f"
-//     );
-
-//     const foo_abi =[
-//       {
-//         "name": "set",
-//         "type": "function",
-//         "inputs": [
-//           {
-//             "name": "d",
-//             "type": "u32"
-//           }
-//         ],
-//         "outputs": []
-//       },
-//       {
-//         "name": "get",
-//         "type": "function",
-//         "inputs": [],
-//         "outputs": [
-//           {
-//             "name": "",
-//             "type": "u32"
-//           }
-//         ]
-//       }
-//     ];
-//     const contrac_address = "0x26d5e4afcc2c1dcec2385e164e40d2bcb14384e9e74f46d4b9d626654d13bcf9";
-//     const params = [
-//       {U32: 200}
-//     ];
-
-//     let tx = await olaWallet.invoke(foo_abi, "set(u32)", contrac_address, params);
-//     console.log(tx);
-//   });
-// });
-
-
-describe("Call Test", () => {
-  it("Call data", async () => {
+describe("Wallet & Invoke Test", () => {
+  it("Invoke transaction", async () => {
     const olaWallet = await generateAccount();
     expect(olaWallet.signer.publicKey).to.eq(
       "0x4dfe4a76a9260db664a4b7c8a3b5293364507c3857e9457ac84f9ca36a9c9c7c4243c6405ca2c8a5b1e62766dc77f2f90ff54e70bb49995d28fb8f98782e005c"
@@ -118,11 +73,56 @@ describe("Call Test", () => {
       }
     ];
     const contrac_address = "0x26d5e4afcc2c1dcec2385e164e40d2bcb14384e9e74f46d4b9d626654d13bcf9";
+    const params = [
+      {U32: 2000}
+    ];
 
-    let tx = await olaWallet.call(foo_abi, "get()", contrac_address, []);
+    let tx = await olaWallet.invoke(foo_abi, "set(u32)", contrac_address, params);
     console.log(tx);
   });
 });
+
+
+// describe("Call Test", () => {
+//   it("Call data", async () => {
+//     const olaWallet = await generateAccount();
+//     expect(olaWallet.signer.publicKey).to.eq(
+//       "0x4dfe4a76a9260db664a4b7c8a3b5293364507c3857e9457ac84f9ca36a9c9c7c4243c6405ca2c8a5b1e62766dc77f2f90ff54e70bb49995d28fb8f98782e005c"
+//     );
+//     expect(olaWallet.address).to.eq(
+//       "0xc32eff4be49142ea8ec271e65126a2cc4f227ebed16b62a7388222bd5afb3e0f"
+//     );
+
+//     const foo_abi =[
+//       {
+//         "name": "set",
+//         "type": "function",
+//         "inputs": [
+//           {
+//             "name": "d",
+//             "type": "u32"
+//           }
+//         ],
+//         "outputs": []
+//       },
+//       {
+//         "name": "get",
+//         "type": "function",
+//         "inputs": [],
+//         "outputs": [
+//           {
+//             "name": "",
+//             "type": "u32"
+//           }
+//         ]
+//       }
+//     ];
+//     const contrac_address = "0x26d5e4afcc2c1dcec2385e164e40d2bcb14384e9e74f46d4b9d626654d13bcf9";
+
+//     let tx = await olaWallet.call(foo_abi, "get()", contrac_address, []);
+//     console.log(tx);
+//   });
+// });
 
 // describe("ABI Encoder Test", () => {
 //   it("Encode ABI", async () => {
