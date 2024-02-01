@@ -1,18 +1,23 @@
 {
   "name": "@sin7y/ola-js-sdk",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "JavaScript SDK for ola.",
   "main": "dist/index.cjs.js",
   "module": "dist/index.es.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha --timeout 10000",
     "build": "rollup -c rollup.config.ts --configPlugin @rollup/plugin-typescript",
-    "watch": "rollup -w -c rollup.config.ts --configPlugin @rollup/plugin-typescript"
+    "watch": "rollup -w -c rollup.config.ts --configPlugin @rollup/plugin-typescript",
+    "release": "./build.sh && np --any-branch"
   },
   "keywords": [
     "crypto",
     "sdk",
     "ola"
+  ],
+  "files": [
+    "dist/"
   ],
   "author": "",
   "license": "ISC",
@@ -21,16 +26,24 @@
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "chai": "^5.0.3",
-    "ethers": "^6.10.0",
     "mocha": "^10.2.0",
+    "np": "^9.2.0",
     "rollup": "^4.9.6",
+    "rollup-plugin-dts": "^6.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "dependencies": {
     "@sin7y/ola-abi-wasm": "^0.0.3",
     "@sin7y/ola-crypto": "^0.0.3",
-    "axios": "^1.6.7"
+    "axios": "^1.6.7",
+    "ethers": "^6.10.0"
   },
-  "type": "module"
+  "peerDependencies": {
+    "ethers": "^6.10.0"
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  }
 }

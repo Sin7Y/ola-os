@@ -1,5 +1,5 @@
 import type { BigNumberish } from "ethers";
-import { toUint64Array } from "../utils";
+import { toUint64Array } from "../utils/crypto";
 
 export class OlaAddress {
   static toBigintArray(value: Uint8Array | BigNumberish) {

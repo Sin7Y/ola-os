@@ -22,11 +22,13 @@ export class OlaProvider {
     };
 
     const { data } = await axios.post(this.baseURL, requestBody);
-    console.log("response data", data);
-    return data as T;
+    if (data.error) {
+      throw Error(data.error.message);
+    }
+    return data.result as T;
   }
 
   async getNonce(address: string) {
-    return this.request<any>("eth_getTransactionCount", { address });
+    return this.request<number>("eth_getTransactionCount", { address });
   }
 }
