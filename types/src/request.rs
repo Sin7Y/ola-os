@@ -1,12 +1,11 @@
 use crate::{
     l2::{L2Tx, TransactionType},
-    tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature, StructBuilder},
+    tx::primitives::{EIP712TypedStructure, PackedEthSignature, StructBuilder},
     EIP_1559_TX_TYPE, EIP_712_TX_TYPE, OLA_RAW_TX_TYPE,
 };
 use ethabi::ethereum_types::U64;
-use ola_basic_types::{Address, L2ChainId, Nonce, H256};
+use ola_basic_types::{Address, Nonce, H256};
 use ola_utils::{
-    address_to_h256,
     bytecode::{hash_bytecode, validate_bytecode, InvalidBytecodeError},
     bytes_to_u64s, h256_to_u64_array,
     hash::hash_bytes,
@@ -208,10 +207,6 @@ impl EIP712TypedStructure for TransactionRequest {
     const TYPE_NAME: &'static str = "Transaction";
 
     fn build_structure<BUILDER: StructBuilder>(&self, builder: &mut BUILDER) {
-        let meta = self
-            .eip712_meta
-            .as_ref()
-            .expect("We can sign transaction only with meta");
         builder.add_member(
             "txType",
             &self
@@ -562,7 +557,7 @@ impl TransactionRequest {
         })
     }
 
-    fn get_default_signed_message(&self, chain_id: u16) -> H256 {
+    fn get_default_signed_message(&self, _chain_id: u16) -> H256 {
         let data = self.into_signed_bytes();
         PackedEthSignature::message_to_signed_bytes(&data)
     }
@@ -685,18 +680,18 @@ fn rlp_opt<T: rlp::Encodable>(rlp: &mut RlpStream, opt: &Option<T>) {
     }
 }
 
-fn access_list_rlp(rlp: &mut RlpStream, access_list: &Option<AccessList>) {
-    if let Some(access_list) = access_list {
-        rlp.begin_list(access_list.len());
-        for item in access_list {
-            rlp.begin_list(2);
-            rlp.append(&item.address);
-            rlp.append_list(&item.storage_keys);
-        }
-    } else {
-        rlp.begin_list(0);
-    }
-}
+// fn access_list_rlp(rlp: &mut RlpStream, access_list: &Option<AccessList>) {
+//     if let Some(access_list) = access_list {
+//         rlp.begin_list(access_list.len());
+//         for item in access_list {
+//             rlp.begin_list(2);
+//             rlp.append(&item.address);
+//             rlp.append_list(&item.storage_keys);
+//         }
+//     } else {
+//         rlp.begin_list(0);
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

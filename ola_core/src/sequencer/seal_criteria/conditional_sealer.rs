@@ -20,23 +20,6 @@ impl ConditionalSealer {
         Self { config, sealers }
     }
 
-    /// Finds a reason why a transaction with the specified `data` is unexecutable.
-    pub(crate) fn find_unexecutable_reason(
-        config: &SequencerConfig,
-        data: &SealData,
-    ) -> Option<&'static str> {
-        for sealer in &Self::default_sealers() {
-            const MOCK_BLOCK_TIMESTAMP: u128 = 0;
-            const TX_COUNT: usize = 1;
-
-            let resolution = sealer.should_seal(config, MOCK_BLOCK_TIMESTAMP, TX_COUNT, data, data);
-            if matches!(resolution, SealResolution::Unexecutable(_)) {
-                return Some(sealer.prom_criterion_name());
-            }
-        }
-        None
-    }
-
     pub(super) fn should_seal_l1_batch(
         &self,
         l1_batch_number: u32,

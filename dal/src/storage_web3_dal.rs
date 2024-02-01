@@ -1,8 +1,7 @@
 use std::ops;
 
 use ola_types::{
-    get_nonce_key, storage::StorageKey, utils::decompose_full_nonce, Address, L1BatchNumber,
-    MiniblockNumber, H256, U256,
+    get_nonce_key, storage::StorageKey, Address, L1BatchNumber, MiniblockNumber, H256, U256,
 };
 use ola_utils::convert::h256_to_u256;
 

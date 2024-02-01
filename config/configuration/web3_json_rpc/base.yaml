@@ -3,7 +3,6 @@ http_url: http://127.0.0.1:13000
 ws_port: 13001
 ws_url: http://127.0.0.1:13001
 max_tx_size: 1000000
-subscriptions_limit: 10000
 filters_limit: 10000
 vm_concurrency_limit: 2048
 threads_per_server: 128

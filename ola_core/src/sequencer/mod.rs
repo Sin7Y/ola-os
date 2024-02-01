@@ -3,11 +3,7 @@ use ola_config::{
     database::DBConfig, sequencer::SequencerConfig,
 };
 use ola_dal::connection::ConnectionPool;
-use ola_types::{
-    fee::TransactionExecutionMetrics,
-    tx::tx_execution_info::{DeduplicatedWritesMetrics, ExecutionMetrics},
-    Transaction,
-};
+use ola_types::tx::tx_execution_info::{DeduplicatedWritesMetrics, ExecutionMetrics};
 use tokio::sync::watch;
 
 use crate::sequencer::{
@@ -32,24 +28,9 @@ pub struct SealData {
     pub(super) writes_metrics: DeduplicatedWritesMetrics,
 }
 
-impl SealData {
-    pub(crate) fn for_transaction(
-        transaction: Transaction,
-        tx_metrics: &TransactionExecutionMetrics,
-    ) -> Self {
-        let execution_metrics = ExecutionMetrics::from_tx_metrics(tx_metrics);
-        let writes_metrics = DeduplicatedWritesMetrics::from_tx_metrics(tx_metrics);
-        Self {
-            execution_metrics,
-            cumulative_size: extractors::encoded_transaction_size(transaction),
-            writes_metrics,
-        }
-    }
-}
-
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn create_sequencer(
-    contracts_config: &ContractsConfig,
+    _contracts_config: &ContractsConfig,
     sequencer_config: SequencerConfig,
     db_config: &DBConfig,
     mempool_config: &MempoolConfig,
