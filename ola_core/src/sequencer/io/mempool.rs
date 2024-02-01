@@ -98,10 +98,11 @@ impl SequencerIO for MempoolIO {
         for _ in 0..poll_iters(self.delay_interval, max_wait) {
             // We only need to get the root hash when we're certain that we have a new transaction.
             if !self.mempool.has_next() {
-                olaos_logs::info!("mempool has no next tx, start sleep");
                 tokio::time::sleep(self.delay_interval).await;
                 continue;
             }
+
+            olaos_logs::info!("mempool has a new tx");
 
             let prev_l1_batch_hash = self.load_previous_l1_batch_hash().await;
             let prev_miniblock_timestamp = self.load_previous_miniblock_timestamp().await;
