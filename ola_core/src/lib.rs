@@ -368,7 +368,7 @@ async fn add_trees_to_task_futures(
     _components: &[Component],
     stop_receiver: watch::Receiver<bool>,
 ) {
-    let db_config = load_db_config().expect("failed to load db config");
+    let db_config = DBConfig::from_env();
     let operation_config =
         load_operation_manager_config().expect("failed to load operation config");
     let (future, tree_health_check) = run_tree(&db_config, &operation_config, stop_receiver).await;
