@@ -49,3 +49,9 @@ export interface L2Tx {
   common_data: L2TxCommonData;
   received_timestamp_ms: number;
 }
+
+export interface CallResponse {
+  jsonrpc: string,
+  result: string,
+  id:number,
+}
