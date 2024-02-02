@@ -98,7 +98,7 @@ impl Invoke {
         } else {
             wallet.get_addr_nonce(from).await.unwrap()
         };
-        dbg!(nonce);
+        // dbg!(nonce);
 
         let calldata = create_calldata(
             &abi,
