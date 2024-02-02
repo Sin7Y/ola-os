@@ -24,7 +24,7 @@ impl SetPubKey {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "pre_alpha" => ProviderParams::pre_alpha(),
+                "pre-alpha" => ProviderParams::pre_alpha(),
                 _ => {
                     bail!("invalid network name")
                 }
