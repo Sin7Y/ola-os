@@ -175,7 +175,11 @@ impl TxSender {
 
     #[tracing::instrument(skip(self, tx))]
     pub async fn call_transaction_impl(&self, tx: L2Tx) -> Result<Bytes, SubmitTxError> {
-        olaos_logs::info!("Start call tx from {:?}, to {:?}", tx.initiator_account(), tx.recipient_account());
+        olaos_logs::info!(
+            "Start call tx from {:?}, to {:?}",
+            tx.initiator_account(),
+            tx.recipient_account()
+        );
 
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
