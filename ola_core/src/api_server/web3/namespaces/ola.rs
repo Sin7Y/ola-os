@@ -28,8 +28,8 @@ impl OlaNamespace {
     pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
         olaos_logs::info!("received a send transaction: {:?}", tx_bytes);
         let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
-        olaos_logs::info!("parsed transaction: {:?}", tx);
         tx.set_input(tx_bytes.0, hash);
+        olaos_logs::info!("parsed transaction, hash: {:?}, initiator_address: {:?}, contract address: {:?}, nonce: {:?}", tx.hash(), tx.initiator_account(), tx.recipient_account(), tx.nonce());
 
         let tx_chain_id = tx.common_data.extract_chain_id().unwrap_or_default();
         if self.state.api_config.l2_chain_id.0 != tx_chain_id {

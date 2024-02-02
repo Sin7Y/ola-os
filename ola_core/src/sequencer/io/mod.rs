@@ -243,3 +243,9 @@ pub struct L1BatchParams {
     pub base_system_contracts: BaseSystemContracts,
     pub protocol_version: ProtocolVersionId,
 }
+
+impl L1BatchParams {
+    pub fn block_number(&self) -> u32 {
+        self.context_mode.inner_block_context().context.block_number
+    }
+}
