@@ -73,9 +73,9 @@ impl BatchExecutorHandle {
             .unwrap();
 
         let res = response_receiver.await;
-        olaos_logs::info!("receive result {:?}", res);
+        olaos_logs::info!("receive result");
         if res.is_err() {
-            olaos_logs::error!("ret err:{:?}", res);
+            olaos_logs::error!("return err:{:?}", res);
             panic!("ret err:{:?}", res)
         }
         res.unwrap()
@@ -90,7 +90,7 @@ impl BatchExecutorHandle {
             .unwrap();
         let _start = Instant::now();
         let resp = response_receiver.await.unwrap();
-        olaos_logs::info!("receive resp {:?}", resp);
+        olaos_logs::info!("receive resp");
         self.handle.await.unwrap();
         resp
     }
@@ -218,7 +218,7 @@ pub(super) struct BatchExecutor {
 }
 
 impl BatchExecutor {
-    #[olaos_logs::instrument(fields(l1_batch_params))]
+    #[olaos_logs::instrument(skip_all)]
     pub(super) fn run(
         mut self,
         secondary_storage_path: String,
@@ -253,15 +253,15 @@ impl BatchExecutor {
             match cmd {
                 Command::ExecuteTx(tx, tx_index_in_l1_batch, resp) => {
                     let result = self.execute_tx(&mut vm_manager, &tx, tx_index_in_l1_batch);
-                    olaos_logs::info!("execute tx {:?} finished, result {:?}", tx.hash(), result);
+                    olaos_logs::info!("execute tx {:?} finished, with error {:?}", tx.hash(), result.err());
                     resp.send(result).unwrap();
                 }
                 Command::FinishBatch(tx_index_in_l1_batch, resp) => {
                     let block_result = self.finish_batch(&mut vm_manager, tx_index_in_l1_batch);
                     olaos_logs::info!(
-                        "finish batch finished, tx_index_in_l1_batch {:?}, result {:?}",
+                        "finish batch finished, tx_index_in_l1_batch {:?}, total log_queries {:?}",
                         tx_index_in_l1_batch,
-                        block_result
+                        block_result.full_result.storage_log_queries.len()
                     );
                     resp.send(block_result).unwrap();
                     return;

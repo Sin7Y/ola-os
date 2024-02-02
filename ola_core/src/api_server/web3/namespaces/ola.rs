@@ -5,6 +5,7 @@ use ola_web3_decl::error::Web3Error;
 
 use crate::api_server::web3::backend::error::internal_error;
 use crate::api_server::web3::state::RpcState;
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct OlaNamespace {
@@ -26,7 +27,7 @@ impl OlaNamespace {
 
     #[tracing::instrument(skip(self, tx_bytes))]
     pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
-        olaos_logs::info!("received a send transaction: {:?}", tx_bytes);
+        olaos_logs::info!("received a send transaction: {:?}", Instant::now());
         let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
         tx.set_input(tx_bytes.0, hash);
         olaos_logs::info!("parsed transaction, hash: {:?}, initiator_address: {:?}, contract address: {:?}, nonce: {:?}", tx.hash(), tx.initiator_account(), tx.recipient_account(), tx.nonce());

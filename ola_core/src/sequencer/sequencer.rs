@@ -160,7 +160,7 @@ impl OlaSequencer {
                 updates_manager.push_miniblock(fictive_miniblock_timestamp);
             }
 
-            olaos_logs::info!("finish batch {:?}", l1_batch_params);
+            olaos_logs::info!("finish batch {:?}", l1_batch_params.block_number());
 
             let block_result = batch_executor
                 .finish_batch(updates_manager.pending_executed_transactions_len() as u32)
@@ -178,7 +178,7 @@ impl OlaSequencer {
             // Start the new batch.
             l1_batch_params = self.wait_for_new_batch_params().await?;
 
-            olaos_logs::info!("get new batch params {:?}", l1_batch_params);
+            olaos_logs::info!("get new batch params {:?}", l1_batch_params.block_number());
 
             updates_manager = UpdatesManager::new(
                 &l1_batch_params.context_mode,
@@ -478,9 +478,9 @@ impl OlaSequencer {
             .execute_tx(tx.clone(), tx_index_in_l1_batch)
             .await;
         olaos_logs::info!(
-            "tx {:?} executed by batch_executor, exec_result {:?}",
+            "tx {:?} executed by batch_executor, exec_result with error {:?}",
             tx.hash(),
-            exec_result
+            exec_result.err()
         );
         let resolution = match &exec_result {
             TxExecutionResult::BootloaderOutOfGasForTx => SealResolution::ExcludeAndSeal,
@@ -554,11 +554,7 @@ impl OlaSequencer {
                 )
             }
         };
-        olaos_logs::info!(
-            "process resolution {:?}, exec_result {:?}",
-            resolution,
-            exec_result
-        );
+        olaos_logs::info!("process resolution {:?}", resolution);
         (resolution, exec_result)
     }
 }

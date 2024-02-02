@@ -59,7 +59,7 @@ impl UpdatesManager {
             .extend_from_sealed_miniblock(old_miniblock_updates);
     }
 
-    #[olaos_logs::instrument(skip(self))]
+    #[olaos_logs::instrument(skip_all, fields(execution_metrics))]
     pub(crate) fn extend_from_executed_transaction(
         &mut self,
         tx: Transaction,
@@ -72,7 +72,7 @@ impl UpdatesManager {
             .extend_from_executed_transaction(tx, tx_execution_result, execution_metrics);
     }
 
-    #[olaos_logs::instrument(skip(self))]
+    #[olaos_logs::instrument(skip_all)]
     pub(crate) fn extend_from_fictive_transaction(&mut self, vm_execution_logs: VmExecutionLogs) {
         self.storage_writes_deduplicator
             .apply(&vm_execution_logs.storage_logs);
