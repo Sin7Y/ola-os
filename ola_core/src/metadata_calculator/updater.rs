@@ -36,7 +36,7 @@ impl TreeUpdater {
         }
     }
 
-    #[tracing::instrument(skip(self, storage, blocks))]
+    #[tracing::instrument(skip_all)]
     async fn process_multiple_blocks(
         &mut self,
         storage: &mut StorageProcessor<'_>,
