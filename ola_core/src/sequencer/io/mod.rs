@@ -74,7 +74,7 @@ impl MiniblockSealer {
         // Commands must be processed sequentially: a later miniblock cannot be saved before
         // an earlier one.
         while let Some(completable) = self.next_command().await {
-            olaos_logs::info!("Miniblock sealer get a new command: {:?}", completable);
+            olaos_logs::info!("Miniblock sealer get a new command");
             let mut conn = self.pool.access_storage_tagged("sequencer").await;
             completable.command.seal(&mut conn).await;
             olaos_logs::info!("Miniblock sealer sealed successfully");
@@ -120,7 +120,7 @@ pub(crate) struct MiniblockSealerHandle {
 impl MiniblockSealerHandle {
     const SHUTDOWN_MSG: &'static str = "miniblock sealer unexpectedly shut down";
 
-    #[olaos_logs::instrument(skip(self))]
+    #[olaos_logs::instrument(skip_all)]
     pub async fn submit(&mut self, command: MiniblockSealCommand) {
         let miniblock_number = command.miniblock_number;
         olaos_logs::info!(
@@ -137,7 +137,7 @@ impl MiniblockSealerHandle {
             completion_sender,
         };
 
-        olaos_logs::info!("Sending a command to miniblock sealer: {:?}", command);
+        olaos_logs::info!("Sending a command to miniblock sealer");
 
         self.commands_sender
             .send(command)
