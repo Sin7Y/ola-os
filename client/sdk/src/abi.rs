@@ -34,9 +34,9 @@ pub fn create_calldata(
     let biz_calldata = abi
         .encode_input_with_signature(function_sig, &params)
         .map_err(|_| ClientError::AbiParseError)?;
-    dbg!(biz_calldata.clone());
+    // dbg!(biz_calldata.clone());
     let entry_point_calldata = build_entry_point_calldata(from, to, biz_calldata, codes)?;
-    dbg!(entry_point_calldata.clone());
+    // dbg!(entry_point_calldata.clone());
     let calldata_bytes = u64s_to_bytes(&entry_point_calldata);
     Ok(calldata_bytes)
 }
