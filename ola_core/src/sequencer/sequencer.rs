@@ -208,7 +208,6 @@ impl OlaSequencer {
         Ok(())
     }
 
-    #[olaos_logs::instrument(skip(self), fields(params))]
     async fn wait_for_new_batch_params(&mut self) -> Result<L1BatchParams, Error> {
         let params = loop {
             if let Some(params) = self.io.wait_for_new_batch_params(POLL_WAIT_DURATION).await {
@@ -216,10 +215,11 @@ impl OlaSequencer {
             }
             self.check_if_cancelled()?;
         };
+        olaos_logs::info!("get new params for batch {:?}", params.block_number());
         Ok(params)
     }
 
-    #[olaos_logs::instrument(skip(self), fields(params))]
+    #[olaos_logs::instrument(skip(self))]
     async fn wait_for_new_miniblock_params(
         &mut self,
         prev_miniblock_timestamp: u64,

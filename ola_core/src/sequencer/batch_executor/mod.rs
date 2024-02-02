@@ -185,7 +185,7 @@ impl MainBatchExecutorBuilder {
 
 #[async_trait]
 impl L1BatchExecutorBuilder for MainBatchExecutorBuilder {
-    #[olaos_logs::instrument(skip(self))]
+    #[olaos_logs::instrument(skip(self, l1_batch_params), fields(block_number = l1_batch_params.block_number()))]
     async fn init_batch(&self, l1_batch_params: L1BatchParams) -> BatchExecutorHandle {
         let mut secondary_storage = RocksdbStorage::new(self.sequencer_db_path.as_ref());
         let mut conn = self.pool.access_storage_tagged("sequencer").await;

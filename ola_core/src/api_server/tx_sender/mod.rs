@@ -154,6 +154,8 @@ impl TxSender {
 
         drop(vm_permit);
 
+        olaos_logs::info!("Drop vm_permit");
+
         let res = match submission_res_handle {
             L2TxSubmissionResult::AlreadyExecuted => Err(SubmitTxError::NonceIsTooLow(
                 expected_nonce.0,
@@ -173,8 +175,12 @@ impl TxSender {
 
     #[tracing::instrument(skip(self, tx))]
     pub async fn call_transaction_impl(&self, tx: L2Tx) -> Result<Bytes, SubmitTxError> {
+        olaos_logs::info!("Start call tx {:?}", tx.hash());
+
         let vm_permit = self.0.vm_concurrency_limiter.acquire().await;
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
+
+        olaos_logs::info!("Acquired vm_permit, start prepare params");
 
         let mut storage = self
             .0
@@ -204,12 +210,17 @@ impl TxSender {
             db_config.merkle_tree.path,
             db_config.sequencer_db_path,
         );
+
+        olaos_logs::info!("Start call in vm_manager");
+
         let call_res = vm_manager
             .call(call_info)
             .map_err(|e| SubmitTxError::TxCallTxError(e.to_string()))?;
         let ret = u64s_to_bytes(&call_res);
 
         drop(vm_permit);
+
+        olaos_logs::info!("Drop vm_permit");
 
         Ok(Bytes(ret))
     }

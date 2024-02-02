@@ -35,7 +35,6 @@ impl MempoolStore {
         self.l2_priority_queue.iter().rfind(|_| true).is_some()
     }
 
-    #[olaos_logs::instrument(skip(self))]
     pub fn next_transaction(&mut self) -> Option<Transaction> {
         let mut removed = 0;
         // We want to fetch the next transaction that would match the fee requirements.
@@ -116,12 +115,13 @@ impl MempoolStore {
         }
     }
 
-    #[olaos_logs::instrument(skip(self))]
+    #[olaos_logs::instrument(skip(self, transaction))]
     fn insert_l2_transaction(
         &mut self,
         transaction: L2Tx,
         initial_nonces: &HashMap<Address, Nonce>,
     ) {
+        olaos_logs::info!("insert l2 tx hash {:?}", transaction.hash());
         let account = transaction.initiator_account();
 
         let metadata = match self.l2_transactions_per_account.entry(account) {

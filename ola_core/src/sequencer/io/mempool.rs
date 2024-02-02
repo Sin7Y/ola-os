@@ -84,14 +84,8 @@ impl SequencerIO for MempoolIO {
         })
     }
 
-    #[olaos_logs::instrument(skip_all)]
     async fn wait_for_new_batch_params(&mut self, max_wait: Duration) -> Option<L1BatchParams> {
         let deadline = Instant::now() + max_wait;
-
-        olaos_logs::info!(
-            "start wait_for_new_batch_params with deadline {:?}",
-            deadline
-        );
 
         // Block until at least one transaction in the mempool can match the filter (or timeout happens).
         // This is needed to ensure that block timestamp is not too old.
@@ -130,7 +124,10 @@ impl SequencerIO for MempoolIO {
                 protocol_version,
             );
 
-            olaos_logs::info!("get new l1_batch_params {:?}", l1_batch_params);
+            olaos_logs::info!(
+                "get new l1_batch_params, batch number {:?}",
+                l1_batch_params.block_number()
+            );
 
             return Some(l1_batch_params);
         }
