@@ -100,7 +100,7 @@ impl Deploy {
         } else {
             wallet.get_addr_nonce(from).await.unwrap()
         };
-        dbg!(nonce);
+        // dbg!(nonce);
 
         let contract_address = H256([
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
