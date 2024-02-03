@@ -300,16 +300,22 @@ impl FromValue {
 
     fn parse_tuple(input: Vec<(String, Value)>) -> Result<String> {
         let mut ret = String::from("{");
-        input.iter().for_each(|i| {
-            match i.1 {
-                Value::FixedArray(_, _) | Value::Array(_, _) | Value::Tuple(_) => {
-                    panic!("Composite types in Tuple has not been supported for cli tools.")
-                }
-                _ => {}
+        input.iter().for_each(|i| match i.1 {
+            Value::FixedArray(_, _) | Value::Array(_, _) | Value::Tuple(_) => {
+                panic!("Composite types in Tuple has not been supported for cli tools.")
             }
-
-            let v = Self::parse_input(i.1.clone());
-            ret += format!("{}: {},", i.0, v).as_str();
+            Value::U32(_) | Value::Field(_) | Value::Bool(_) | Value::Fields(_) => {
+                let v = Self::parse_input(i.1.clone());
+                ret += format!("\"{}\": {},", i.0, v).as_str();
+            }
+            Value::Address(_) | Value::Hash(_) => {
+                let v = Self::parse_input(i.1.clone());
+                ret += format!("\"{}\": \"0x{}\",", i.0, v).as_str();
+            }
+            Value::String(_) => {
+                let v = Self::parse_input(i.1.clone());
+                ret += format!("\"{}\": \"{}\",", i.0, v).as_str();
+            }
         });
         ret.pop();
         ret += "}";
