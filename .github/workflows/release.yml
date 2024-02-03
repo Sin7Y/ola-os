@@ -1,11 +1,8 @@
 name: ola_node Release
 on:
   push:
-    branches: ["pre-alpha"]
     tags:
-      - 'pre-alpha'
-  pull_request:
-    branches: ["pre-alpha"]
+      - 'v*.*.*'
   workflow_dispatch:
 
 env:
