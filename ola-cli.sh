@@ -30,7 +30,7 @@ insert_env_line() {
     fi
 }
 
-echo "Installing ${yellow}ola-os, olatte, olac, mini-ola ${normal}..."
+echo "Installing ${yellow} olatte, olac, mini-ola ${normal}..."
 
 OLA_DIR=${XDG_CONFIG_HOME:-$HOME}/.ola
 
@@ -39,7 +39,6 @@ OLA_BIN_DIR="$OLA_DIR/bin"
 # Create the base directory if it doesn't exist
 mkdir -p $OLA_BIN_DIR
 
-OLA_OS_BIN_URL="https://github.com/Sin7Y/ola-os/releases/download/pre-alpha/"
 OLATTE_BIN_URL="https://github.com/Sin7Y/ola-os/releases/download/pre-alpha/"
 OLAC_BIN_URL="https://github.com/Sin7Y/ola-lang/releases/download/v0.1.1/"
 MINIOLA_BIN_URL="https://github.com/Sin7Y/olavm/releases/download/pre-alpha/"
@@ -113,14 +112,14 @@ install_ola() {
     echo "Detected host triple: ${cyan}${TRIPLE}${normal}"
     TEMP_DIR="$(mktemp -d)"
 
-    BINARIES=("ola_node" "olatte" "olac" "mini-ola")
-    URLS=("${OLA_OS_BIN_URL}" "${OLATTE_BIN_URL}" "${OLAC_BIN_URL}" "${MINIOLA_BIN_URL}")
+    BINARIES=("olatte" "olac" "mini-ola")
+    URLS=("${OLATTE_BIN_URL}" "${OLAC_BIN_URL}" "${MINIOLA_BIN_URL}")
 
     for i in "${!BINARIES[@]}"; do
         BASE_FILE_NAME="${BINARIES[i]}"
         FILE_URL="${URLS[i]}"
 
-        echo "Downloading ${BASE_FILE_NAME} release file from GitHub..."
+        echo "Downloading ${yellow}${BASE_FILE_NAME}${normal} release file from GitHub..."
         FILE_NAME="${BASE_FILE_NAME}-${TRIPLE}"
         FULL_FILE_URL="${FILE_URL}/${FILE_NAME}"
         TEMP_FILE_NAME="${TEMP_DIR}/${FILE_NAME}"
@@ -131,7 +130,7 @@ install_ola() {
 
 
     rm -rf $TEMP_DIR
-    echo "Successfully installed ola_node, olatte, olac, mini-ola"
+    echo "Successfully installed ${yellow}olatte, olac, mini-ola ${normal}"
 }
 
 install_ola
