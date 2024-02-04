@@ -97,4 +97,39 @@ impl StorageWeb3Dal<'_, '_> {
             pending_l1_batch: L1BatchNumber(row.max_batch.unwrap_or(0) as u32),
         })
     }
+
+    pub async fn get_l1_batch_number_for_initial_write(
+        &mut self,
+        key: &StorageKey,
+    ) -> Result<Option<L1BatchNumber>, SqlxError> {
+        let hashed_key = key.hashed_key();
+        let row = sqlx::query!(
+            "SELECT l1_batch_number FROM initial_writes WHERE hashed_key = $1",
+            hashed_key.as_bytes(),
+        )
+        .fetch_optional(self.storage.conn())
+        .await?;
+
+        let l1_batch_number = row.map(|record| L1BatchNumber(record.l1_batch_number as u32));
+        Ok(l1_batch_number)
+    }
+
+    /// This method doesn't check if block with number equals to `block_number`
+    /// is present in the database. For such blocks `None` will be returned.
+    pub async fn get_factory_dep_unchecked(
+        &mut self,
+        hash: H256,
+        block_number: MiniblockNumber,
+    ) -> Result<Option<Vec<u8>>, SqlxError> {
+        {
+            sqlx::query!(
+                "SELECT bytecode FROM factory_deps WHERE bytecode_hash = $1 AND miniblock_number <= $2",
+                hash.as_bytes(),
+                block_number.0 as i64
+            )
+            .fetch_optional(self.storage.conn())
+            .await
+            .map(|option_row| option_row.map(|row| row.bytecode))
+        }
+    }
 }

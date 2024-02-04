@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use ola_types::{get_known_code_key, StorageKey, StorageValue, H256};
 
@@ -27,3 +27,21 @@ pub trait ReadStorage: fmt::Debug {
         self.read_value(&code_key) != H256::zero()
     }
 }
+
+/// Functionality to write to the VM storage in a batch.
+///
+/// So far, this trait is implemented only for [`StorageView`].
+pub trait WriteStorage: ReadStorage {
+    /// Sets the new value under a given key and returns the previous value.
+    fn set_value(&mut self, key: StorageKey, value: StorageValue) -> StorageValue;
+
+    /// Returns a map with the key–value pairs updated by this batch.
+    fn modified_storage_keys(&self) -> &HashMap<StorageKey, StorageValue>;
+
+    /// Returns the number of read / write ops for which the value was read from the underlying
+    /// storage.
+    fn missed_storage_invocations(&self) -> usize;
+}
+
+/// Smart pointer to a dynamically typed [`WriteStorage`].
+pub type StoragePtr<'a> = Rc<RefCell<&'a mut dyn WriteStorage>>;

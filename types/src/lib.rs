@@ -87,6 +87,14 @@ impl Transaction {
         }
     }
 
+    /// Returns the payer for L2 transaction and 0 for L1 transactions
+    pub fn payer(&self) -> Address {
+        match &self.common_data {
+            ExecuteTransactionCommon::L2(data) => data.initiator_address,
+            ExecuteTransactionCommon::ProtocolUpgrade(data) => data.sender,
+        }
+    }
+
     pub fn msg_hash(&self) -> Option<Vec<u8>> {
         let common_data = match &self.common_data {
             ExecuteTransactionCommon::L2(data) => data,
