@@ -34,12 +34,6 @@ pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
 }
 
 pub fn set_panic_hook() {
-    // let base_path = std::env::current_dir()
-    //     .expect("Failed to determine the current directory")
-    //     .join(".logs");
-    // let file_appender = rolling::daily(base_path, "olaos.panic.log");
-    // let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-
     let placeholder = "Unknown panic info".to_string();
     panic::set_hook(Box::new(move |panic_info| {
         let payload = panic_info
@@ -55,14 +49,6 @@ pub fn set_panic_hook() {
             location.line(),
             payload
         );
-
-        // let file_layer =
-        //     BunyanFormattingLayer::new("panic_logger".to_string(), non_blocking.clone());
-        // let subscriber = Registry::default()
-        //     .with(EnvFilter::new("info"))
-        //     .with(JsonStorageLayer)
-        //     .with(file_layer);
-        // let _guard = set_global_default(subscriber).unwrap();
 
         super::error!("{}", panic_message);
     }));
