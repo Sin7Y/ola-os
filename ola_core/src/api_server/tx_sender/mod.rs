@@ -1,5 +1,6 @@
 use std::{fmt::Debug, num::NonZeroU32, sync::Arc, time::Instant};
 
+use crate::api_server::execution_sandbox::execute::execute_tx_eth_call;
 use governor::{
     clock::MonotonicClock,
     middleware::NoOpMiddleware,
@@ -20,7 +21,7 @@ use ola_utils::{time::millis_since_epoch, u64s_to_bytes};
 
 use self::{error::SubmitTxError, proxy::TxProxy};
 
-use super::execution_sandbox::{TxSharedArgs, VmConcurrencyLimiter};
+use super::execution_sandbox::{BlockArgs, TxSharedArgs, VmConcurrencyLimiter};
 
 use web3::types::Bytes;
 use zk_vm::{BlockInfo, CallInfo, VmManager as OlaVmManager};
@@ -174,7 +175,7 @@ impl TxSender {
     }
 
     #[tracing::instrument(skip(self, tx))]
-    pub async fn call_transaction_impl(&self, tx: L2Tx) -> Result<Bytes, SubmitTxError> {
+    pub async fn eth_call(&self, block_args: BlockArgs, tx: L2Tx) -> Result<Bytes, SubmitTxError> {
         olaos_logs::info!(
             "Start call tx from {:?}, to {:?}",
             tx.initiator_account(),
@@ -185,6 +186,20 @@ impl TxSender {
         let vm_permit = vm_permit.ok_or(SubmitTxError::ServerShuttingDown)?;
 
         olaos_logs::info!("Acquired vm_permit, start prepare params");
+
+        let vm_execution_cache_misses_limit = self.0.sender_config.vm_execution_cache_misses_limit;
+        let result = execute_tx_eth_call(
+            vm_permit,
+            self.shared_args(),
+            self.0.replica_connection_pool.clone(),
+            tx,
+            block_args,
+            vm_execution_cache_misses_limit,
+            false,
+        )
+        .await?;
+
+        ////
 
         let mut storage = self
             .0

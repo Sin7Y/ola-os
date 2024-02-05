@@ -1,8 +1,9 @@
-use ola_types::api::TransactionDetails;
+use ola_types::api::{BlockId, BlockNumber, TransactionDetails};
 use ola_types::H256;
 use ola_types::{l2::L2Tx, request::CallRequest, Bytes};
 use ola_web3_decl::error::Web3Error;
 
+use crate::api_server::execution_sandbox::BlockArgs;
 use crate::api_server::web3::backend::error::internal_error;
 use crate::api_server::web3::state::RpcState;
 use std::time::Instant;
@@ -51,13 +52,30 @@ impl OlaNamespace {
     }
 
     #[tracing::instrument(skip(self, request))]
-    pub async fn call_impl(&self, request: CallRequest) -> Result<Bytes, Web3Error> {
+    pub async fn call_impl(
+        &self,
+        request: CallRequest,
+        block_id: Option<BlockId>,
+    ) -> Result<Bytes, Web3Error> {
         olaos_logs::info!("received a call transaction request: {:?}", request);
+
+        let block = block_id.unwrap_or(BlockId::Number(BlockNumber::Pending));
+        let mut connection = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await;
+
+        let block_args = BlockArgs::new(&mut connection, block)
+            .await
+            .map_err(|err| internal_error("eth_call", err))?
+            .ok_or(Web3Error::NoBlock)?;
+        drop(connection);
 
         let tx = L2Tx::from_request(request.into(), self.state.api_config.max_tx_size)?;
         olaos_logs::info!("parsed call request transaction: {:?}", tx);
 
-        let call_result = self.state.tx_sender.call_transaction_impl(tx).await;
+        let call_result = self.state.tx_sender.eth_call(block_args, tx).await;
         let res_bytes = call_result.map_err(|err| {
             olaos_logs::info!("Send raw transaction error: {err}");
             Web3Error::SubmitTransactionError(err.to_string(), err.data())

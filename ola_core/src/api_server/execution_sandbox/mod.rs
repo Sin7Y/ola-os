@@ -4,7 +4,7 @@ use std::{
 };
 
 use ola_contracts::BaseSystemContracts;
-use ola_dal::StorageProcessor;
+use ola_dal::{SqlxError, StorageProcessor};
 use ola_state::postgres::PostgresStorageCaches;
 use ola_types::{api, AccountTreeId, MiniblockNumber};
 use tokio::runtime::Handle;
@@ -111,6 +111,30 @@ pub(crate) struct BlockArgs {
 }
 
 impl BlockArgs {
+    /// Loads block information from DB.
+    pub async fn new(
+        connection: &mut StorageProcessor<'_>,
+        block_id: api::BlockId,
+    ) -> Result<Option<Self>, SqlxError> {
+        let resolved_block_number = connection
+            .blocks_web3_dal()
+            .resolve_block_id(block_id)
+            .await?;
+        let Some(resolved_block_number) = resolved_block_number else {
+            return Ok(None);
+        };
+
+        let block_timestamp_s = connection
+            .blocks_web3_dal()
+            .get_block_timestamp(resolved_block_number)
+            .await?;
+        Ok(Some(Self {
+            block_id,
+            resolved_block_number,
+            block_timestamp_s,
+        }))
+    }
+
     async fn pending(connection: &mut StorageProcessor<'_>) -> Self {
         let (block_id, resolved_block_number) = get_pending_state(connection).await;
         Self {

@@ -129,7 +129,7 @@ async fn execute_tx_in_sandbox2(
     tokio::task::spawn_blocking(move || {
         // let span = span!(Level::DEBUG, "execute_in_sandbox").entered();
         let execution_mode = execution_args.execution_mode;
-        let result = apply::apply_vm_in_sandbox(
+        let result = apply::apply_vm_in_sandbox2(
             vm_permit,
             shared_args,
             &execution_args,
@@ -137,17 +137,17 @@ async fn execute_tx_in_sandbox2(
             tx,
             block_args,
             moved_cache,
-            |vm, tx| {
-                push_transaction_to_bootloader_memory(vm, &tx, execution_mode, None);
-                let result = if trace_call {
-                    vm.execute_till_block_end_with_call_tracer(job_type)
-                } else {
-                    vm.execute_till_block_end(job_type)
-                };
-                result.full_result
-            },
+            // |vm, tx| {
+            //     push_transaction_to_bootloader_memory(vm, &tx, execution_mode, None);
+            //     let result = if trace_call {
+            //         vm.execute_till_block_end_with_call_tracer(job_type)
+            //     } else {
+            //         vm.execute_till_block_end(job_type)
+            //     };
+            //     result.full_result
+            // },
         );
-        span.exit();
+        // span.exit();
         result
     })
     .await

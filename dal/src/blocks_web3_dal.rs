@@ -58,4 +58,18 @@ impl BlocksWeb3Dal<'_, '_> {
             .expect("DAL invocation before genesis");
         Ok(L1BatchNumber(number as u32))
     }
+
+    pub async fn get_block_timestamp(
+        &mut self,
+        block_number: MiniblockNumber,
+    ) -> Result<Option<u64>, SqlxError> {
+        let timestamp = sqlx::query!(
+            "SELECT timestamp FROM miniblocks WHERE number = $1",
+            block_number.0 as i64
+        )
+        .fetch_optional(self.storage.conn())
+        .await?
+        .map(|row| row.timestamp as u64);
+        Ok(timestamp)
+    }
 }
