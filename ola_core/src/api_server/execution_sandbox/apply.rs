@@ -75,24 +75,18 @@ pub(super) fn apply_vm_in_sandbox2<T>(
     let storage_view_setup_started_at = Instant::now();
     if let Some(nonce) = execution_args.enforced_nonce {
         let nonce_key = get_nonce_key(&tx.initiator_account());
-        let full_nonce = storage_view.read_value(&nonce_key);
-        let (_, deployment_nonce) = decompose_full_nonce(h256_to_u256(full_nonce));
-        let enforced_full_nonce = nonces_to_full_nonce(U256::from(nonce.0), deployment_nonce);
-        storage_view.set_value(nonce_key, u256_to_h256(enforced_full_nonce));
+        let nonce_value = u256_to_h256(U256::from(nonce.0));
+        storage_view.set_value(nonce_key, nonce_value);
     }
 
     let payer = tx.payer();
-    let balance_key = storage_key_for_eth_balance(&payer);
-    let mut current_balance = h256_to_u256(storage_view.read_value(&balance_key));
-    current_balance += execution_args.added_balance;
-    storage_view.set_value(balance_key, u256_to_h256(current_balance));
     let storage_view_setup_time = storage_view_setup_started_at.elapsed();
     // We don't want to emit too many logs.
     if storage_view_setup_time > Duration::from_millis(10) {
         olaos_logs::info!("Prepared the storage view (took {storage_view_setup_time:?})",);
     }
 
-    let mut oracle_tools = vm::OracleTools::new(&mut storage_view, HistoryDisabled);
+    // let mut oracle_tools = vm::OracleTools::new(&mut storage_view, HistoryDisabled);
     let block_properties = BlockProperties {
         default_aa_code_hash: h256_to_u256(shared_args.base_system_contracts.default_aa.hash),
     };

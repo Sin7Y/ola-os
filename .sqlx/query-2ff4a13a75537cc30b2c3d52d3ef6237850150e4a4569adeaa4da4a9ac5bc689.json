@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT bytecode FROM factory_deps WHERE bytecode_hash = $1 AND miniblock_number <= $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "bytecode",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2ff4a13a75537cc30b2c3d52d3ef6237850150e4a4569adeaa4da4a9ac5bc689"
+}
