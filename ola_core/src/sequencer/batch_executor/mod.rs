@@ -426,7 +426,7 @@ mod tests {
         code_hash: &Vec<u8>,
     ) -> Result<(), StateError> {
         let mut batch = WriteBatch::default();
-        let cf = db.cf_sequencer_handle(SequencerColumnFamily::ContractMap);
+        let cf = db.cf_sequencer_handle(SequencerColumnFamily::State);
         let code_key = tree_key_to_u8_arr(contract_addr);
         batch.put_cf(cf, &code_key, code_hash);
 
