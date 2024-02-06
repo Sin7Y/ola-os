@@ -78,6 +78,6 @@ jobs:
           cargo install --version=0.7.2 sqlx-cli --no-default-features --features postgres
           SKIP_DOCKER=true cd dal && ./scripts/init_main_db.sh
       - name: Build
-        run: cargo build
+        run: cargo +nightly build
       - name: Run tests
         run: cargo test
