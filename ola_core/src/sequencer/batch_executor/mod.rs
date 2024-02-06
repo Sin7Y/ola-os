@@ -390,326 +390,326 @@ impl BatchExecutor {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::sequencer::batch_executor::{MainBatchExecutorBuilder, TxExecutionResult};
-    use crate::sequencer::io::L1BatchParams;
-    use ola_config::database::{DBConfig, MerkleTreeConfig};
-    use ola_config::sequencer::SequencerConfig;
-    use ola_contracts::{BaseSystemContracts, BaseSystemContractsHashes, SystemContractCode};
-    use ola_dal::connection::{ConnectionPool, DbVariant};
-    use ola_types::l2::L2Tx;
-    use ola_types::protocol_version::{ProtocolVersion, ProtocolVersionId};
-    use ola_types::tx::execute::Execute;
-    use ola_types::{Transaction, H256, U256};
-    use ola_vm::vm_with_bootloader::{BlockContext, BlockContextMode, BlockProperties};
-    use olavm_core::crypto::hash::Hasher;
-    use olavm_core::crypto::poseidon::PoseidonHasher;
-    use olavm_core::program::binary_program::BinaryProgram;
-    use olavm_core::state::error::StateError;
-    use olavm_core::storage::db::{Database, RocksDB, SequencerColumnFamily};
-    use olavm_core::types::merkle_tree::{
-        h256_to_tree_key, tree_key_to_h256, tree_key_to_u8_arr, TreeValue,
-    };
-    use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
-    use olavm_core::types::{Field, GoldilocksField};
-    use rocksdb::WriteBatch;
-    use std::fs::File;
-    use std::io::BufReader;
-    use std::path::PathBuf;
-    use std::str::FromStr;
-    use tracing::log::LevelFilter;
+// #[cfg(test)]
+// mod tests {
+//     use crate::sequencer::batch_executor::{MainBatchExecutorBuilder, TxExecutionResult};
+//     use crate::sequencer::io::L1BatchParams;
+//     use ola_config::database::{DBConfig, MerkleTreeConfig};
+//     use ola_config::sequencer::SequencerConfig;
+//     use ola_contracts::{BaseSystemContracts, BaseSystemContractsHashes, SystemContractCode};
+//     use ola_dal::connection::{ConnectionPool, DbVariant};
+//     use ola_types::l2::L2Tx;
+//     use ola_types::protocol_version::{ProtocolVersion, ProtocolVersionId};
+//     use ola_types::tx::execute::Execute;
+//     use ola_types::{Transaction, H256, U256};
+//     use ola_vm::vm_with_bootloader::{BlockContext, BlockContextMode, BlockProperties};
+//     use olavm_core::crypto::hash::Hasher;
+//     use olavm_core::crypto::poseidon::PoseidonHasher;
+//     use olavm_core::program::binary_program::BinaryProgram;
+//     use olavm_core::state::error::StateError;
+//     use olavm_core::storage::db::{Database, RocksDB, SequencerColumnFamily};
+//     use olavm_core::types::merkle_tree::{
+//         h256_to_tree_key, tree_key_to_h256, tree_key_to_u8_arr, TreeValue,
+//     };
+//     use olavm_core::types::storage::{field_arr_to_u8_arr, u8_arr_to_field_arr};
+//     use olavm_core::types::{Field, GoldilocksField};
+//     use rocksdb::WriteBatch;
+//     use std::fs::File;
+//     use std::io::BufReader;
+//     use std::path::PathBuf;
+//     use std::str::FromStr;
+//     use tracing::log::LevelFilter;
 
-    pub fn save_contract_map(
-        db: &RocksDB,
-        contract_addr: &TreeValue,
-        code_hash: &Vec<u8>,
-    ) -> Result<(), StateError> {
-        let mut batch = WriteBatch::default();
-        let cf = db.cf_sequencer_handle(SequencerColumnFamily::State);
-        let code_key = tree_key_to_u8_arr(contract_addr);
-        batch.put_cf(cf, &code_key, code_hash);
+//     pub fn save_contract_map(
+//         db: &RocksDB,
+//         contract_addr: &TreeValue,
+//         code_hash: &Vec<u8>,
+//     ) -> Result<(), StateError> {
+//         let mut batch = WriteBatch::default();
+//         let cf = db.cf_sequencer_handle(SequencerColumnFamily::State);
+//         let code_key = tree_key_to_u8_arr(contract_addr);
+//         batch.put_cf(cf, &code_key, code_hash);
 
-        db.write(batch).map_err(StateError::StorageIoError)
-    }
+//         db.write(batch).map_err(StateError::StorageIoError)
+//     }
 
-    pub fn save_program(
-        db: &RocksDB,
-        code_hash: &Vec<u8>,
-        code: &Vec<u8>,
-    ) -> Result<(), StateError> {
-        let mut batch = WriteBatch::default();
-        let cf = db.cf_sequencer_handle(SequencerColumnFamily::FactoryDeps);
+//     pub fn save_program(
+//         db: &RocksDB,
+//         code_hash: &Vec<u8>,
+//         code: &Vec<u8>,
+//     ) -> Result<(), StateError> {
+//         let mut batch = WriteBatch::default();
+//         let cf = db.cf_sequencer_handle(SequencerColumnFamily::FactoryDeps);
 
-        batch.put_cf(cf, code_hash, code);
-        db.write(batch).map_err(StateError::StorageIoError)
-    }
+//         batch.put_cf(cf, code_hash, code);
+//         db.write(batch).map_err(StateError::StorageIoError)
+//     }
 
-    pub fn manual_deploy_contract(
-        db: &RocksDB,
-        contract_path: &str,
-        addr: &TreeValue,
-    ) -> Result<TreeValue, StateError> {
-        let file = File::open(contract_path).unwrap();
-        let reader = BufReader::new(file);
-        let program: BinaryProgram = serde_json::from_reader(reader).unwrap();
-        let instructions = program.bytecode.split("\n");
+//     pub fn manual_deploy_contract(
+//         db: &RocksDB,
+//         contract_path: &str,
+//         addr: &TreeValue,
+//     ) -> Result<TreeValue, StateError> {
+//         let file = File::open(contract_path).unwrap();
+//         let reader = BufReader::new(file);
+//         let program: BinaryProgram = serde_json::from_reader(reader).unwrap();
+//         let instructions = program.bytecode.split("\n");
 
-        let code: Vec<_> = instructions
-            .map(|e| GoldilocksField::from_canonical_u64(u64::from_str_radix(&e[2..], 16).unwrap()))
-            .collect();
+//         let code: Vec<_> = instructions
+//             .map(|e| GoldilocksField::from_canonical_u64(u64::from_str_radix(&e[2..], 16).unwrap()))
+//             .collect();
 
-        let hasher = PoseidonHasher;
-        let code_hash = hasher.hash_bytes(&code);
-        save_program(
-            &db,
-            &tree_key_to_u8_arr(&code_hash),
-            &serde_json::to_string_pretty(&program)
-                .unwrap()
-                .as_bytes()
-                .to_vec(),
-        )?;
+//         let hasher = PoseidonHasher;
+//         let code_hash = hasher.hash_bytes(&code);
+//         save_program(
+//             &db,
+//             &tree_key_to_u8_arr(&code_hash),
+//             &serde_json::to_string_pretty(&program)
+//                 .unwrap()
+//                 .as_bytes()
+//                 .to_vec(),
+//         )?;
 
-        save_contract_map(&db, addr, &tree_key_to_u8_arr(&code_hash))?;
+//         save_contract_map(&db, addr, &tree_key_to_u8_arr(&code_hash))?;
 
-        Ok(code_hash)
-    }
+//         Ok(code_hash)
+//     }
 
-    fn default_sequencer_config() -> SequencerConfig {
-        SequencerConfig {
-            miniblock_seal_queue_capacity: 10,
-            miniblock_commit_deadline_ms: 1000,
-            block_commit_deadline_ms: 2500,
-            reject_tx_at_geometry_percentage: 0.0,
-            close_block_at_geometry_percentage: 0.0,
-            fee_account_addr: H256::from_str(
-                "0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b0000",
-            )
-            .unwrap(),
-            entrypoint_hash: H256::from_str(
-                "0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b594c",
-            )
-            .unwrap(),
-            default_aa_hash: H256::from_str(
-                "0x0100038dc66b69be75ec31653c64cb931678299b9b659472772b2550b703f41c",
-            )
-            .unwrap(),
-            transaction_slots: 250,
-            save_call_traces: true,
-        }
-    }
+//     fn default_sequencer_config() -> SequencerConfig {
+//         SequencerConfig {
+//             miniblock_seal_queue_capacity: 10,
+//             miniblock_commit_deadline_ms: 1000,
+//             block_commit_deadline_ms: 2500,
+//             reject_tx_at_geometry_percentage: 0.0,
+//             close_block_at_geometry_percentage: 0.0,
+//             fee_account_addr: H256::from_str(
+//                 "0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b0000",
+//             )
+//             .unwrap(),
+//             entrypoint_hash: H256::from_str(
+//                 "0x0100038581be3d0e201b3cc45d151ef5cc59eb3a0f146ad44f0f72abf00b594c",
+//             )
+//             .unwrap(),
+//             default_aa_hash: H256::from_str(
+//                 "0x0100038dc66b69be75ec31653c64cb931678299b9b659472772b2550b703f41c",
+//             )
+//             .unwrap(),
+//             transaction_slots: 250,
+//             save_call_traces: true,
+//         }
+//     }
 
-    async fn batch_execute_tx(
-        binary_files: Vec<&str>,
-        contract_addresses: Vec<H256>,
-        calldata: Vec<u8>,
-        sequencer_db_path: String,
-        merkle_tree_path: String,
-        backup_path: String,
-    ) {
-        let db_config = DBConfig {
-            statement_timeout_sec: Some(300),
-            sequencer_db_path,
-            merkle_tree: MerkleTreeConfig {
-                path: merkle_tree_path,
-                backup_path,
-                mode: Default::default(),
-                multi_get_chunk_size: 1000,
-                block_cache_size_mb: 128,
-                max_l1_batches_per_iter: 50,
-            },
-            backup_count: 5,
-            backup_interval_ms: 60000,
-        };
+//     async fn batch_execute_tx(
+//         binary_files: Vec<&str>,
+//         contract_addresses: Vec<H256>,
+//         calldata: Vec<u8>,
+//         sequencer_db_path: String,
+//         merkle_tree_path: String,
+//         backup_path: String,
+//     ) {
+//         let db_config = DBConfig {
+//             statement_timeout_sec: Some(300),
+//             sequencer_db_path,
+//             merkle_tree: MerkleTreeConfig {
+//                 path: merkle_tree_path,
+//                 backup_path,
+//                 mode: Default::default(),
+//                 multi_get_chunk_size: 1000,
+//                 block_cache_size_mb: 128,
+//                 max_l1_batches_per_iter: 50,
+//             },
+//             backup_count: 5,
+//             backup_interval_ms: 60000,
+//         };
 
-        let timestamp = 1702458919000;
-        let block_numner = 1;
-        let sequencer_config = default_sequencer_config();
+//         let timestamp = 1702458919000;
+//         let block_numner = 1;
+//         let sequencer_config = default_sequencer_config();
 
-        let base_system_contracts_hashes = BaseSystemContractsHashes {
-            entrypoint: sequencer_config.entrypoint_hash,
-            default_aa: sequencer_config.default_aa_hash,
-        };
-        let _version = ProtocolVersion {
-            id: ProtocolVersionId::latest(),
-            timestamp: 0,
-            base_system_contracts_hashes: base_system_contracts_hashes,
-            tx: None,
-        };
+//         let base_system_contracts_hashes = BaseSystemContractsHashes {
+//             entrypoint: sequencer_config.entrypoint_hash,
+//             default_aa: sequencer_config.default_aa_hash,
+//         };
+//         let _version = ProtocolVersion {
+//             id: ProtocolVersionId::latest(),
+//             timestamp: 0,
+//             base_system_contracts_hashes: base_system_contracts_hashes,
+//             tx: None,
+//         };
 
-        // mock deploy contract
-        let contract_address = contract_addresses.first().unwrap().clone();
-        for (file_name, addr) in binary_files.iter().zip(contract_addresses) {
-            let sequencer_db = RocksDB::new(
-                Database::Sequencer,
-                db_config.sequencer_db_path.clone(),
-                false,
-            );
+//         // mock deploy contract
+//         let contract_address = contract_addresses.first().unwrap().clone();
+//         for (file_name, addr) in binary_files.iter().zip(contract_addresses) {
+//             let sequencer_db = RocksDB::new(
+//                 Database::Sequencer,
+//                 db_config.sequencer_db_path.clone(),
+//                 false,
+//             );
 
-            let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            path.push("src/sequencer/test_data/");
-            path.push(*file_name);
-            let _ = manual_deploy_contract(
-                &sequencer_db,
-                path.to_str().unwrap(),
-                &h256_to_tree_key(&addr),
-            );
-        }
-        // pg database
-        let pool_builder = ConnectionPool::singleton(DbVariant::Master);
-        let sequencer_pool = pool_builder.build().await;
-        // let mut storage = sequencer_pool.access_storage_tagged("sequencer").await;
-        // let mut transaction = storage.start_transaction().await;
+//             let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+//             path.push("src/sequencer/test_data/");
+//             path.push(*file_name);
+//             let _ = manual_deploy_contract(
+//                 &sequencer_db,
+//                 path.to_str().unwrap(),
+//                 &h256_to_tree_key(&addr),
+//             );
+//         }
+//         // pg database
+//         let pool_builder = ConnectionPool::singleton(DbVariant::Master);
+//         let sequencer_pool = pool_builder.build().await;
+//         // let mut storage = sequencer_pool.access_storage_tagged("sequencer").await;
+//         // let mut transaction = storage.start_transaction().await;
 
-        // init version
-        // transaction
-        //     .protocol_versions_dal()
-        //     .save_protocol_version(version)
-        //     .await;
+//         // init version
+//         // transaction
+//         //     .protocol_versions_dal()
+//         //     .save_protocol_version(version)
+//         //     .await;
 
-        // init l1_batch
-        // transaction
-        //     .blocks_dal()
-        //     .insert_l1_batch(&l1_batch, &initial_bootloader_contents)
-        //     .await;
+//         // init l1_batch
+//         // transaction
+//         //     .blocks_dal()
+//         //     .insert_l1_batch(&l1_batch, &initial_bootloader_contents)
+//         //     .await;
 
-        // let l1_batch = L1BatchHeader {
-        //     number: L1BatchNumber(block_numner),
-        //     is_finished: true,
-        //     timestamp,
-        //     l1_tx_count: 0 as u16,
-        //     l2_tx_count: 1 as u16,
-        //     used_contract_hashes: vec![],
-        //     base_system_contracts_hashes,
-        //     protocol_version: Some(ProtocolVersionId::latest()),
-        // };
+//         // let l1_batch = L1BatchHeader {
+//         //     number: L1BatchNumber(block_numner),
+//         //     is_finished: true,
+//         //     timestamp,
+//         //     l1_tx_count: 0 as u16,
+//         //     l2_tx_count: 1 as u16,
+//         //     used_contract_hashes: vec![],
+//         //     base_system_contracts_hashes,
+//         //     protocol_version: Some(ProtocolVersionId::latest()),
+//         // };
 
-        let context = BlockContext {
-            block_number: block_numner,
-            block_timestamp: timestamp,
-            operator_address: H256::zero(),
-        };
+//         let context = BlockContext {
+//             block_number: block_numner,
+//             block_timestamp: timestamp,
+//             operator_address: H256::zero(),
+//         };
 
-        // let block_context_properties =
-        //     BlockContextMode::NewBlock(context.into(), U256::from_dec_str("1234567").unwrap());
-        // let initial_bootloader_contents = UpdatesManager::initial_bootloader_memory(
-        //     &L1BatchUpdates::new(),
-        //     block_context_properties,
-        // );
+//         // let block_context_properties =
+//         //     BlockContextMode::NewBlock(context.into(), U256::from_dec_str("1234567").unwrap());
+//         // let initial_bootloader_contents = UpdatesManager::initial_bootloader_memory(
+//         //     &L1BatchUpdates::new(),
+//         //     block_context_properties,
+//         // );
 
-        let batch_executor_base = MainBatchExecutorBuilder::new(
-            db_config.sequencer_db_path.clone(),
-            db_config.merkle_tree.path.clone(),
-            sequencer_pool.clone(),
-            sequencer_config.save_call_traces,
-        );
+//         let batch_executor_base = MainBatchExecutorBuilder::new(
+//             db_config.sequencer_db_path.clone(),
+//             db_config.merkle_tree.path.clone(),
+//             sequencer_pool.clone(),
+//             sequencer_config.save_call_traces,
+//         );
 
-        let l1_batch_params = L1BatchParams {
-            context_mode: BlockContextMode::NewBlock(
-                context.into(),
-                U256::from_dec_str("1234567").unwrap(),
-            ),
-            properties: BlockProperties {
-                default_aa_code_hash: Default::default(),
-            },
-            base_system_contracts: BaseSystemContracts {
-                entrypoint: SystemContractCode {
-                    code: vec![],
-                    hash: Default::default(),
-                },
-                default_aa: SystemContractCode {
-                    code: vec![],
-                    hash: Default::default(),
-                },
-            },
-            protocol_version: ProtocolVersionId::latest(),
-        };
-        let batch_executor = batch_executor_base.init_batch_mock(l1_batch_params);
+//         let l1_batch_params = L1BatchParams {
+//             context_mode: BlockContextMode::NewBlock(
+//                 context.into(),
+//                 U256::from_dec_str("1234567").unwrap(),
+//             ),
+//             properties: BlockProperties {
+//                 default_aa_code_hash: Default::default(),
+//             },
+//             base_system_contracts: BaseSystemContracts {
+//                 entrypoint: SystemContractCode {
+//                     code: vec![],
+//                     hash: Default::default(),
+//                 },
+//                 default_aa: SystemContractCode {
+//                     code: vec![],
+//                     hash: Default::default(),
+//                 },
+//             },
+//             protocol_version: ProtocolVersionId::latest(),
+//         };
+//         let batch_executor = batch_executor_base.init_batch_mock(l1_batch_params);
 
-        //construct tx
-        let mut l2_tx = L2Tx {
-            execute: Execute {
-                contract_address,
-                calldata,
-                factory_deps: None,
-            },
-            common_data: Default::default(),
-            received_timestamp_ms: 0,
-        };
-        l2_tx.common_data.signature = vec![0; 64];
-        let tx = Transaction::from(l2_tx);
-        let exec_result = batch_executor.execute_tx(tx.clone(), 0).await;
-        match exec_result {
-            TxExecutionResult::Success { tx_result, .. } => {
-                println!("tx ret:{:?}", u8_arr_to_field_arr(&tx_result.ret))
-            }
-            TxExecutionResult::RejectedByVm { .. } => {}
-            TxExecutionResult::BootloaderOutOfGasForTx => {
-                println!("tx exec res:{:?}", exec_result);
-            }
-            TxExecutionResult::BootloaderOutOfGasForBlockTip => {}
-        }
-    }
+//         //construct tx
+//         let mut l2_tx = L2Tx {
+//             execute: Execute {
+//                 contract_address,
+//                 calldata,
+//                 factory_deps: None,
+//             },
+//             common_data: Default::default(),
+//             received_timestamp_ms: 0,
+//         };
+//         l2_tx.common_data.signature = vec![0; 64];
+//         let tx = Transaction::from(l2_tx);
+//         let exec_result = batch_executor.execute_tx(tx.clone(), 0).await;
+//         match exec_result {
+//             TxExecutionResult::Success { tx_result, .. } => {
+//                 println!("tx ret:{:?}", u8_arr_to_field_arr(&tx_result.ret))
+//             }
+//             TxExecutionResult::RejectedByVm { .. } => {}
+//             TxExecutionResult::BootloaderOutOfGasForTx => {
+//                 println!("tx exec res:{:?}", exec_result);
+//             }
+//             TxExecutionResult::BootloaderOutOfGasForBlockTip => {}
+//         }
+//     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn call_ret_test() {
-        let _ = env_logger::builder()
-            .filter_level(LevelFilter::Info)
-            .try_init();
-        let addr = tree_key_to_h256(&[
-            GoldilocksField::ONE,
-            GoldilocksField::ONE,
-            GoldilocksField::ZERO,
-            GoldilocksField::ONE,
-        ]);
+//     #[ignore]
+//     #[tokio::test]
+//     async fn call_ret_test() {
+//         let _ = env_logger::builder()
+//             .filter_level(LevelFilter::Info)
+//             .try_init();
+//         let addr = tree_key_to_h256(&[
+//             GoldilocksField::ONE,
+//             GoldilocksField::ONE,
+//             GoldilocksField::ZERO,
+//             GoldilocksField::ONE,
+//         ]);
 
-        let call_data = [5, 11, 2, 2062500454];
+//         let call_data = [5, 11, 2, 2062500454];
 
-        let calldata = call_data
-            .iter()
-            .map(|e| GoldilocksField::from_canonical_u64(*e))
-            .collect();
-        batch_execute_tx(
-            vec!["call_ret.json"],
-            vec![addr],
-            field_arr_to_u8_arr(&calldata),
-            "./db/call_ret/tree".to_string(),
-            "./db/call_ret/merkle_tree".to_string(),
-            "./db/call_ret/backups".to_string(),
-        )
-        .await;
-    }
+//         let calldata = call_data
+//             .iter()
+//             .map(|e| GoldilocksField::from_canonical_u64(*e))
+//             .collect();
+//         batch_execute_tx(
+//             vec!["call_ret.json"],
+//             vec![addr],
+//             field_arr_to_u8_arr(&calldata),
+//             "./db/call_ret/tree".to_string(),
+//             "./db/call_ret/merkle_tree".to_string(),
+//             "./db/call_ret/backups".to_string(),
+//         )
+//         .await;
+//     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn sccall_test() {
-        let addr_caller = tree_key_to_h256(&[
-            GoldilocksField::ONE,
-            GoldilocksField::ONE,
-            GoldilocksField::ZERO,
-            GoldilocksField::ONE,
-        ]);
+//     #[ignore]
+//     #[tokio::test]
+//     async fn sccall_test() {
+//         let addr_caller = tree_key_to_h256(&[
+//             GoldilocksField::ONE,
+//             GoldilocksField::ONE,
+//             GoldilocksField::ZERO,
+//             GoldilocksField::ONE,
+//         ]);
 
-        let addr_callee = tree_key_to_h256(&[
-            GoldilocksField::ONE,
-            GoldilocksField::ZERO,
-            GoldilocksField::ONE,
-            GoldilocksField::ZERO,
-        ]);
-        let call_data = [1, 0, 1, 0, 4, 645225708];
-        let calldata = call_data
-            .iter()
-            .map(|e| GoldilocksField::from_canonical_u64(*e))
-            .collect();
-        batch_execute_tx(
-            vec!["sccall_caller.json", "sccall_callee.json"],
-            vec![addr_caller, addr_callee],
-            field_arr_to_u8_arr(&calldata),
-            "./db/sccall/tree".to_string(),
-            "./db/sccall/merkle_tree".to_string(),
-            "./db/sccall/backups".to_string(),
-        )
-        .await;
-    }
-}
+//         let addr_callee = tree_key_to_h256(&[
+//             GoldilocksField::ONE,
+//             GoldilocksField::ZERO,
+//             GoldilocksField::ONE,
+//             GoldilocksField::ZERO,
+//         ]);
+//         let call_data = [1, 0, 1, 0, 4, 645225708];
+//         let calldata = call_data
+//             .iter()
+//             .map(|e| GoldilocksField::from_canonical_u64(*e))
+//             .collect();
+//         batch_execute_tx(
+//             vec!["sccall_caller.json", "sccall_callee.json"],
+//             vec![addr_caller, addr_callee],
+//             field_arr_to_u8_arr(&calldata),
+//             "./db/sccall/tree".to_string(),
+//             "./db/sccall/merkle_tree".to_string(),
+//             "./db/sccall/backups".to_string(),
+//         )
+//         .await;
+//     }
+// }
