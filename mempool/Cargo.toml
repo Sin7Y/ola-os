@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 ola_types = { path = "../types" }
 olaos_logs = { path = "../logs" }
+tracing = "0.1.26"

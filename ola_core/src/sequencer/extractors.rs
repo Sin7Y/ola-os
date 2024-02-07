@@ -61,7 +61,7 @@ async fn wait_for_l1_batch_params_unchecked(
             .get_l1_batch_state_root_and_timestamp(number)
             .await;
         if let Some((root_hash, timestamp)) = data {
-            olaos_logs::trace!(
+            olaos_logs::info!(
                 "Waiting for hash of L1 batch #{number} took {:?}",
                 stage_started_at.elapsed()
             );

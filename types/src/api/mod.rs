@@ -1,5 +1,6 @@
 pub use crate::request::{SerializationTransactionError, TransactionRequest};
-use ola_basic_types::H256;
+use chrono::{DateTime, Utc};
+use ola_basic_types::{Address, H256, U256};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use strum::Display;
 use web3::types::U64;
@@ -28,7 +29,7 @@ pub enum BlockNumber {
     /// Alias for BlockNumber::Latest.
     Committed,
     /// Last block that was finalized on L1.
-    Finalized,
+    // Finalized,
     /// Latest sealed block
     Latest,
     /// Earliest block (genesis)
@@ -53,7 +54,7 @@ impl Serialize for BlockNumber {
         match *self {
             BlockNumber::Number(ref x) => serializer.serialize_str(&format!("0x{:x}", x)),
             BlockNumber::Committed => serializer.serialize_str("committed"),
-            BlockNumber::Finalized => serializer.serialize_str("finalized"),
+            // BlockNumber::Finalized => serializer.serialize_str("finalized"),
             BlockNumber::Latest => serializer.serialize_str("latest"),
             BlockNumber::Earliest => serializer.serialize_str("earliest"),
             BlockNumber::Pending => serializer.serialize_str("pending"),
@@ -75,7 +76,7 @@ impl<'de> Deserialize<'de> for BlockNumber {
             fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
                 let result = match value {
                     "committed" => BlockNumber::Committed,
-                    "finalized" => BlockNumber::Finalized,
+                    // "finalized" => BlockNumber::Finalized,
                     "latest" => BlockNumber::Latest,
                     "earliest" => BlockNumber::Earliest,
                     "pending" => BlockNumber::Pending,
@@ -127,4 +128,27 @@ impl From<BlockIdVariant> for BlockId {
             BlockIdVariant::BlockHashObject(hash_object) => BlockId::Hash(hash_object.block_hash),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransactionStatus {
+    Pending,
+    Included,
+    Verified,
+    Failed,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TransactionDetails {
+    pub is_l1_originated: bool,
+    pub status: TransactionStatus,
+    pub fee: U256,
+    pub gas_per_pubdata: Option<U256>,
+    pub initiator_address: Address,
+    pub received_at: DateTime<Utc>,
+    pub eth_commit_tx_hash: Option<H256>,
+    pub eth_prove_tx_hash: Option<H256>,
+    pub eth_execute_tx_hash: Option<H256>,
 }

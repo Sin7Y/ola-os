@@ -1,4 +1,4 @@
-use ola_types::{api, MiniblockNumber};
+use ola_types::{api, L1BatchNumber, MiniblockNumber};
 use sqlx::Row;
 
 use crate::{
@@ -48,5 +48,14 @@ impl BlocksWeb3Dal<'_, '_> {
             .and_then(|row| row.get::<Option<i64>, &str>("number"))
             .map(|n| MiniblockNumber(n as u32));
         Ok(block_number)
+    }
+
+    pub async fn get_sealed_l1_batch_number(&mut self) -> Result<L1BatchNumber, SqlxError> {
+        let number = sqlx::query!("SELECT MAX(number) as \"number\" FROM l1_batches")
+            .fetch_one(self.storage.conn())
+            .await?
+            .number
+            .expect("DAL invocation before genesis");
+        Ok(L1BatchNumber(number as u32))
     }
 }

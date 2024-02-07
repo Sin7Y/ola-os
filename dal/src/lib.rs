@@ -45,9 +45,9 @@ pub fn get_master_database_url() -> String {
         .parse()
         .unwrap_or(false)
     {
-        "postgres://admin:admin123@host.docker.internal:5432/olaos".into()
+        "postgres://admin:admin123@host.docker.internal:5434/olaos".into()
     } else {
-        "postgres://admin:admin123@localhost:5432/olaos".into()
+        "postgres://admin:admin123@localhost:5434/olaos".into()
     }
 }
 

@@ -1,12 +1,11 @@
 use crate::{
     l2::{L2Tx, TransactionType},
-    tx::primitives::{EIP712TypedStructure, Eip712Domain, PackedEthSignature, StructBuilder},
+    tx::primitives::{EIP712TypedStructure, PackedEthSignature, StructBuilder},
     EIP_1559_TX_TYPE, EIP_712_TX_TYPE, OLA_RAW_TX_TYPE,
 };
 use ethabi::ethereum_types::U64;
-use ola_basic_types::{Address, L2ChainId, Nonce, H256};
+use ola_basic_types::{Address, Nonce, H256};
 use ola_utils::{
-    address_to_h256,
     bytecode::{hash_bytecode, validate_bytecode, InvalidBytecodeError},
     bytes_to_u64s, h256_to_u64_array,
     hash::hash_bytes,
@@ -22,6 +21,8 @@ pub use web3::types::{Bytes, U256};
 pub enum SerializationTransactionError {
     #[error("transaction type is not supported")]
     UnknownTransactionFormat,
+    #[error("from address is null")]
+    FromAddressIsNull,
     #[error("to address is null")]
     ToAddressIsNull,
     #[error("invalid paymaster params")]
@@ -36,6 +37,8 @@ pub enum SerializationTransactionError {
     AccessListsNotSupported,
     #[error("wrong chain id {}", .0.unwrap_or_default())]
     WrongChainId(Option<u16>),
+    #[error("oversized data. max: {0}; actual: {1}")]
+    OversizedData(usize, usize),
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -58,6 +61,117 @@ impl PaymasterParams {
             paymaster_input: value[1].clone(),
         });
         Ok(result)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CallRequest {
+    /// Sender address (None for arbitrary address)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<Address>,
+    /// To address (None allowed for eth_estimateGas)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<Address>,
+    /// Data (None for empty data)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<Bytes>,
+    /// Nonce
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub nonce: Option<U256>,
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub transaction_type: Option<U64>,
+    /// Eip712 meta
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub eip712_meta: Option<Eip712Meta>,
+}
+
+impl CallRequest {
+    /// Function to return a builder for a Call Request
+    pub fn builder() -> CallRequestBuilder {
+        CallRequestBuilder::default()
+    }
+}
+
+/// Call Request Builder
+#[derive(Clone, Debug, Default)]
+pub struct CallRequestBuilder {
+    call_request: CallRequest,
+}
+
+impl CallRequestBuilder {
+    /// Set sender address (None for arbitrary address)
+    pub fn from(mut self, from: Address) -> Self {
+        self.call_request.from = Some(from);
+        self
+    }
+
+    /// Set to address (None allowed for eth_estimateGas)
+    pub fn to(mut self, to: Address) -> Self {
+        self.call_request.to = Some(to);
+        self
+    }
+
+    /// Set data (None for empty data)
+    pub fn data(mut self, data: Bytes) -> Self {
+        self.call_request.data = Some(data);
+        self
+    }
+
+    /// Set transaction type, Some(1) for AccessList transaction, None for Legacy
+    pub fn transaction_type(mut self, transaction_type: U64) -> Self {
+        self.call_request.transaction_type = Some(transaction_type);
+        self
+    }
+
+    /// Set meta
+    pub fn eip712_meta(mut self, eip712_meta: Eip712Meta) -> Self {
+        self.call_request.eip712_meta = Some(eip712_meta);
+        self
+    }
+
+    /// build the Call Request
+    pub fn build(&self) -> CallRequest {
+        self.call_request.clone()
+    }
+}
+
+impl From<L2Tx> for CallRequest {
+    fn from(tx: L2Tx) -> Self {
+        let mut meta = Eip712Meta {
+            factory_deps: None,
+            custom_signature: Some(tx.common_data.signature.clone()),
+            paymaster_params: None,
+        };
+        meta.factory_deps = tx.execute.factory_deps.clone();
+        let mut request = CallRequestBuilder::default()
+            .from(tx.initiator_account())
+            .transaction_type(U64::from(tx.common_data.transaction_type as u32))
+            .to(tx.execute.contract_address)
+            .data(Bytes(tx.execute.calldata.clone()))
+            .eip712_meta(meta)
+            .build();
+
+        request.transaction_type = match tx.common_data.transaction_type {
+            TransactionType::EIP712Transaction => Some(U64::from(EIP_712_TX_TYPE)),
+            TransactionType::EIP1559Transaction => Some(U64::from(EIP_1559_TX_TYPE)),
+            _ => Some(U64::from(OLA_RAW_TX_TYPE)),
+        };
+        request
+    }
+}
+
+impl From<CallRequest> for TransactionRequest {
+    fn from(call_request: CallRequest) -> Self {
+        TransactionRequest {
+            nonce: call_request.nonce.unwrap_or_default(),
+            from: call_request.from,
+            to: call_request.to,
+            input: call_request.data.unwrap_or_default(),
+            transaction_type: call_request.transaction_type,
+            eip712_meta: call_request.eip712_meta,
+            ..Default::default()
+        }
     }
 }
 
@@ -93,10 +207,6 @@ impl EIP712TypedStructure for TransactionRequest {
     const TYPE_NAME: &'static str = "Transaction";
 
     fn build_structure<BUILDER: StructBuilder>(&self, builder: &mut BUILDER) {
-        let meta = self
-            .eip712_meta
-            .as_ref()
-            .expect("We can sign transaction only with meta");
         builder.add_member(
             "txType",
             &self
@@ -207,15 +317,13 @@ impl TransactionRequest {
                 .expect("We can only sign transactions with known sender"),
         )
         .to_vec();
-        let to = h256_to_u64_array(
-            &self
-                .to
-                .expect("We can only sign transactions with known sender"),
-        )
-        .to_vec();
 
-        let input_len = (&self.input.0.len() / 8) as u64;
         let input = bytes_to_u64s(self.input.clone().0);
+        let pos_biz_calldata_start = 8;
+        let biz_calldata_len = input.get(pos_biz_calldata_start).unwrap_or(&0);
+        let pos_biz_calldata_end = pos_biz_calldata_start + *biz_calldata_len as usize + 1;
+        let biz_input = input[pos_biz_calldata_start..pos_biz_calldata_end].to_vec();
+        let biz_addr = input[4..8].to_vec();
 
         let have_paymaster: u64 = if meta.paymaster_params.is_some() {
             1
@@ -254,11 +362,16 @@ impl TransactionRequest {
             None
         };
 
-        let mut data = vec![vec![chain_id, *transaction_type, *nonce], from, to, input]
-            .iter()
-            .flatten()
-            .cloned()
-            .collect::<Vec<_>>();
+        let mut data = vec![
+            vec![chain_id, *transaction_type, *nonce],
+            from,
+            biz_addr,
+            biz_input,
+        ]
+        .iter()
+        .flatten()
+        .cloned()
+        .collect::<Vec<_>>();
         match paymaster_address {
             Some(address) => {
                 data.extend(address);
@@ -357,8 +470,7 @@ impl TransactionRequest {
         let default_signed_message = tx.get_default_signed_message(chain_id);
         tx.from = match tx.from {
             Some(_) => tx.from,
-            // FIXME: can from unset?
-            None => panic!("from must be set"),
+            None => return Err(SerializationTransactionError::FromAddressIsNull),
         };
         let hash = if tx.is_eip712_tx() || tx.is_ola_raw_tx() {
             let digest = [
@@ -445,7 +557,7 @@ impl TransactionRequest {
         })
     }
 
-    fn get_default_signed_message(&self, chain_id: u16) -> H256 {
+    fn get_default_signed_message(&self, _chain_id: u16) -> H256 {
         let data = self.into_signed_bytes();
         PackedEthSignature::message_to_signed_bytes(&data)
     }
@@ -459,7 +571,7 @@ impl TransactionRequest {
                 return Ok(custom_sig);
             }
         }
-        panic!("packed_eth_signature is unsupported");
+        Ok([0; 32].to_vec())
     }
 }
 
@@ -498,7 +610,7 @@ impl Eip712Meta {
 impl L2Tx {
     pub fn from_request(
         request: TransactionRequest,
-        _max_tx_size: usize,
+        max_tx_size: usize,
     ) -> Result<Self, SerializationTransactionError> {
         let nonce = request.get_nonce_checked()?;
 
@@ -526,10 +638,26 @@ impl L2Tx {
         tx.common_data.transaction_type = match request.transaction_type.map(|t| t.as_u64() as u8) {
             Some(EIP_712_TX_TYPE) => TransactionType::EIP712Transaction,
             Some(EIP_1559_TX_TYPE) => TransactionType::EIP1559Transaction,
-            _ => TransactionType::EIP712Transaction,
+            Some(OLA_RAW_TX_TYPE) => TransactionType::OlaRawTransaction,
+            _ => TransactionType::OlaRawTransaction,
         };
         tx.set_raw_signature(raw_signature);
+
+        tx.check_encoded_size(max_tx_size)?;
+
         Ok(tx)
+    }
+
+    fn check_encoded_size(&self, _max_tx_size: usize) -> Result<(), SerializationTransactionError> {
+        // TODO:
+        // let tx_size = self.abi_encoding_len() * 32;
+        // if tx_size > max_tx_size {
+        //     return Err(SerializationTransactionError::OversizedData(
+        //         max_tx_size,
+        //         tx_size,
+        //     ));
+        // };
+        Ok(())
     }
 }
 
@@ -552,18 +680,18 @@ fn rlp_opt<T: rlp::Encodable>(rlp: &mut RlpStream, opt: &Option<T>) {
     }
 }
 
-fn access_list_rlp(rlp: &mut RlpStream, access_list: &Option<AccessList>) {
-    if let Some(access_list) = access_list {
-        rlp.begin_list(access_list.len());
-        for item in access_list {
-            rlp.begin_list(2);
-            rlp.append(&item.address);
-            rlp.append_list(&item.storage_keys);
-        }
-    } else {
-        rlp.begin_list(0);
-    }
-}
+// fn access_list_rlp(rlp: &mut RlpStream, access_list: &Option<AccessList>) {
+//     if let Some(access_list) = access_list {
+//         rlp.begin_list(access_list.len());
+//         for item in access_list {
+//             rlp.begin_list(2);
+//             rlp.append(&item.address);
+//             rlp.append_list(&item.storage_keys);
+//         }
+//     } else {
+//         rlp.begin_list(0);
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -597,21 +725,23 @@ mod tests {
                     paymaster_input: vec![],
                 }),
             }),
-            chain_id: Some(270),
+            chain_id: Some(1027),
             ..Default::default()
         };
 
-        let msg =
-            PackedEthSignature::typed_data_to_signed_bytes(&Eip712Domain::new(L2ChainId(270)), &tx);
+        let msg = PackedEthSignature::typed_data_to_signed_bytes(
+            &Eip712Domain::new(L2ChainId(1027)),
+            &tx,
+        );
         let signature = PackedEthSignature::sign_raw(&private_key, &msg).unwrap();
 
         tx.v = Some(U64([signature.v() as u64; 1]));
         tx.r = Some(U256::from_big_endian(&signature.r()));
         tx.s = Some(U256::from_big_endian(&signature.s()));
-        let data = tx.get_signed_bytes(&signature, 270);
+        let data = tx.get_signed_bytes(&signature, 1027);
         tx.raw = Some(Bytes(data.clone()));
 
-        let (tx2, _) = TransactionRequest::from_bytes(&data, 270).unwrap();
+        let (tx2, _) = TransactionRequest::from_bytes(&data, 1027).unwrap();
 
         assert_eq!(tx, tx2);
     }
@@ -635,15 +765,15 @@ mod tests {
                     paymaster_input: vec![],
                 }),
             }),
-            chain_id: Some(270),
+            chain_id: Some(1027),
             ..Default::default()
         };
 
-        let msg = tx.get_default_signed_message(270);
+        let msg = tx.get_default_signed_message(1027);
         let signature = PackedEthSignature::sign_raw(&private_key, &msg).unwrap();
 
         let mut rlp = RlpStream::new();
-        tx.rlp(&mut rlp, 270, Some(&signature));
+        tx.rlp(&mut rlp, 1027, Some(&signature));
         let mut data = rlp.out().to_vec();
         data.insert(0, EIP_712_TX_TYPE);
         tx.raw = Some(Bytes(data.clone()));
@@ -652,7 +782,7 @@ mod tests {
         tx.s = Some(U256::from_big_endian(signature.s()));
         dbg!(hex::encode(data.clone()));
 
-        let (tx2, _) = TransactionRequest::from_bytes(&data, 270).unwrap();
+        let (tx2, _) = TransactionRequest::from_bytes(&data, 1027).unwrap();
 
         assert_eq!(tx, tx2);
     }

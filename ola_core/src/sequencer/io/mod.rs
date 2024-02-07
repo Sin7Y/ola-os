@@ -74,23 +74,26 @@ impl MiniblockSealer {
         // Commands must be processed sequentially: a later miniblock cannot be saved before
         // an earlier one.
         while let Some(completable) = self.next_command().await {
+            olaos_logs::info!("Miniblock sealer get a new command");
             let mut conn = self.pool.access_storage_tagged("sequencer").await;
             completable.command.seal(&mut conn).await;
-
+            olaos_logs::info!("Miniblock sealer sealed successfully");
             completable.completion_sender.send(()).ok();
             // ^ We don't care whether anyone listens to the processing progress
+            olaos_logs::info!("Miniblock sealer send ok to sender");
         }
         Ok(())
     }
 
+    #[olaos_logs::instrument(skip(self))]
     async fn next_command(&mut self) -> Option<Completable<MiniblockSealCommand>> {
-        olaos_logs::debug!("Polling miniblock seal queue for next command");
+        olaos_logs::info!("Polling miniblock seal queue for next command");
         let start = Instant::now();
         let command = self.commands_receiver.recv().await;
         let elapsed = start.elapsed();
 
         if let Some(completable) = &command {
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "Received command to seal miniblock #{} (polling took {elapsed:?})",
                 completable.command.miniblock_number
             );
@@ -117,9 +120,10 @@ pub(crate) struct MiniblockSealerHandle {
 impl MiniblockSealerHandle {
     const SHUTDOWN_MSG: &'static str = "miniblock sealer unexpectedly shut down";
 
+    #[olaos_logs::instrument(skip_all)]
     pub async fn submit(&mut self, command: MiniblockSealCommand) {
         let miniblock_number = command.miniblock_number;
-        olaos_logs::debug!(
+        olaos_logs::info!(
             "Enqueuing sealing command for miniblock #{miniblock_number} with #{} txs (L1 batch #{})",
             command.miniblock.executed_transactions.len(),
             command.l1_batch_number
@@ -132,6 +136,9 @@ impl MiniblockSealerHandle {
             command,
             completion_sender,
         };
+
+        olaos_logs::info!("Sending a command to miniblock sealer");
+
         self.commands_sender
             .send(command)
             .await
@@ -139,7 +146,7 @@ impl MiniblockSealerHandle {
 
         let elapsed = start.elapsed();
         let queue_capacity = self.commands_sender.capacity();
-        olaos_logs::debug!(
+        olaos_logs::info!(
             "Enqueued sealing command for miniblock #{miniblock_number} (took {elapsed:?}; \
              available queue capacity: {queue_capacity})"
         );
@@ -149,8 +156,9 @@ impl MiniblockSealerHandle {
         }
     }
 
+    #[olaos_logs::instrument(skip(self))]
     pub async fn wait_for_all_commands(&mut self) {
-        olaos_logs::debug!(
+        olaos_logs::info!(
             "Requested waiting for miniblock seal queue to empty; current available capacity: {}",
             self.commands_sender.capacity()
         );
@@ -162,7 +170,7 @@ impl MiniblockSealerHandle {
         }
 
         let elapsed = start.elapsed();
-        olaos_logs::debug!("Miniblock seal queue is emptied (took {elapsed:?})");
+        olaos_logs::info!("Miniblock seal queue is emptied (took {elapsed:?})");
     }
 }
 
@@ -234,4 +242,10 @@ pub struct L1BatchParams {
     pub properties: BlockProperties,
     pub base_system_contracts: BaseSystemContracts,
     pub protocol_version: ProtocolVersionId,
+}
+
+impl L1BatchParams {
+    pub fn block_number(&self) -> u32 {
+        self.context_mode.inner_block_context().context.block_number
+    }
 }

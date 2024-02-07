@@ -63,7 +63,7 @@ pub trait JobProcessor: Sync + Send {
                 backoff = Self::POLLING_INTERVAL_MS;
                 iterations_left = iterations_left.map(|i| i - 1);
 
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "Spawning thread processing {:?} job with id {:?}",
                     Self::SERVICE_NAME,
                     job_id
@@ -77,7 +77,7 @@ pub trait JobProcessor: Sync + Send {
                 olaos_logs::info!("No more jobs to process. Server can stop now.");
                 return Ok(());
             } else {
-                olaos_logs::trace!("Backing off for {} ms", backoff);
+                olaos_logs::info!("Backing off for {} ms", backoff);
                 sleep(Duration::from_millis(backoff)).await;
                 backoff = (backoff * Self::BACKOFF_MULTIPLIER).min(Self::MAX_BACKOFF_MS);
             }
@@ -104,7 +104,7 @@ pub trait JobProcessor: Sync + Send {
         }
 
         let result = loop {
-            olaos_logs::trace!(
+            olaos_logs::info!(
                 "Polling {} task with id {:?}. Is finished: {}",
                 Self::SERVICE_NAME,
                 job_id,
@@ -117,7 +117,7 @@ pub trait JobProcessor: Sync + Send {
         };
         let error_message = match result {
             Ok(Ok(data)) => {
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "{} Job {:?} finished successfully",
                     Self::SERVICE_NAME,
                     job_id

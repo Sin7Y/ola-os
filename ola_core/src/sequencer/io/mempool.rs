@@ -31,7 +31,6 @@ pub(crate) struct MempoolIO {
     current_l1_batch_number: L1BatchNumber,
     fee_account: Address,
     delay_interval: Duration,
-    l2_erc20_bridge_addr: Address,
 }
 
 impl MempoolIO {
@@ -41,7 +40,6 @@ impl MempoolIO {
         pool: ConnectionPool,
         config: &SequencerConfig,
         delay_interval: Duration,
-        l2_erc20_bridge_addr: Address,
     ) -> Self {
         let mut storage = pool.access_storage_tagged("sequencer").await;
         let last_sealed_l1_batch_header = storage.blocks_dal().get_newest_l1_batch_header().await;
@@ -56,7 +54,6 @@ impl MempoolIO {
             current_miniblock_number: last_miniblock_number + 1,
             fee_account: config.fee_account_addr,
             delay_interval,
-            l2_erc20_bridge_addr,
         }
     }
 }
@@ -71,6 +68,7 @@ impl SequencerIO for MempoolIO {
         self.current_miniblock_number
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn load_pending_batch(&mut self) -> Option<PendingBatchData> {
         let mut storage = self.pool.access_storage_tagged("sequencer").await;
 
@@ -98,6 +96,8 @@ impl SequencerIO for MempoolIO {
                 continue;
             }
 
+            olaos_logs::info!("mempool has a new tx");
+
             let prev_l1_batch_hash = self.load_previous_l1_batch_hash().await;
             let prev_miniblock_timestamp = self.load_previous_miniblock_timestamp().await;
             // We cannot create two L1 batches or miniblocks with the same timestamp (forbidden by the bootloader).
@@ -112,20 +112,29 @@ impl SequencerIO for MempoolIO {
             let mut storage = self.pool.access_storage().await;
             let (base_system_contracts, protocol_version) = storage
                 .protocol_versions_dal()
-                .base_system_contracts_by_timestamp(current_timestamp)
+                .base_system_contracts_by_timestamp(current_timestamp as i64)
                 .await;
-            return Some(l1_batch_params(
+
+            let l1_batch_params = l1_batch_params(
                 self.current_l1_batch_number,
                 self.fee_account,
                 current_timestamp,
                 prev_l1_batch_hash,
                 base_system_contracts,
                 protocol_version,
-            ));
+            );
+
+            olaos_logs::info!(
+                "get new l1_batch_params, batch number {:?}",
+                l1_batch_params.block_number()
+            );
+
+            return Some(l1_batch_params);
         }
         None
     }
 
+    #[olaos_logs::instrument(skip(self))]
     async fn wait_for_new_miniblock_params(
         &mut self,
         max_wait: Duration,
@@ -140,6 +149,7 @@ impl SequencerIO for MempoolIO {
         current_timestamp.await.ok()
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn wait_for_next_tx(&mut self, max_wait: Duration) -> Option<Transaction> {
         for _ in 0..poll_iters(self.delay_interval, max_wait) {
             let res = self.mempool.next_transaction();
@@ -153,6 +163,7 @@ impl SequencerIO for MempoolIO {
         None
     }
 
+    #[olaos_logs::instrument(skip(self))]
     async fn rollback(&mut self, tx: Transaction) {
         // Reset nonces in the mempool.
         self.mempool.rollback(&tx);
@@ -160,6 +171,7 @@ impl SequencerIO for MempoolIO {
         self.mempool.insert(vec![tx], HashMap::new());
     }
 
+    #[olaos_logs::instrument(skip(self))]
     async fn reject(&mut self, rejected: &Transaction, error: &str) {
         // TODO: uncomment when add L1 transaction
         // assert!(
@@ -184,6 +196,7 @@ impl SequencerIO for MempoolIO {
             .await;
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn seal_miniblock(&mut self, updates_manager: &UpdatesManager) {
         let command = updates_manager
             .seal_miniblock_command(self.current_l1_batch_number, self.current_miniblock_number);
@@ -191,6 +204,7 @@ impl SequencerIO for MempoolIO {
         self.current_miniblock_number += 1;
     }
 
+    #[olaos_logs::instrument(skip_all, fields(block_context))]
     async fn seal_l1_batch(
         &mut self,
         block_result: VmBlockResult,
@@ -222,6 +236,7 @@ impl SequencerIO for MempoolIO {
         self.current_l1_batch_number += 1;
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn load_previous_batch_version_id(&mut self) -> Option<ProtocolVersionId> {
         let mut storage = self.pool.access_storage().await;
         storage
@@ -230,6 +245,7 @@ impl SequencerIO for MempoolIO {
             .await
     }
 
+    #[olaos_logs::instrument(skip_all)]
     async fn load_upgrade_tx(
         &mut self,
         version_id: ProtocolVersionId,
@@ -243,6 +259,7 @@ impl SequencerIO for MempoolIO {
 }
 
 impl MempoolIO {
+    #[olaos_logs::instrument(skip_all)]
     async fn load_previous_l1_batch_hash(&self) -> U256 {
         olaos_logs::info!(
             "Getting previous L1 batch hash for L1 batch #{}",

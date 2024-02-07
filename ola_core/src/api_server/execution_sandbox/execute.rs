@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-
 use ola_dal::connection::ConnectionPool;
-use ola_types::{fee::TransactionExecutionMetrics, l2::L2Tx, StorageKey, Transaction};
-use ola_types::{Nonce, H256, U256};
-use ola_vm::vm_with_bootloader::BootloaderJobType;
-use ola_vm::{vm::VmExecutionResult, vm_with_bootloader::TxExecutionMode};
-use tracing::Level;
+use ola_types::{l2::L2Tx, Transaction};
+use ola_types::{Nonce, U256};
+use ola_vm::errors::{TxRevertReason, VmRevertReason};
+use ola_vm::vm_with_bootloader::TxExecutionMode;
 
-use super::{apply, vm_metrics, BlockArgs};
+use super::{apply, BlockArgs};
 use super::{error::SandboxExecutionError, TxSharedArgs, VmPermit};
 
 #[derive(Debug)]
@@ -31,30 +28,14 @@ impl TxExecutionArgs {
 pub(crate) async fn execute_tx_with_pending_state(
     vm_permit: VmPermit,
     shared_args: TxSharedArgs,
-    execution_args: TxExecutionArgs,
     connection_pool: ConnectionPool,
     tx: Transaction,
-    storage_read_cache: &mut HashMap<StorageKey, H256>,
-) -> (
-    Result<VmExecutionResult, SandboxExecutionError>,
-    TransactionExecutionMetrics,
-) {
+) -> Result<(), SandboxExecutionError> {
     let mut connection = connection_pool.access_storage_tagged("api").await;
     let block_args = BlockArgs::pending(&mut connection).await;
     drop(connection);
 
-    execute_tx_in_sandbox(
-        vm_permit,
-        shared_args,
-        execution_args,
-        connection_pool,
-        tx,
-        block_args,
-        BootloaderJobType::TransactionExecution,
-        false,
-        storage_read_cache,
-    )
-    .await
+    execute_tx_in_sandbox(vm_permit, shared_args, connection_pool, tx, block_args).await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -62,53 +43,23 @@ pub(crate) async fn execute_tx_with_pending_state(
 async fn execute_tx_in_sandbox(
     vm_permit: VmPermit,
     shared_args: TxSharedArgs,
-    execution_args: TxExecutionArgs,
     connection_pool: ConnectionPool,
     tx: Transaction,
     block_args: BlockArgs,
-    _job_type: BootloaderJobType,
-    _trace_call: bool,
-    storage_read_cache: &mut HashMap<StorageKey, H256>,
-) -> (
-    Result<VmExecutionResult, SandboxExecutionError>,
-    TransactionExecutionMetrics,
-) {
-    let total_factory_deps = tx
-        .execute
-        .factory_deps
-        .as_ref()
-        .map_or(0, |deps| deps.len() as u16);
-
-    let moved_cache = std::mem::take(storage_read_cache);
-    let (execution_result, moved_cache) = tokio::task::spawn_blocking(move || {
-        let span = tracing::span!(Level::DEBUG, "execute_in_sandbox").entered();
-        let _execution_mode = execution_args.execution_mode;
-        let result = apply::apply_vm_in_sandbox(
-            vm_permit,
-            shared_args,
-            &execution_args,
-            &connection_pool,
-            tx,
-            block_args,
-            moved_cache,
-            // FIXME: replace apply return real VmExecutionResult
-            |_tx| VmExecutionResult::default(),
-        );
-        span.exit();
+) -> Result<(), SandboxExecutionError> {
+    let execution_result = tokio::task::spawn_blocking(move || {
+        let result =
+            apply::apply_vm_in_sandbox(vm_permit, shared_args, &connection_pool, tx, block_args);
         result
     })
     .await
     .unwrap();
 
-    *storage_read_cache = moved_cache;
-
-    let tx_execution_metrics =
-        vm_metrics::collect_tx_execution_metrics(total_factory_deps, &execution_result);
-    // FIXME:
-    let result = Ok(execution_result);
-    // let result = match execution_result.revert_reason {
-    //     None => Ok(execution_result),
-    //     Some(revert) => Err(revert.revert_reason.into()),
-    // };
-    (result, tx_execution_metrics)
+    execution_result.map_err(|e| {
+        let revert_reason = VmRevertReason::General {
+            msg: e.to_string(),
+            data: vec![],
+        };
+        TxRevertReason::TxReverted(revert_reason).into()
+    })
 }

@@ -150,4 +150,19 @@ impl PostgresStorageCaches {
             Ok(())
         }
     }
+
+    pub fn schedule_values_update(&self, to_miniblock: MiniblockNumber) {
+        let values = self
+            .values
+            .as_ref()
+            .expect("`schedule_update()` called without configuring values cache");
+
+        if values.cache.valid_for() < to_miniblock {
+            // Filter out no-op updates right away in order to not store lots of them in RAM.
+            values
+                .command_sender
+                .send(to_miniblock)
+                .expect("values cache update task failed");
+        }
+    }
 }

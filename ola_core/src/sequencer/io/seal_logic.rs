@@ -14,9 +14,9 @@ use ola_dal::StorageProcessor;
 use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
     log::{LogQuery, StorageLog, StorageLogQuery},
-    tx::{IncludedTxLocation, TransactionExecutionResult},
-    AccountTreeId, Address, L1BatchNumber, MiniblockNumber, StorageKey, StorageValue, Transaction,
-    H256, U256,
+    tx::TransactionExecutionResult,
+    AccountTreeId, L1BatchNumber, MiniblockNumber, StorageKey, StorageValue, Transaction, H256,
+    U256,
 };
 use ola_utils::{misc::miniblock_hash, u256_to_h256};
 
@@ -32,31 +32,19 @@ use crate::sequencer::{
 #[derive(Debug, Clone, Copy)]
 struct SealProgressMetricNames {
     target: &'static str,
-    stage_latency: &'static str,
-    entity_count: &'static str,
-    latency_per_unit: &'static str,
 }
 
 impl SealProgressMetricNames {
-    const L1_BATCH: Self = Self {
-        target: "L1 batch",
-        stage_latency: "server.sequencer.l1_batch.sealed_time_stage",
-        entity_count: "server.sequencer.l1_batch.sealed_entity_count",
-        latency_per_unit: "server.sequencer.l1_batch.sealed_entity_per_unit",
-    };
+    const L1_BATCH: Self = Self { target: "L1 batch" };
 
     const MINIBLOCK: Self = Self {
         target: "miniblock",
-        stage_latency: "server.sequencer.miniblock.sealed_time_stage",
-        entity_count: "server.sequencer.miniblock.sealed_entity_count",
-        latency_per_unit: "server.sequencer.miniblock.sealed_entity_per_unit",
     };
 }
 
 #[derive(Debug)]
 struct SealProgress {
     metric_names: SealProgressMetricNames,
-    is_fictive: Option<bool>,
     stage_start: Instant,
 }
 
@@ -64,15 +52,13 @@ impl SealProgress {
     fn for_l1_batch() -> Self {
         Self {
             metric_names: SealProgressMetricNames::L1_BATCH,
-            is_fictive: None,
             stage_start: Instant::now(),
         }
     }
 
-    fn for_miniblock(is_fictive: bool) -> Self {
+    fn for_miniblock() -> Self {
         Self {
             metric_names: SealProgressMetricNames::MINIBLOCK,
-            is_fictive: Some(is_fictive),
             stage_start: Instant::now(),
         }
     }
@@ -83,7 +69,7 @@ impl SealProgress {
         let elapsed = self.stage_start.elapsed();
         if elapsed > MIN_STAGE_DURATION_TO_REPORT {
             let target = self.metric_names.target;
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "{target} execution stage {stage} took {elapsed:?} with count {count:?}"
             );
         }
@@ -103,7 +89,7 @@ impl MiniblockSealCommand {
         let l1_batch_number = self.l1_batch_number;
         let miniblock_number = self.miniblock_number;
         let started_at = Instant::now();
-        let mut progress = SealProgress::for_miniblock(is_fictive);
+        let mut progress = SealProgress::for_miniblock();
 
         let (l1_tx_count, l2_tx_count) = l1_l2_tx_count(&self.miniblock.executed_transactions);
         let (writes_count, reads_count) =
@@ -197,7 +183,7 @@ impl MiniblockSealCommand {
 
         transaction.commit().await;
         // progress.end_stage("commit_miniblock", None);
-        olaos_logs::debug!(
+        olaos_logs::info!(
             "Sealed miniblock {miniblock_number} in {:?}",
             started_at.elapsed()
         );
@@ -270,37 +256,41 @@ impl MiniblockSealCommand {
     //     self.group_by_tx_location(&self.miniblock.events, is_fictive, |event| event.location.1)
     // }
 
-    fn group_by_tx_location<'a, T>(
-        &'a self,
-        entries: &'a [T],
-        is_fictive: bool,
-        tx_location: impl Fn(&T) -> u32,
-    ) -> Vec<(IncludedTxLocation, Vec<&'a T>)> {
-        let grouped_entries = entries.iter().group_by(|&entry| tx_location(entry));
-        let grouped_entries = grouped_entries.into_iter().map(|(tx_index, entries)| {
-            let (tx_hash, tx_initiator_address) = if is_fictive {
-                assert_eq!(tx_index as usize, self.first_tx_index);
-                (H256::zero(), Address::zero())
-            } else {
-                let tx = self.transaction(tx_index as usize);
-                (tx.hash(), tx.initiator_account())
-            };
+    // fn group_by_tx_location<'a, T>(
+    //     &'a self,
+    //     entries: &'a [T],
+    //     is_fictive: bool,
+    //     tx_location: impl Fn(&T) -> u32,
+    // ) -> Vec<(IncludedTxLocation, Vec<&'a T>)> {
+    //     let grouped_entries = entries.iter().group_by(|&entry| tx_location(entry));
+    //     let grouped_entries = grouped_entries.into_iter().map(|(tx_index, entries)| {
+    //         let (tx_hash, tx_initiator_address) = if is_fictive {
+    //             assert_eq!(tx_index as usize, self.first_tx_index);
+    //             (H256::zero(), Address::zero())
+    //         } else {
+    //             let tx = self.transaction(tx_index as usize);
+    //             (tx.hash(), tx.initiator_account())
+    //         };
 
-            let location = IncludedTxLocation {
-                tx_hash,
-                tx_index_in_miniblock: tx_index - self.first_tx_index as u32,
-                tx_initiator_address,
-            };
-            (location, entries.collect())
-        });
-        grouped_entries.collect()
-    }
+    //         let location = IncludedTxLocation {
+    //             tx_hash,
+    //             tx_index_in_miniblock: tx_index - self.first_tx_index as u32,
+    //             tx_initiator_address,
+    //         };
+    //         (location, entries.collect())
+    //     });
+    //     grouped_entries.collect()
+    // }
 }
 
 impl UpdatesManager {
     /// Persists an L1 batch in the storage.
     /// This action includes a creation of an empty "fictive" miniblock that contains
     /// the events generated during the bootloader "tip phase".
+    #[olaos_logs::instrument(
+        skip_all,
+        fields(current_miniblock_number, current_l1_batch_number, block_context)
+    )]
     pub(crate) async fn seal_l1_batch(
         mut self,
         storage: &mut StorageProcessor<'_>,
@@ -333,8 +323,8 @@ impl UpdatesManager {
         progress.end_stage("fictive_miniblock", None);
 
         let (_, deduped_log_queries) = sort_storage_access_queries(
-            self.l1_batch
-                .block_storage_logs
+            full_result
+                .storage_log_queries
                 .iter()
                 .map(|log| &log.log_query),
         );
@@ -342,7 +332,7 @@ impl UpdatesManager {
 
         let (l1_tx_count, l2_tx_count) = l1_l2_tx_count(&self.l1_batch.executed_transactions);
         let (writes_count, reads_count) =
-            storage_log_query_write_read_counts(&self.l1_batch.block_storage_logs);
+            storage_log_query_write_read_counts(&full_result.storage_log_queries);
         let (dedup_writes_count, dedup_reads_count) =
             log_query_write_read_counts(deduped_log_queries.iter());
 
@@ -443,7 +433,7 @@ impl UpdatesManager {
             .storage_logs_dedup_dal()
             .insert_initial_writes(current_l1_batch_number, &written_storage_keys)
             .await;
-        progress.end_stage("insert_initial_writes", Some(deduplicated_writes.len()));
+        progress.end_stage("insert_initial_writes", Some(written_storage_keys.len()));
 
         transaction.commit().await;
         progress.end_stage("commit_l1_batch", None);

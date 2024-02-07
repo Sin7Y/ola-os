@@ -20,23 +20,6 @@ impl ConditionalSealer {
         Self { config, sealers }
     }
 
-    /// Finds a reason why a transaction with the specified `data` is unexecutable.
-    pub(crate) fn find_unexecutable_reason(
-        config: &SequencerConfig,
-        data: &SealData,
-    ) -> Option<&'static str> {
-        for sealer in &Self::default_sealers() {
-            const MOCK_BLOCK_TIMESTAMP: u128 = 0;
-            const TX_COUNT: usize = 1;
-
-            let resolution = sealer.should_seal(config, MOCK_BLOCK_TIMESTAMP, TX_COUNT, data, data);
-            if matches!(resolution, SealResolution::Unexecutable(_)) {
-                return Some(sealer.prom_criterion_name());
-            }
-        }
-        None
-    }
-
     pub(super) fn should_seal_l1_batch(
         &self,
         l1_batch_number: u32,
@@ -45,7 +28,7 @@ impl ConditionalSealer {
         block_data: &SealData,
         tx_data: &SealData,
     ) -> SealResolution {
-        olaos_logs::trace!(
+        olaos_logs::info!(
             "Determining seal resolution for L1 batch #{l1_batch_number} with {tx_count} transactions \
              and metrics {:?}",
             block_data.execution_metrics
@@ -64,7 +47,7 @@ impl ConditionalSealer {
                 SealResolution::IncludeAndSeal
                 | SealResolution::ExcludeAndSeal
                 | SealResolution::Unexecutable(_) => {
-                    olaos_logs::debug!(
+                    olaos_logs::info!(
                         "L1 batch #{l1_batch_number} processed by `{name}` with resolution {seal_resolution:?}",
                         name = sealer.prom_criterion_name()
                     );
@@ -81,9 +64,8 @@ impl ConditionalSealer {
         // TODO: MaxCyclesCriterion? limit_cpu_cycle_per_block(main trace table size)
         vec![
             Box::new(criteria::SlotsCriterion),
-            // Box::new(criteria::PubDataBytesCriterion),
-            Box::new(criteria::InitialWritesCriterion),
-            Box::new(criteria::RepeatedWritesCriterion),
+            // Box::new(criteria::InitialWritesCriterion),
+            // Box::new(criteria::RepeatedWritesCriterion),
             // Box::new(criteria::MaxCyclesCriterion),
             Box::new(criteria::TxEncodingSizeCriterion),
         ]

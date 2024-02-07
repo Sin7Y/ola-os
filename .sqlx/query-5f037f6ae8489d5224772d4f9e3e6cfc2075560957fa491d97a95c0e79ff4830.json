@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (SELECT l1_batch_number FROM miniblocks WHERE number = $1) as \"block_batch?\", (SELECT MAX(number) + 1 FROM l1_batches) as \"max_batch?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "block_batch?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "max_batch?",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "5f037f6ae8489d5224772d4f9e3e6cfc2075560957fa491d97a95c0e79ff4830"
+}

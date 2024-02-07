@@ -125,6 +125,7 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
             break;
         }
 
+        #[allow(suspicious_double_ref_op)]
         let candidate = it.peek().unwrap().clone();
 
         let subit = it.clone().take_while(|el| {

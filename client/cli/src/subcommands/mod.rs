@@ -9,3 +9,9 @@ pub use deploy::Deploy;
 
 mod set_pubkey;
 pub use set_pubkey::SetPubKey;
+
+mod call;
+pub use call::Call;
+
+mod transaction;
+pub use transaction::Transaction;

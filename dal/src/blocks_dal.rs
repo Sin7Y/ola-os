@@ -24,7 +24,7 @@ impl BlocksDal<'_, '_> {
             .await
             .unwrap()
             .count;
-        olaos_logs::debug!("is_genesis_needed count = {}", count);
+        olaos_logs::info!("is_genesis_needed count = {}", count);
         count == 0
     }
 
@@ -144,7 +144,7 @@ impl BlocksDal<'_, '_> {
         last_l1_batch.into()
     }
 
-    #[tracing::instrument(name = "get_sealed_l1_batch_number", skip_all)]
+    // #[tracing::instrument(name = "get_sealed_l1_batch_number", skip_all)]
     pub async fn get_sealed_l1_batch_number(&mut self) -> L1BatchNumber {
         let number = sqlx::query!(
             "SELECT MAX(number) as \"number\" FROM l1_batches WHERE is_finished = TRUE"
@@ -348,7 +348,7 @@ impl BlocksDal<'_, '_> {
         .unwrap();
 
         if update_result.rows_affected() == 0 {
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "L1 batch {} info wasn't updated. Details: root_hash: {:?}, merkle_root_hash: {:?}, parent_hash: {:?}, commitment: {:?}",
                 block_number.0 as i64,
                 block_metadata.root_hash.0.to_vec(),
