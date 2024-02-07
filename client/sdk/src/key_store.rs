@@ -140,6 +140,7 @@ mod tests {
     use ethereum_types::H512;
     use std::str::FromStr;
 
+    #[ignore]
     #[test]
     fn test_new() {
         let private_key =

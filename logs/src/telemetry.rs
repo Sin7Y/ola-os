@@ -1,5 +1,7 @@
+use std::panic;
+
 use tracing::{subscriber::set_global_default, Subscriber};
-use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::{non_blocking::WorkerGuard, rolling};
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
@@ -29,4 +31,25 @@ pub fn init_subscriber(subscriber: impl Subscriber + Send + Sync) {
     // Redirect all `log`'s events to our subscriber
     LogTracer::init().expect("Failed to set logger");
     set_global_default(subscriber).expect("Failed to set subscriber");
+}
+
+pub fn set_panic_hook() {
+    let placeholder = "Unknown panic info".to_string();
+    panic::set_hook(Box::new(move |panic_info| {
+        let payload = panic_info
+            .payload()
+            .downcast_ref::<String>()
+            .unwrap_or(&placeholder);
+        let location = panic_info
+            .location()
+            .unwrap_or_else(|| panic::Location::caller());
+        let panic_message = format!(
+            "Panic occurred in file '{}' at line {}: {}",
+            location.file(),
+            location.line(),
+            payload
+        );
+
+        super::error!("{}", panic_message);
+    }));
 }

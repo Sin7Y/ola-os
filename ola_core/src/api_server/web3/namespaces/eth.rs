@@ -1,11 +1,10 @@
 use ola_types::{
     api::{BlockId, BlockNumber},
-    Address, H256, U256,
+    Address, U256,
 };
 use ola_web3_decl::error::Web3Error;
-use web3::types::Bytes;
 
-use crate::api_server::web3::{resolve_block, state::RpcState};
+use crate::api_server::web3::{backend::error::internal_error, resolve_block, state::RpcState};
 
 #[derive(Debug)]
 pub struct EthNamespace {
@@ -43,14 +42,14 @@ impl EthNamespace {
             .access_storage_tagged("api")
             .await;
 
-        let (full_nonce, block_number) = match block_id {
+        let full_nonce = match block_id {
             BlockId::Number(BlockNumber::Pending) => {
                 let nonce = connection
                     .transactions_web3_dal()
                     .next_nonce_by_initiator_account(address)
                     .await
-                    .map_err(|err| Web3Error::InternalError);
-                (nonce, None)
+                    .map_err(|err| internal_error(method_name, err));
+                nonce
             }
             _ => {
                 let block_number = resolve_block(&mut connection, block_id, method_name).await?;
@@ -62,8 +61,8 @@ impl EthNamespace {
                         let U256(ref arr) = nonce_u256;
                         arr[0] as u32
                     })
-                    .map_err(|err| Web3Error::InternalError);
-                (nonce, Some(block_number))
+                    .map_err(|err| internal_error(method_name, err));
+                nonce
             }
         };
 

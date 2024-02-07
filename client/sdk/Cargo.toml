@@ -11,17 +11,16 @@ ola_web3_decl = { path = "../../web3_decl", default-features = false, features =
     "client",
 ] }
 ola_utils = { path = "../../utils" }
-# ola-core = { git = "https://github.com/Sin7Y/olavm.git", branch = "main", package = "core" }
-ola-core = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/core", package = "core" }
-
+ola-core = { git = "https://github.com/Sin7Y/olavm.git", branch = "pre-alpha", package = "core" }
+# ola-core = { path = "../../../olavm/core", package = "core" }
 parity-crypto = { version = "0.9", features = ["publickey"] }
 ethereum-types = "0.14.1"
 thiserror = "1.0"
 secp256k1 = "0.28.0"
 sha2 = "0.10.0"
 async-trait = "0.1"
-tokio = { version = "1", features = ["full"] }
-ola-lang-abi = "1.0.4"
+tokio = { version = "=1.35.0", features = ["full"] }
+ola-lang-abi = "1.0.5"
 serde = { version = "1.0.193", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0.108", default-features = false, features = [
     "std",
@@ -31,3 +30,4 @@ eth-keystore = "0.5.0"
 const-hex = "1.10.0"
 hex = "0.4.3"
 anyhow = "1.0.75"
+bincode = "1.3.3"

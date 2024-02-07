@@ -147,7 +147,7 @@ impl SealManager {
                 millis_since(manager.batch_timestamp()) > block_commit_deadline_ms;
 
             if should_seal_timeout {
-                olaos_logs::debug!(
+                olaos_logs::info!(
                     "Decided to seal L1 batch using rule `{RULE_NAME}`; batch timestamp: {}, \
                      commit deadline: {block_commit_deadline_ms}ms",
                     extractors::display_timestamp(manager.batch_timestamp())

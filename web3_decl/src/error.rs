@@ -11,4 +11,6 @@ pub enum Web3Error {
     SerializationError(#[from] SerializationTransactionError),
     #[error("Internal error")]
     InternalError,
+    #[error("Invalid l2 chainId `{0}`")]
+    InvalidChainId(u16),
 }

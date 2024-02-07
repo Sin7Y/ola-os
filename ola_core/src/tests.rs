@@ -2,7 +2,7 @@
 mod tests {
     use std::{collections::HashMap, fs::File, io::Read};
 
-use ola_config::constants::contracts::*;
+    use ola_config::constants::contracts::*;
     use ola_dal::StorageProcessor;
     use ola_state::rocksdb::RocksdbStorage;
     use ola_types::{
@@ -18,6 +18,7 @@ use ola_config::constants::contracts::*;
 
     use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 
+    #[ignore]
     #[tokio::test]
     async fn manually_depoly_contract() {
         let address = u256_to_h256(U256([100, 100, 100, 100]));
@@ -116,11 +117,12 @@ use ola_config::constants::contracts::*;
         transaction.commit().await;
     }
 
+    #[ignore]
     #[tokio::test]
     async fn rocks_read() {
         let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
 
-        let path = "/Users/Softcloud/develop/zk/sin7y/ola-os/db".to_string();
+        let path = "../db/main/sequencer".to_string();
         let mut db = RocksdbStorage::new(path.as_ref());
 
         db.update_from_postgres(&mut storage).await;

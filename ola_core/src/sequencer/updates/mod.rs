@@ -33,6 +33,7 @@ pub struct UpdatesManager {
 }
 
 impl UpdatesManager {
+    #[olaos_logs::instrument]
     pub(crate) fn new(
         block_context: &BlockContextMode,
         base_system_contract_hashes: BaseSystemContractsHashes,
@@ -49,6 +50,7 @@ impl UpdatesManager {
         }
     }
 
+    #[olaos_logs::instrument(skip(self))]
     pub(crate) fn push_miniblock(&mut self, new_miniblock_timestamp: u64) {
         let new_miniblock_updates = MiniblockUpdates::new(new_miniblock_timestamp);
         let old_miniblock_updates = std::mem::replace(&mut self.miniblock, new_miniblock_updates);
@@ -57,6 +59,7 @@ impl UpdatesManager {
             .extend_from_sealed_miniblock(old_miniblock_updates);
     }
 
+    #[olaos_logs::instrument(skip_all, fields(execution_metrics))]
     pub(crate) fn extend_from_executed_transaction(
         &mut self,
         tx: Transaction,
@@ -69,13 +72,15 @@ impl UpdatesManager {
             .extend_from_executed_transaction(tx, tx_execution_result, execution_metrics);
     }
 
+    #[olaos_logs::instrument(skip_all)]
     pub(crate) fn extend_from_fictive_transaction(&mut self, vm_execution_logs: VmExecutionLogs) {
         self.storage_writes_deduplicator
             .apply(&vm_execution_logs.storage_logs);
         self.miniblock
-            .extend_from_fictive_transaction(vm_execution_logs);
+            .extend_from_fictive_transaction(vm_execution_logs.clone());
     }
 
+    #[olaos_logs::instrument(skip(self))]
     pub(crate) fn seal_miniblock_command(
         &self,
         l1_batch_number: L1BatchNumber,

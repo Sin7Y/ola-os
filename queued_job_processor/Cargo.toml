@@ -8,4 +8,4 @@ ola_utils = { path = "../utils" }
 olaos_logs = { path = "../logs" }
 anyhow = "1.0"
 async-trait = "0.1"
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "=1.35.0", features = ["time"] }

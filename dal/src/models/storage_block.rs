@@ -79,22 +79,6 @@ pub fn web3_block_number_to_sql(block_number: api::BlockNumber) -> String {
         api::BlockNumber::Latest | api::BlockNumber::Committed => {
             "(SELECT MAX(number) as number FROM miniblocks)".to_string()
         }
-        api::BlockNumber::Finalized => "
-                (SELECT COALESCE(
-                    (
-                        SELECT MAX(number) FROM miniblocks
-                        WHERE l1_batch_number = (
-                            SELECT MAX(number) FROM l1_batches
-                            JOIN eth_txs ON
-                                l1_batches.eth_execute_tx_id = eth_txs.id
-                            WHERE
-                                eth_txs.confirmed_eth_tx_history_id IS NOT NULL
-                        )
-                    ),
-                    0
-                ) as number)
-            "
-        .to_string(),
     }
 }
 
@@ -124,5 +108,23 @@ fn convert_base_system_contracts_hashes(
         default_aa: default_aa_code_hash
             .map(|hash| H256::from_slice(&hash))
             .expect("should not be none"),
+    }
+}
+
+/// Information about L1 batch which a certain miniblock belongs to.
+#[derive(Debug)]
+pub struct ResolvedL1BatchForMiniblock {
+    /// L1 batch which the miniblock belongs to. `None` if the miniblock is not explicitly attached
+    /// (i.e., its L1 batch is not sealed).
+    pub miniblock_l1_batch: Option<L1BatchNumber>,
+    /// Pending (i.e., unsealed) L1 batch.
+    pub pending_l1_batch: L1BatchNumber,
+}
+
+impl ResolvedL1BatchForMiniblock {
+    /// Returns the L1 batch number that the miniblock has now or will have in the future (provided
+    /// that the node will operate correctly).
+    pub fn expected_l1_batch(&self) -> L1BatchNumber {
+        self.miniblock_l1_batch.unwrap_or(self.pending_l1_batch)
     }
 }

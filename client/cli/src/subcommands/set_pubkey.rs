@@ -5,14 +5,13 @@ use clap::Parser;
 use ola_types::{L2ChainId, Nonce};
 use ola_wallet_sdk::{
     abi::create_set_public_key_calldata, key_store::OlaKeyPair,
-    private_key_signer::PrivateKeySigner, provider::ProviderParams, signer::Signer,
-    utils::h256_from_hex_be, wallet::Wallet,
+    private_key_signer::PrivateKeySigner, provider::ProviderParams, signer::Signer, wallet::Wallet,
 };
 use ola_web3_decl::jsonrpsee::http_client::HttpClientBuilder;
 
 #[derive(Debug, Parser)]
 pub struct SetPubKey {
-    #[clap(long, help = "network name")]
+    #[clap(long, help = "network name, can be local or pre-alpha")]
     network: Option<String>,
     #[clap(long, help = "Provide transaction nonce manually")]
     nonce: Option<u32>,
@@ -25,13 +24,13 @@ impl SetPubKey {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "test" => ProviderParams::pub_test(),
+                "pre-alpha" => ProviderParams::pre_alpha(),
                 _ => {
                     bail!("invalid network name")
                 }
             }
         } else {
-            ProviderParams::pub_test()
+            ProviderParams::pre_alpha()
         };
 
         let keystore_path = PathBuf::from(self.keystore);
@@ -53,7 +52,7 @@ impl SetPubKey {
         let nonce = if let Some(n) = self.nonce {
             n
         } else {
-            wallet.get_addr_nonce(from).await.unwrap() + 1
+            wallet.get_addr_nonce(from).await.unwrap()
         };
         let calldata = create_set_public_key_calldata(&from, public_key)?;
         let handle = wallet

@@ -21,7 +21,7 @@ olaos_object_store = { path = "../object_store" }
 olaos_queued_job_processor = { path = "../queued_job_processor" }
 jsonrpsee = { version = "0.19.0", default-features = false, features = ["macros", "server", "client"] }
 anyhow = "1"
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "=1.35.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 web3 = { version = "0.19.0", default-features = false, features = [
@@ -49,11 +49,11 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
 derivative = "*"
 rayon = "*"
-# olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core" }
-olavm_core = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/core", package = "core" }
+olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "pre-alpha"}
+# olavm_core = { path = "../../olavm/core", package = "core" }
 tempfile = "3.0.2"
-# zk-vm = {git = "https://github.com/Sin7Y/olavm.git"}
-zk-vm = { path = "/Users/Softcloud/develop/zk/sin7y/olavm/zk-vm", package = "zk-vm" }
+zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "pre-alpha"}
+# zk-vm = { path = "../../olavm/zk-vm" }
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"
 [features]

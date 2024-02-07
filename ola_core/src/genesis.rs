@@ -3,7 +3,7 @@ use ola_dal::StorageProcessor;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
     commitment::{L1BatchCommitment, L1BatchMetadata},
-    get_full_code_key,
+    get_full_code_key, get_system_context_init_logs,
     log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
     protocol_version::{ProtocolVersion, ProtocolVersionId},
     AccountTreeId, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
@@ -29,7 +29,7 @@ pub async fn ensure_genesis_state(
 
     // return if genesis block was already processed
     if !transaction.blocks_dal().is_genesis_needed().await {
-        olaos_logs::debug!("genesis is not needed!");
+        olaos_logs::info!("genesis is not needed!");
         return transaction
             .blocks_dal()
             .get_l1_batch_state_root(L1BatchNumber(0))
@@ -205,8 +205,10 @@ async fn insert_base_system_contracts_to_factory_deps(
 async fn insert_system_contracts(
     storage: &mut StorageProcessor<'_>,
     contracts: &[DeployedContract],
-    _chain_id: L2ChainId,
+    chain_id: L2ChainId,
 ) {
+    let system_context_init_logs = (H256::default(), get_system_context_init_logs(chain_id));
+
     let storage_logs: Vec<(H256, Vec<StorageLog>)> = contracts
         .iter()
         .map(|contract| {
@@ -223,6 +225,7 @@ async fn insert_system_contracts(
                 ],
             )
         })
+        .chain(Some(system_context_init_logs))
         .collect();
 
     let mut transaction = storage.start_transaction().await;

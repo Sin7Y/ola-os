@@ -70,6 +70,11 @@ impl MempoolStore {
             .size
             .checked_sub((removed + 1) as u64)
             .expect("mempool size can't be negative");
+        olaos_logs::info!(
+            "get next transaction {:?} mempool size {:?}",
+            transaction.hash(),
+            self.size
+        );
         Some(transaction.into())
     }
 
@@ -86,7 +91,11 @@ impl MempoolStore {
             } = transaction;
             match common_data {
                 ExecuteTransactionCommon::L2(data) => {
-                    olaos_logs::trace!("inserting L2 transaction {}", data.nonce);
+                    olaos_logs::info!(
+                        "inserting L2 transaction, address {:?} nonce {}",
+                        data.initiator_address,
+                        data.nonce
+                    );
                     self.insert_l2_transaction(
                         L2Tx {
                             execute,
@@ -97,35 +106,48 @@ impl MempoolStore {
                     );
                 }
                 ExecuteTransactionCommon::ProtocolUpgrade(_) => {
+                    olaos_logs::error!(
+                        "Protocol upgrade tx is not supposed to be inserted into mempool"
+                    );
                     panic!("Protocol upgrade tx is not supposed to be inserted into mempool");
                 }
             }
         }
     }
 
+    #[olaos_logs::instrument(skip(self, transaction))]
     fn insert_l2_transaction(
         &mut self,
         transaction: L2Tx,
         initial_nonces: &HashMap<Address, Nonce>,
     ) {
+        olaos_logs::info!("insert l2 tx hash {:?}", transaction.hash());
         let account = transaction.initiator_account();
 
         let metadata = match self.l2_transactions_per_account.entry(account) {
             Entry::Occupied(mut txs) => txs.get_mut().insert(transaction),
             Entry::Vacant(entry) => {
                 let account_nonce = initial_nonces.get(&account).cloned().unwrap_or(Nonce(0));
+                olaos_logs::info!(
+                    "insert new account {:?}, nonce {:?}",
+                    account,
+                    account_nonce
+                );
                 entry
                     .insert(AccountTransactions::new(account_nonce))
                     .insert(transaction)
             }
         };
         if let Some(score) = metadata.previous_score {
+            olaos_logs::info!("remove previous score {:?}", score);
             self.l2_priority_queue.remove(&score);
         }
         if let Some(score) = metadata.new_score {
+            olaos_logs::info!("insert new score {:?}", score);
             self.l2_priority_queue.insert(score);
         }
         if metadata.is_new {
+            olaos_logs::info!("add transaction size");
             self.size += 1;
         }
     }
@@ -133,6 +155,7 @@ impl MempoolStore {
     /// When a sequencer starts the block over after a rejected transaction,
     /// we have to rollback the nonces/ids in the mempool and
     /// reinsert the transactions from the block back into mempool.
+    #[olaos_logs::instrument(skip(self))]
     pub fn rollback(&mut self, tx: &Transaction) {
         // rolling back the nonces and priority ids
         match &tx.common_data {
@@ -175,6 +198,10 @@ impl MempoolStore {
                 .l2_transactions_per_account
                 .iter()
                 .fold(0, |agg, (_, tnxs)| agg + tnxs.len() as u64);
+            olaos_logs::info!(
+                "drained addresses in gc {:?}",
+                drained.keys().collect::<Vec<_>>()
+            );
             return drained.into_keys().collect();
         }
         vec![]

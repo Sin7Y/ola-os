@@ -49,7 +49,11 @@ impl Inspect {
         if self.raw {
             println!("{}", key.public_key_str());
         } else {
-            println!("Public key: 0x{}", key.public_key_str());
+            println!(
+                "Public key: 0x{}\nAddress: 0x{}",
+                key.public_key_str(),
+                key.address_str()
+            );
         }
 
         Ok(())

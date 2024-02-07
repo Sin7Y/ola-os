@@ -30,7 +30,7 @@ jobs:
   #     postgres:
   #       image: postgres
   #       ports:
-  #         - 5432:5432
+  #         - 5434:5432
   #   steps:
   #     - uses: actions/checkout@v2
   #     - uses: actions-rs/toolchain@v1
@@ -51,13 +51,13 @@ jobs:
           
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04.3
 
     services:
       postgres:
         image: postgres
         ports:
-          - 5432:5432
+          - 5434:5432
 
     steps:
       - uses: actions/checkout@v3
@@ -78,6 +78,6 @@ jobs:
           cargo install --version=0.7.2 sqlx-cli --no-default-features --features postgres
           SKIP_DOCKER=true cd dal && ./scripts/init_main_db.sh
       - name: Build
-        run: cargo build
+        run: cargo +nightly build
       - name: Run tests
         run: cargo test

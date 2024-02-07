@@ -32,15 +32,41 @@ impl MempoolConfig {
     }
 }
 
+#[derive(Debug, Deserialize, Clone, PartialEq)]
+pub struct OperationsManagerConfig {
+    /// Sleep time in ms when there is no new input data
+    pub delay_interval: u64,
+}
+
+impl OperationsManagerConfig {
+    pub fn from_env() -> Self {
+        envy_load("operations_manager", "OLAOS_OPERATIONS_MANAGER_")
+    }
+
+    pub fn delay_interval(&self) -> Duration {
+        Duration::from_millis(self.delay_interval)
+    }
+}
+
 pub fn load_mempool_config() -> Result<MempoolConfig, config::ConfigError> {
     load_config("configuration/mempool", "OLAOS_MEMPOOL")
 }
 
+pub fn load_operation_manager_config() -> Result<OperationsManagerConfig, config::ConfigError> {
+    load_config(
+        "configuration/operation_manager",
+        "OLAOS_OPERATIONS_MANAGER",
+    )
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{chain::load_mempool_config, utils::tests::EnvMutex};
+    use crate::{
+        chain::{load_mempool_config, load_operation_manager_config},
+        utils::tests::EnvMutex,
+    };
 
-    use super::MempoolConfig;
+    use super::{MempoolConfig, OperationsManagerConfig};
 
     static MUTEX: EnvMutex = EnvMutex::new();
 
@@ -52,6 +78,12 @@ mod tests {
             stuck_tx_timeout: 50,
             remove_stuck_txs: true,
             delay_interval: 200,
+        }
+    }
+
+    fn default_operation_manager_config() -> OperationsManagerConfig {
+        OperationsManagerConfig {
+            delay_interval: 100,
         }
     }
 
@@ -68,20 +100,17 @@ mod tests {
         let api_config = load_mempool_config().expect("failed to load mempool config");
         assert_eq!(api_config, default_mempool_config());
     }
-}
 
-#[derive(Debug, Deserialize, Clone, PartialEq)]
-pub struct OperationsManagerConfig {
-    /// Sleep time in ms when there is no new input data
-    pub delay_interval: u64,
-}
+    #[test]
+    fn test_load_operation_manager_config() {
+        let mut lock = MUTEX.lock();
+        let config = r#"
+            OLAOS_OPERATIONS_MANAGER_DELAY_INTERVAL=100
+        "#;
+        lock.set_env(config);
 
-impl OperationsManagerConfig {
-    pub fn from_env() -> Self {
-        envy_load("operations_manager", "OLAOS_OPERATIONS_MANAGER_")
-    }
-
-    pub fn delay_interval(&self) -> Duration {
-        Duration::from_millis(self.delay_interval)
+        let api_config =
+            load_operation_manager_config().expect("failed to load operation manager config");
+        assert_eq!(api_config, default_operation_manager_config());
     }
 }

@@ -22,6 +22,12 @@ pub struct VmPermit {
     _permit: Arc<tokio::sync::OwnedSemaphorePermit>,
 }
 
+impl VmPermit {
+    fn rt_handle(&self) -> &Handle {
+        &self.rt_handle
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct VmConcurrencyBarrier {
     limiter: Arc<tokio::sync::Semaphore>,
@@ -79,7 +85,7 @@ impl VmConcurrencyLimiter {
         let elapsed = start.elapsed();
         // We don't want to emit too many logs.
         if elapsed > Duration::from_millis(10) {
-            olaos_logs::debug!(
+            olaos_logs::info!(
                 "Permit is obtained. Available permits: {available_permits}. Took {elapsed:?}"
             );
         }
