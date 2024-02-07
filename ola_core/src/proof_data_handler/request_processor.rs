@@ -115,7 +115,7 @@ impl RequestProcessor {
         //     l1_verifier_config,
         // };
 
-        Ok(Json(ProofGenerationDataResponse {}))
+        Ok(Json(ProofGenerationDataResponse::Success(None)))
     }
 
     pub(crate) async fn submit_proof(
