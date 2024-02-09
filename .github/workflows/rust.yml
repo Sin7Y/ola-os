@@ -65,10 +65,9 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2023-04-05
           override: true
           components: rustfmt, clippy
-          channel: nightly-2023-04-05
       - name: fmt
         run: cargo fmt --all -- --check
       - name: Docker prepare
