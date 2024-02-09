@@ -68,6 +68,7 @@ jobs:
           toolchain: nightly
           override: true
           components: rustfmt, clippy
+          channel: nightly-2024-02-07
       - name: fmt
         run: cargo fmt --all -- --check
       - name: Docker prepare
