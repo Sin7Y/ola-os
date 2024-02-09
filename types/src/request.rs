@@ -697,6 +697,7 @@ fn rlp_opt<T: rlp::Encodable>(rlp: &mut RlpStream, opt: &Option<T>) {
 mod tests {
     use ethabi::ethereum_types::U64;
     use ola_basic_types::{Address, Bytes, L2ChainId, H256, U256};
+    use ola_utils::u64s_to_bytes;
     use rlp::RlpStream;
 
     use crate::{
@@ -711,14 +712,17 @@ mod tests {
         let private_key = H256::random();
         let address = PackedEthSignature::address_from_private_key(&private_key).unwrap();
 
+        let input = [1u64; 10];
+        let input = u64s_to_bytes(&input);
+
         let mut tx = TransactionRequest {
             nonce: U256::from(0u32),
             to: Some(Address::random()),
             from: Some(address),
-            input: Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8]),
+            input: Bytes::from(input),
             transaction_type: Some(U64::from(OLA_RAW_TX_TYPE)),
             eip712_meta: Some(Eip712Meta {
-                factory_deps: Some(vec![vec![2; 32]]),
+                factory_deps: Some(vec![]),
                 custom_signature: Some(vec![1; 32]),
                 paymaster_params: Some(PaymasterParams {
                     paymaster: Default::default(),
@@ -751,14 +755,17 @@ mod tests {
         let private_key = H256::random();
         let address = PackedEthSignature::address_from_private_key(&private_key).unwrap();
 
+        let input = [1u64; 10];
+        let input = u64s_to_bytes(&input);
+
         let mut tx = TransactionRequest {
             nonce: U256::from(0u32),
             to: Some(Address::random()),
             from: Some(address),
-            input: Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8]),
+            input: Bytes::from(input),
             transaction_type: Some(U64::from(OLA_RAW_TX_TYPE)),
             eip712_meta: Some(Eip712Meta {
-                factory_deps: Some(vec![vec![2; 32]]),
+                factory_deps: Some(vec![]),
                 custom_signature: Some(vec![1; 32]),
                 paymaster_params: Some(PaymasterParams {
                     paymaster: Default::default(),
