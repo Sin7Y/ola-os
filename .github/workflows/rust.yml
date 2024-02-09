@@ -51,7 +51,7 @@ jobs:
           
   build:
 
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -65,7 +65,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2024-02-09
           override: true
           components: rustfmt, clippy
       - name: fmt
