@@ -65,7 +65,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-latest
+          toolchain: nightly
           override: true
           components: rustfmt, clippy
       - name: fmt
