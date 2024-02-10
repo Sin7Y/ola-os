@@ -1,6 +1,7 @@
 use bigdecimal::BigDecimal;
 use num::{bigint::ToBigInt, rational::Ratio, BigUint};
 use ola_basic_types::{Address, H256, U256};
+use olavm_core::types::{account::Address as OlavmAddress, merkle_tree::tree_key_to_h256};
 
 pub fn u256_to_big_decimal(value: U256) -> BigDecimal {
     let ratio = Ratio::new_raw(u256_to_biguint(value), BigUint::from(1u8));
@@ -46,6 +47,14 @@ pub fn address_to_h256(address: &Address) -> H256 {
     H256(buffer)
 }
 
+pub fn olavm_address_to_address(addr: &OlavmAddress) -> Address {
+    tree_key_to_h256(addr)
+}
+
+pub fn olavm_address_to_u256(addr: &OlavmAddress) -> U256 {
+    h256_to_u256(tree_key_to_h256(addr))
+}
+
 pub fn h160_bytes_to_h256(data: &[u8; 20]) -> H256 {
     let mut buffer = [0u8; 32];
     buffer[12..].copy_from_slice(data);
@@ -60,6 +69,16 @@ pub fn u256_to_biguint(value: U256) -> BigUint {
     let mut bytes = [0u8; 32];
     value.to_little_endian(&mut bytes);
     BigUint::from_bytes_le(&bytes)
+}
+
+pub fn biguint_to_u256(value: BigUint) -> U256 {
+    let bytes = value.to_bytes_le();
+    U256::from_little_endian(&bytes)
+}
+
+pub fn bigdecimal_to_u256(value: BigDecimal) -> U256 {
+    let bigint = value.with_scale(0).into_bigint_and_exponent().0;
+    biguint_to_u256(bigint.to_biguint().unwrap())
 }
 
 pub fn u256_to_h256(num: U256) -> H256 {
@@ -119,6 +138,20 @@ pub fn h256_to_u64_array(h: &H256) -> [u64; 4] {
     ]
 }
 
+pub fn u64_array_to_h256(arr: &[u64; 4]) -> H256 {
+    let mut bytes = [0u8; 32];
+    for i in 0..arr.len() {
+        bytes[i * 8..i * 8 + 8].clone_from_slice(&arr[i].to_be_bytes());
+    }
+    H256(bytes)
+}
+
+pub fn h256_to_string(h: &H256) -> String {
+    let bytes = h.to_fixed_bytes();
+    let s = hex::encode(bytes);
+    s
+}
+
 pub fn program_bytecode_to_bytes(bytecode: &str) -> Option<Vec<u8>> {
     let felt_str_vec: Vec<_> = bytecode.split("\n").collect();
     let mut bytes = vec![];
@@ -142,7 +175,9 @@ pub fn program_bytecode_to_bytes(bytecode: &str) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{program_bytecode_to_bytes, u64s_to_bytes};
+    use ola_basic_types::H256;
+
+    use crate::{h256_to_string, program_bytecode_to_bytes, u64s_to_bytes};
 
     #[test]
     fn test_program_bytecode_to_bytes() {
@@ -163,5 +198,17 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2,
         ];
         assert_eq!(result.as_slice(), expect);
+    }
+
+    #[test]
+    fn test_h256_to_string() {
+        let hex_str = "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292";
+        let bytes = hex::decode(hex_str).expect("failed to decode hex string");
+        let h = H256::from_slice(&bytes);
+        let s = h256_to_string(&h);
+        assert_eq!(
+            s.as_str(),
+            "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292"
+        );
     }
 }

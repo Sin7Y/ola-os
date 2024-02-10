@@ -1,5 +1,6 @@
 use std::{net::SocketAddr, time::Duration};
 
+use anyhow::Ok;
 use futures::future;
 use jsonrpsee::{
     server::{BatchRequestConfig, ServerBuilder},
@@ -17,6 +18,7 @@ use tokio::sync::watch;
 use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
 
 use self::{
+    backend::error::internal_error,
     namespaces::{eth::EthNamespace, ola::OlaNamespace},
     state::{InternalApiconfig, RpcState},
 };
@@ -49,7 +51,6 @@ impl Namespace {
 #[derive(Debug)]
 pub struct ApiBuilder {
     transport: Option<ApiTransport>,
-    subscriptions_limit: Option<usize>,
     config: InternalApiconfig,
     namespaces: Option<Vec<Namespace>>,
     threads: Option<usize>,
@@ -65,7 +66,6 @@ impl ApiBuilder {
     pub fn new(config: InternalApiconfig, pool: ConnectionPool) -> Self {
         Self {
             transport: None,
-            subscriptions_limit: None,
             config,
             namespaces: None,
             threads: None,
@@ -124,7 +124,10 @@ impl ApiBuilder {
     pub async fn build(
         mut self,
         stop_receiver: watch::Receiver<bool>,
-    ) -> (Vec<tokio::task::JoinHandle<()>>, ReactiveHealthCheck) {
+    ) -> (
+        Vec<tokio::task::JoinHandle<anyhow::Result<()>>>,
+        ReactiveHealthCheck,
+    ) {
         match self.transport.take() {
             Some(ApiTransport::Http(addr)) => {
                 let (api_health_check, health_updater) = ReactiveHealthCheck::new("http_api");
@@ -149,7 +152,7 @@ impl ApiBuilder {
         addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
         health_updater: HealthUpdater,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> tokio::task::JoinHandle<anyhow::Result<()>> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -179,6 +182,7 @@ impl ApiBuilder {
                 response_body_size_limit,
             ));
             runtime.shutdown_timeout(SERVER_SHUTDOWN_TIMEOUT);
+            Ok(())
         })
     }
 
@@ -187,7 +191,7 @@ impl ApiBuilder {
         addr: SocketAddr,
         stop_receiver: watch::Receiver<bool>,
         health_updater: HealthUpdater,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> tokio::task::JoinHandle<anyhow::Result<()>> {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -218,6 +222,7 @@ impl ApiBuilder {
                 response_body_size_limit,
             ));
             runtime.shutdown_timeout(SERVER_SHUTDOWN_TIMEOUT);
+            Ok(())
         })
     }
 
@@ -306,7 +311,7 @@ impl ApiBuilder {
     async fn wait_for_vm(vm_barrier: VmConcurrencyBarrier, _transport: &str) {
         let wait_for_vm =
             tokio::time::timeout(SERVER_SHUTDOWN_TIMEOUT, vm_barrier.wait_until_stopped());
-        wait_for_vm.await;
+        let _ = wait_for_vm.await;
     }
 }
 
@@ -317,6 +322,6 @@ async fn resolve_block(
 ) -> Result<MiniblockNumber, Web3Error> {
     let result = connection.blocks_web3_dal().resolve_block_id(block).await;
     result
-        .map_err(|err| Web3Error::InternalError)?
+        .map_err(|err| internal_error(method_name, err))?
         .ok_or(Web3Error::NoBlock)
 }

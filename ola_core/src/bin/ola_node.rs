@@ -5,18 +5,20 @@ use ola_core::{
     genesis_init, initialize_components, is_genesis_needed, setup_sigint_handler, Component,
 };
 use ola_utils::wait_for_tasks::wait_for_tasks;
-use olaos_logs::telemetry::{get_subscriber, init_subscriber};
+use olaos_logs::telemetry::{get_subscriber, init_subscriber, set_panic_hook};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let (subscriber, _guard) = get_subscriber("olaos".into(), "info".into());
     init_subscriber(subscriber);
+    set_panic_hook();
     olaos_logs::info!("init_subscriber finished");
 
     if is_genesis_needed().await {
         let network = load_network_config().expect("failed to load network config");
         let contracts = load_contracts_config().expect("failed to laod contract config");
         genesis_init(&network, &contracts).await;
+        olaos_logs::info!("genesis_init finished");
     }
 
     let components = vec![Component::HttpApi, Component::Sequencer, Component::Tree];

@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    SELECT transactions.is_priority,\n                        transactions.initiator_address,\n                        transactions.received_at,\n                        transactions.miniblock_number,\n                        transactions.error\n                    FROM transactions\n                    LEFT JOIN miniblocks ON miniblocks.number = transactions.miniblock_number\n                    LEFT JOIN l1_batches ON l1_batches.number = miniblocks.l1_batch_number\n                    WHERE transactions.hash = $1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "is_priority",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "initiator_address",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "received_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "miniblock_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "error",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "bc6bb577ece0d6251dec6465ef9a90829a977598e546f4b415ffc69f678618ab"
+}

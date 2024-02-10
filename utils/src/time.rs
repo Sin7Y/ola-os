@@ -12,3 +12,7 @@ fn duration_since_epoch() -> Duration {
         .duration_since(UNIX_EPOCH)
         .expect("Incorrect system time")
 }
+
+pub fn seconds_since_epoch() -> u64 {
+    duration_since_epoch().as_secs()
+}

@@ -1,0 +1,16 @@
+[package]
+name = "olaos_prover_fri_gateway"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+olaos_object_store = { path = "../../object_store" }
+ola_dal = { path = "../../dal" }
+olaos_logs = { path = "../../logs" }
+anyhow = "1.0"
+reqwest = { version = "0.11", features = ["blocking"] }
+tokio = { version = "=1.35.0", features = ["time", "macros"] }
+ctrlc = { version = "3.1", features = ["termination"] }
+async-trait = "0.1"
+futures = { version = "0.3", features = ["compat"] }
+serde = { version = "1.0", features = ["derive"] }

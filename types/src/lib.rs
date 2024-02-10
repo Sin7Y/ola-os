@@ -8,6 +8,7 @@ pub use self::{
 };
 use l2::L2TxCommonData;
 pub use ola_basic_types::H256;
+use ola_utils::{bytes_to_u64s, h256_to_u64_array, hash::PoseidonBytes, u64s_to_bytes};
 use protocol_version::ProtocolUpgradeTxCommonData;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,7 @@ pub mod fee;
 pub mod l2;
 pub mod priority_op_onchain_data;
 pub mod protocol_version;
+pub mod prover_server_api;
 pub mod request;
 pub mod storage;
 pub mod storage_writes_deduplicator;
@@ -83,6 +85,35 @@ impl Transaction {
             ExecuteTransactionCommon::L2(data) => data.initiator_address,
             ExecuteTransactionCommon::ProtocolUpgrade(data) => data.sender,
         }
+    }
+
+    pub fn msg_hash(&self) -> Option<Vec<u8>> {
+        let common_data = match &self.common_data {
+            ExecuteTransactionCommon::L2(data) => data,
+            ExecuteTransactionCommon::ProtocolUpgrade(_) => return None,
+        };
+        let chain_id = match common_data.extract_chain_id() {
+            Some(chain) => chain as u64,
+            None => return None,
+        };
+
+        let transaction_type = common_data.transaction_type as u64;
+        let nonce = match self.nonce() {
+            Some(n) => n.0 as u64,
+            None => return None,
+        };
+
+        let from = h256_to_u64_array(&self.initiator_account()).to_vec();
+        let to = h256_to_u64_array(&self.execute.contract_address).to_vec();
+        let input = bytes_to_u64s(self.execute.calldata.clone());
+        let data = vec![vec![chain_id, transaction_type, nonce], from, to, input]
+            .iter()
+            .flatten()
+            .cloned()
+            .collect::<Vec<_>>();
+        let msg = u64s_to_bytes(&data);
+        let msg_hash = msg.hash_bytes();
+        Some(msg_hash.to_vec())
     }
 }
 

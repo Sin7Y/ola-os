@@ -1,9 +1,10 @@
 use ola_types::{
-    log::StorageLogQuery,
+    log::{LogQuery, StorageLogQuery},
     tx::tx_execution_info::{TxExecutionStatus, VmExecutionLogs},
     vm_trace::Call,
     U256,
 };
+use olavm_core::merkle_tree::log::StorageQuery;
 use olavm_core::trace::trace::Trace;
 
 use crate::{errors::VmRevertReasonParsingResult, Word};
@@ -32,6 +33,34 @@ pub struct VmPartialExecutionResult {
     pub revert_reason: Option<String>,
     pub contracts_used: usize,
     pub cycles_used: u32,
+}
+
+impl VmPartialExecutionResult {
+    pub fn new(storage_queries: &Vec<StorageQuery>, tx_index_in_l1_batch: u32) -> Self {
+        let storage_logs: Vec<StorageLogQuery> = storage_queries
+            .iter()
+            .map(|log| {
+                let mut log_query: LogQuery = log.into();
+                log_query.tx_number_in_block = tx_index_in_l1_batch as u16;
+                StorageLogQuery {
+                    log_query,
+                    log_type: log.kind.into(),
+                }
+            })
+            .collect();
+        let total_log_queries_count = storage_logs.len();
+        let logs: VmExecutionLogs = VmExecutionLogs {
+            storage_logs,
+            events: vec![],
+            total_log_queries_count,
+        };
+        Self {
+            logs,
+            revert_reason: None,
+            contracts_used: 0,
+            cycles_used: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

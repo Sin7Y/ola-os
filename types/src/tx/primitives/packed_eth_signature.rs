@@ -79,8 +79,9 @@ impl PackedEthSignature {
     }
 
     pub fn sign(private_key: &H256, msg: &[u8]) -> Result<PackedEthSignature, ParityCryptoError> {
-        let signed_bytes = Self::message_to_signed_bytes(msg);
-        Self::sign_raw(private_key, &signed_bytes)
+        let bytes_to_sign = Self::message_to_signed_bytes(msg);
+        // dbg!(bytes_to_sign);
+        Self::sign_raw(private_key, &bytes_to_sign)
     }
 
     pub fn sign_raw(

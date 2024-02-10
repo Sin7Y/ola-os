@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use ola_config::{chain::OperationsManagerConfig, database::DBConfig};
 use ola_dal::connection::ConnectionPool;
 use ola_types::{
@@ -79,7 +80,7 @@ impl MetadataCalculator {
         pool: ConnectionPool,
         prover_pool: ConnectionPool,
         stop_receiver: watch::Receiver<bool>,
-    ) {
+    ) -> anyhow::Result<()> {
         let update_task = self.updater.loop_updating_tree(
             self.delayer,
             &pool,
@@ -88,6 +89,7 @@ impl MetadataCalculator {
             self.health_updater,
         );
         update_task.await;
+        Ok(())
     }
 
     fn build_block_metadata(
@@ -120,7 +122,7 @@ impl MetadataCalculator {
             l1_batch_header.base_system_contracts_hashes.default_aa,
         );
         let block_commitment_hash = block_commitment.hash();
-        olaos_logs::trace!("L1 batch commitment {:?}", &block_commitment);
+        olaos_logs::info!("L1 batch commitment {:?}", block_commitment_hash);
 
         let metadata = L1BatchMetadata {
             root_hash: merkle_root_hash,
@@ -135,7 +137,7 @@ impl MetadataCalculator {
             pass_through_data_hash: block_commitment_hash.pass_through_data,
         };
 
-        olaos_logs::trace!("Block metadata {:?}", metadata);
+        olaos_logs::info!("Block root hash {:?}", merkle_root_hash);
         metadata
     }
 }

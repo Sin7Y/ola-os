@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    time::Instant,
-};
+use std::{collections::HashSet, time::Instant};
 
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{l2::L2Tx, Address, Transaction, U256};
@@ -11,7 +8,6 @@ use crate::api_server::execution_sandbox::{apply, execute::TxExecutionArgs};
 
 use super::{BlockArgs, TxSharedArgs, VmPermit};
 
-// FIXME: define real ValidationError
 pub type ValidationError = String;
 
 impl TxSharedArgs {
@@ -43,26 +39,17 @@ impl TxSharedArgs {
         let execution_args = TxExecutionArgs::for_validation(&tx);
         let _execution_mode = execution_args.execution_mode;
         let tx: Transaction = tx.into();
-        let (validation_result, _) = tokio::task::spawn_blocking(move || {
+        let validation_result = tokio::task::spawn_blocking(move || {
             let span = tracing::debug_span!("validate_in_sandbox").entered();
-            let result = apply::apply_vm_in_sandbox(
-                vm_permit,
-                self,
-                &execution_args,
-                &connection_pool,
-                tx,
-                block_args,
-                HashMap::new(),
-                // FIXME: replace real apply Fn
-                |_tx| Ok(()),
-            );
+            let result =
+                apply::apply_vm_in_sandbox(vm_permit, self, &connection_pool, tx, block_args);
             span.exit();
             result
         })
         .await
         .unwrap();
 
-        validation_result
+        validation_result.map_err(|e| e.to_string())
     }
 }
 

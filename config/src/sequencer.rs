@@ -85,7 +85,7 @@ mod tests {
     fn default_network_config() -> NetworkConfig {
         NetworkConfig {
             network: Network::Localhost,
-            ola_network_id: 360,
+            ola_network_id: 1027,
             ola_network_name: "localhost".to_string(),
         }
     }
@@ -109,7 +109,7 @@ mod tests {
     fn test_load_network_config() {
         let mut lock = MUTEX.lock();
         let config = r#"
-            OLAOS_NETWORK_OLA_NETWORK_ID=360
+            OLAOS_NETWORK_OLA_NETWORK_ID=1027
         "#;
         lock.set_env(config);
 
