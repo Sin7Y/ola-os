@@ -1,29 +1,20 @@
-use blake2::{Blake2s256, Digest};
 pub use ola_basic_types::{AccountTreeId, Address, L2ChainId, H256, U256};
-use ola_config::constants::{
-    contracts::{
-        ACCOUNT_CODE_STORAGE_ADDRESS, BOOTLOADER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS,
-        NONCE_HOLDER_ADDRESS, SYSTEM_CONTEXT_ADDRESS,
-    },
-    system_context::{
-        SYSTEM_CONTEXT_CHAIN_ID_POSITION, SYSTEM_CONTEXT_COINBASE_POSITION,
-        SYSTEM_CONTEXT_DIFFICULTY, SYSTEM_CONTEXT_DIFFICULTY_POSITION,
-    },
+use ola_config::constants::contracts::{
+    ACCOUNT_CODE_STORAGE_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS, NONCE_HOLDER_ADDRESS,
+    SYSTEM_CONTEXT_ADDRESS, SYSTEM_CONTEXT_CHAIN_ID_POSITION,
 };
-use ola_utils::{convert::address_to_h256, hash::hash_bytes};
-use olavm_core::{
-    types::account::{AccountTreeId as OlavmAccountTreeId, Address as OlavmAddress},
-    types::merkle_tree::{h256_to_tree_key, TreeKey as OlavmTreeKey, TreeValue as OlavmTreeValue},
-    // merkle_tree::log::{WitnessStorageLog as OlavmWitnessStorageLog, StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind},
-    // types::merkle_tree::{TreeKey, TreeValue},
-    types::storage::StorageKey as OlavmStorageKey,
+use ola_utils::{
+    convert::address_to_h256,
+    hash::{hash_bytes, PoseidonBytes},
 };
+
 use olavm_plonky2::hash::utils::h256_add_offset;
 use serde::{Deserialize, Serialize};
 
 use crate::log::StorageLog;
 
 pub mod log;
+pub mod witness_block_state;
 pub mod writes;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -53,7 +44,7 @@ impl StorageKey {
         let mut bytes = [0_u8; 64];
         bytes[0..32].copy_from_slice(&address.0);
         U256::from(key.to_fixed_bytes()).to_big_endian(&mut bytes[32..64]);
-        Blake2s256::digest(bytes).into()
+        bytes.hash_bytes()
     }
 
     pub fn hashed_key(&self) -> H256 {
@@ -74,16 +65,16 @@ impl StorageKey {
 
 pub type StorageValue = H256;
 
-fn get_address_mapping_key(address: &Address, position: H256) -> H256 {
+fn get_address_mapping_key(position: H256, address: &Address) -> H256 {
     let padded_address = address_to_h256(address);
-    hash_bytes(&[padded_address.as_bytes(), position.as_bytes()].concat())
+    hash_bytes(&[position.as_bytes(), padded_address.as_bytes()].concat())
 }
 
 pub fn get_nonce_key(account: &Address) -> StorageKey {
     let nonce_manager = AccountTreeId::new(NONCE_HOLDER_ADDRESS);
 
     // The `minNonce` (used as nonce for EOAs) is stored in a mapping inside the NONCE_HOLDER system contract
-    let key = get_address_mapping_key(account, H256::zero());
+    let key = get_address_mapping_key(H256::zero(), account);
 
     StorageKey::new(nonce_manager, key)
 }
@@ -102,4 +93,11 @@ pub fn get_known_code_key(hash: &H256) -> StorageKey {
 pub fn get_system_context_key(key: H256) -> StorageKey {
     let system_context = AccountTreeId::new(SYSTEM_CONTEXT_ADDRESS);
     StorageKey::new(system_context, key)
+}
+
+pub fn get_system_context_init_logs(chain_id: L2ChainId) -> Vec<StorageLog> {
+    vec![StorageLog::new_write_log(
+        get_system_context_key(SYSTEM_CONTEXT_CHAIN_ID_POSITION),
+        H256::from_low_u64_be(chain_id.0 as u64),
+    )]
 }

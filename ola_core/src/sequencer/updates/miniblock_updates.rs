@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use ola_types::{
-    events::extract_bytecodes_marked_as_known,
     log::StorageLogQuery,
     tx::{
         tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
@@ -44,29 +43,36 @@ impl MiniblockUpdates {
         tx_execution_result: VmTxExecutionResult,
         execution_metrics: ExecutionMetrics,
     ) {
-        // Get bytecode hashes that were marked as known
-        let saved_factory_deps =
-            extract_bytecodes_marked_as_known(&tx_execution_result.result.logs.events);
+        // // Get bytecode hashes that were marked as known
+        // let saved_factory_deps =
+        //     extract_bytecodes_marked_as_known(&tx_execution_result.result.logs.events);
 
-        // Get transaction factory deps
+        // // Get transaction factory deps
+        // let factory_deps = tx.execute.factory_deps.as_deref().unwrap_or_default();
+        // let tx_factory_deps: HashMap<_, _> = factory_deps
+        //     .iter()
+        //     .map(|bytecode| (hash_bytecode(bytecode), bytecode))
+        //     .collect();
+
+        // // Save all bytecodes that were marked as known on the entrypoint
+        // let known_bytecodes = saved_factory_deps.into_iter().map(|bytecode_hash| {
+        //     let bytecode = tx_factory_deps.get(&bytecode_hash).unwrap_or_else(|| {
+        //         panic!(
+        //             "Failed to get factory deps on tx: bytecode hash: {:?}, tx hash: {}",
+        //             bytecode_hash,
+        //             tx.hash()
+        //         )
+        //     });
+        //     (bytecode_hash, bytecode.to_vec())
+        // });
+
         let factory_deps = tx.execute.factory_deps.as_deref().unwrap_or_default();
         let tx_factory_deps: HashMap<_, _> = factory_deps
             .iter()
-            .map(|bytecode| (hash_bytecode(bytecode), bytecode))
+            .map(|bytecode| (hash_bytecode(bytecode), bytecode.to_vec()))
             .collect();
 
-        // Save all bytecodes that were marked as known on the bootloader
-        let known_bytecodes = saved_factory_deps.into_iter().map(|bytecode_hash| {
-            let bytecode = tx_factory_deps.get(&bytecode_hash).unwrap_or_else(|| {
-                panic!(
-                    "Failed to get factory deps on tx: bytecode hash: {:?}, tx hash: {}",
-                    bytecode_hash,
-                    tx.hash()
-                )
-            });
-            (bytecode_hash, bytecode.to_vec())
-        });
-        self.new_factory_deps.extend(known_bytecodes);
+        self.new_factory_deps.extend(tx_factory_deps);
 
         // self.events.extend(tx_execution_result.result.logs.events);
         self.storage_logs

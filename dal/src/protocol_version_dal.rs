@@ -47,7 +47,7 @@ impl ProtocolVersionsDal<'_, '_> {
 
     pub async fn base_system_contracts_by_timestamp(
         &mut self,
-        current_timestamp: u64,
+        current_timestamp: i64,
     ) -> (BaseSystemContracts, ProtocolVersionId) {
         let row = sqlx::query!(
             "SELECT bootloader_code_hash, default_account_code_hash, id FROM protocol_versions

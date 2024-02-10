@@ -36,7 +36,7 @@ impl TreeUpdater {
         }
     }
 
-    #[tracing::instrument(skip(self, storage, blocks))]
+    #[tracing::instrument(skip_all)]
     async fn process_multiple_blocks(
         &mut self,
         storage: &mut StorageProcessor<'_>,
@@ -83,9 +83,10 @@ impl TreeUpdater {
             index += 1;
         }
 
-        if let Some(last_block) = new_blocks.last() {
-            *next_block_to_seal = last_block.header.number + 1;
-            self.process_multiple_blocks(&mut storage, new_blocks).await;
+        for block in new_blocks {
+            *next_block_to_seal = block.header.number + 1;
+            self.process_multiple_blocks(&mut storage, vec![block])
+                .await;
         }
     }
 
@@ -156,7 +157,7 @@ impl TreeUpdater {
                 };
                 health_updater.update(health.into());
 
-                olaos_logs::trace!(
+                olaos_logs::info!(
                     "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) made progress from #{next_block_snapshot}"
                 );
                 future_ready(()).right_future()

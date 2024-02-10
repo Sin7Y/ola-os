@@ -30,7 +30,7 @@ jobs:
   #     postgres:
   #       image: postgres
   #       ports:
-  #         - 5432:5432
+  #         - 5434:5432
   #   steps:
   #     - uses: actions/checkout@v2
   #     - uses: actions-rs/toolchain@v1
@@ -57,7 +57,7 @@ jobs:
       postgres:
         image: postgres
         ports:
-          - 5432:5432
+          - 5434:5432
 
     steps:
       - uses: actions/checkout@v3
@@ -65,7 +65,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2024-01-19
           override: true
           components: rustfmt, clippy
       - name: fmt

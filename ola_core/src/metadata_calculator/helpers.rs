@@ -210,7 +210,7 @@ pub(crate) async fn get_logs_for_l1_batch(
         .await;
 
     for storage_key in protective_reads {
-        let previous_value = previous_values[&storage_key.hashed_key()].unwrap();
+        let previous_value = previous_values[&storage_key.hashed_key()].unwrap_or_default();
         // Sanity check: value must not change for slots that require protective reads.
         if let Some(value) = touched_slots.get(&storage_key) {
             assert_eq!(

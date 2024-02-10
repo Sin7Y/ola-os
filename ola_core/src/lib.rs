@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
+use anyhow::{Context, Ok};
 use api_server::{
     execution_sandbox::{VmConcurrencyBarrier, VmConcurrencyLimiter},
     healthcheck::HealthCheckHandle,
@@ -12,9 +13,13 @@ use ola_config::{
         load_api_config, load_healthcheck_config, load_web3_json_rpc_config, ApiConfig,
         Web3JsonRpcConfig,
     },
-    chain::{load_mempool_config, MempoolConfig, OperationsManagerConfig},
+    chain::{
+        load_mempool_config, load_operation_manager_config, MempoolConfig, OperationsManagerConfig,
+    },
     contracts::{load_contracts_config, ContractsConfig},
     database::{load_db_config, DBConfig},
+    object_store::load_object_store_config,
+    proof_data_handler::load_proof_data_handler_config,
     sequencer::{load_network_config, load_sequencer_config, NetworkConfig, SequencerConfig},
 };
 use ola_contracts::BaseSystemContracts;
@@ -26,16 +31,21 @@ use ola_dal::{
 use ola_state::postgres::PostgresStorageCaches;
 use ola_types::{system_contracts::get_system_smart_contracts, L2ChainId};
 use olaos_health_check::{CheckHealth, ReactiveHealthCheck};
+use olaos_object_store::ObjectStoreFactory;
+use olaos_queued_job_processor::JobProcessor;
 use sequencer::{
     create_sequencer, io::MiniblockSealer, mempool_actor::MempoolFetcher, types::MempoolGuard,
 };
 use tokio::{sync::watch, task::JoinHandle};
+use witness_input_producer::WitnessInputProducer;
 
 pub mod api_server;
 pub mod genesis;
 pub mod metadata_calculator;
+pub mod proof_data_handler;
 pub mod sequencer;
 pub mod tests;
+pub mod witness_input_producer;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Component {
@@ -43,10 +53,16 @@ pub enum Component {
     WsApi,
     Sequencer,
     Tree,
+    WitnessInputProducer,
+    ProofDataHandler,
 }
 pub async fn initialize_components(
     components: Vec<Component>,
-) -> anyhow::Result<(Vec<JoinHandle<()>>, watch::Sender<bool>, HealthCheckHandle)> {
+) -> anyhow::Result<(
+    Vec<JoinHandle<anyhow::Result<()>>>,
+    watch::Sender<bool>,
+    HealthCheckHandle,
+)> {
     olaos_logs::info!("Starting the components: {components:?}");
     let db_config = load_db_config().expect("failed to load database config");
     let connection_pool = ConnectionPool::builder(DbVariant::Master).build().await;
@@ -61,7 +77,7 @@ pub async fn initialize_components(
 
     let (stop_sender, stop_receiver) = watch::channel(false);
 
-    let mut task_futures: Vec<JoinHandle<()>> = vec![];
+    let mut task_futures: Vec<JoinHandle<anyhow::Result<()>>> = vec![];
 
     if components.contains(&Component::HttpApi) {
         let api_config = load_api_config().expect("failed to load api config");
@@ -131,6 +147,42 @@ pub async fn initialize_components(
         olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
     }
 
+    let object_store_config =
+        load_object_store_config().expect("failed to load object store config");
+    let store_factory = ObjectStoreFactory::new(object_store_config);
+
+    if components.contains(&Component::WitnessInputProducer) {
+        let started_at = Instant::now();
+        olaos_logs::info!("initializing Merkle Tree");
+        let pool_builder = ConnectionPool::singleton(DbVariant::Master);
+        let connection_pool = pool_builder.build().await;
+        let network_config = load_network_config().expect("failed to load network config");
+        let _ = add_witness_input_producer_to_task_futures(
+            &mut task_futures,
+            &connection_pool,
+            &store_factory,
+            L2ChainId(network_config.ola_network_id),
+            stop_receiver.clone(),
+        )
+        .await
+        .context("add_witness_input_producer_to_task_futures");
+        olaos_logs::info!(
+            "initialized WitnessInputProducer in {:?}",
+            started_at.elapsed()
+        );
+    }
+
+    if components.contains(&Component::ProofDataHandler) {
+        let proof_data_handler_config =
+            load_proof_data_handler_config().expect("failed to load proof data handler config");
+        task_futures.push(tokio::spawn(proof_data_handler::run_server(
+            proof_data_handler_config,
+            store_factory.create_store().await,
+            connection_pool.clone(),
+            stop_receiver.clone(),
+        )));
+    }
+
     healthchecks.push(Box::new(ConnectionPoolHealthCheck::new(
         replica_connection_pool,
     )));
@@ -151,7 +203,7 @@ async fn run_http_api(
     replica_connection_pool: ConnectionPool,
     stop_receiver: watch::Receiver<bool>,
     storage_caches: PostgresStorageCaches,
-) -> (Vec<JoinHandle<()>>, ReactiveHealthCheck) {
+) -> (Vec<JoinHandle<anyhow::Result<()>>>, ReactiveHealthCheck) {
     let (tx_sender, vm_barrier) = build_tx_sender(
         tx_sender_config,
         &api_config.web3_json_rpc,
@@ -207,7 +259,7 @@ async fn build_tx_sender(
 
 fn build_storage_caches(
     replica_connection_pool: &ConnectionPool,
-    task_futures: &mut Vec<JoinHandle<()>>,
+    task_futures: &mut Vec<JoinHandle<anyhow::Result<()>>>,
 ) -> PostgresStorageCaches {
     let rpc_config = load_web3_json_rpc_config().expect("failed to load web3_json_rpc_config");
     let factory_deps_capacity = rpc_config.factory_deps_cache_size() as u64;
@@ -243,7 +295,7 @@ pub fn setup_sigint_handler() -> oneshot::Receiver<()> {
 }
 
 async fn add_sequencer_to_task_futures(
-    task_futures: &mut Vec<JoinHandle<()>>,
+    task_futures: &mut Vec<JoinHandle<anyhow::Result<()>>>,
     contracts_config: &ContractsConfig,
     sequencer_config: SequencerConfig,
     db_config: &DBConfig,
@@ -311,13 +363,14 @@ pub async fn is_genesis_needed() -> bool {
 }
 
 async fn add_trees_to_task_futures(
-    task_futures: &mut Vec<JoinHandle<()>>,
+    task_futures: &mut Vec<JoinHandle<anyhow::Result<()>>>,
     healthchecks: &mut Vec<Box<dyn CheckHealth>>,
     _components: &[Component],
     stop_receiver: watch::Receiver<bool>,
 ) {
     let db_config = DBConfig::from_env();
-    let operation_config = OperationsManagerConfig::from_env();
+    let operation_config =
+        load_operation_manager_config().expect("failed to load operation config");
     let (future, tree_health_check) = run_tree(&db_config, &operation_config, stop_receiver).await;
     task_futures.push(future);
     healthchecks.push(Box::new(tree_health_check));
@@ -327,7 +380,7 @@ async fn run_tree(
     config: &DBConfig,
     operation_manager: &OperationsManagerConfig,
     stop_receiver: watch::Receiver<bool>,
-) -> (JoinHandle<()>, ReactiveHealthCheck) {
+) -> (JoinHandle<anyhow::Result<()>>, ReactiveHealthCheck) {
     let started_at = Instant::now();
     let config =
         metadata_calculator::MetadataCalculatorConfig::for_main_node(config, operation_manager);
@@ -338,4 +391,23 @@ async fn run_tree(
     let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
     olaos_logs::info!("Initialized merkle tree in {:?}", started_at.elapsed());
     (future, tree_health_check)
+}
+
+async fn add_witness_input_producer_to_task_futures(
+    task_futures: &mut Vec<JoinHandle<anyhow::Result<()>>>,
+    connection_pool: &ConnectionPool,
+    store_factory: &ObjectStoreFactory,
+    l2_chain_id: L2ChainId,
+    stop_receiver: watch::Receiver<bool>,
+) -> anyhow::Result<()> {
+    let started_at = Instant::now();
+    olaos_logs::info!("initializing WitnessInputProducer");
+    let producer =
+        WitnessInputProducer::new(connection_pool.clone(), store_factory, l2_chain_id).await?;
+    task_futures.push(tokio::spawn(producer.run(stop_receiver, None)));
+    olaos_logs::info!(
+        "Initialized WitnessInputProducer in {:?}",
+        started_at.elapsed()
+    );
+    Ok(())
 }

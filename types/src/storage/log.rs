@@ -1,12 +1,12 @@
 use ola_basic_types::{AccountTreeId, Address, H256, U256};
-use ola_utils::u256_to_h256;
+use ola_utils::{olavm_address_to_address, olavm_address_to_u256, u256_to_h256};
 use serde::{Deserialize, Serialize};
 
 use crate::{StorageKey, StorageValue};
 use olavm_core::{
     merkle_tree::log::{
         StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind,
-        WitnessStorageLog as OlavmWitnessStorageLog,
+        StorageQuery as OlavmStorageQuery, WitnessStorageLog as OlavmWitnessStorageLog,
     },
     types::{
         account::AccountTreeId as OlavmAccountTreeId,
@@ -39,11 +39,39 @@ pub struct LogQuery {
     pub is_service: bool,
 }
 
+impl From<&OlavmStorageQuery> for LogQuery {
+    fn from(query: &OlavmStorageQuery) -> Self {
+        Self {
+            timestamp: Timestamp(query.block_timestamp as u32),
+            tx_number_in_block: 0,
+            aux_byte: 0,
+            shard_id: 0,
+            address: olavm_address_to_address(&query.contract_addr),
+            key: olavm_address_to_u256(&query.storage_key),
+            read_value: olavm_address_to_u256(&query.pre_value),
+            written_value: olavm_address_to_u256(&query.value),
+            rw_flag: query.kind != OlavmStorageLogKind::Read,
+            rollback: false,
+            is_service: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum StorageLogQueryType {
     Read,
     InitialWrite,
     RepeatedWrite,
+}
+
+impl From<OlavmStorageLogKind> for StorageLogQueryType {
+    fn from(kind: OlavmStorageLogKind) -> Self {
+        match kind {
+            OlavmStorageLogKind::Read => StorageLogQueryType::Read,
+            OlavmStorageLogKind::InitialWrite => StorageLogQueryType::InitialWrite,
+            OlavmStorageLogKind::RepeatedWrite => StorageLogQueryType::RepeatedWrite,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -109,7 +137,7 @@ impl WitnessStorageLog {
                 kind: if self.storage_log.kind == StorageLogKind::Read {
                     OlavmStorageLogKind::Read
                 } else {
-                    OlavmStorageLogKind::Write
+                    OlavmStorageLogKind::RepeatedWrite
                 },
                 key: h256_to_tree_key(&self.storage_log.key.hashed_key()),
                 value: h256_to_tree_value(&self.storage_log.value),

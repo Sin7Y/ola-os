@@ -1,3 +1,4 @@
+use ethereum_types::H256;
 use ola_types::{
     l2::L2Tx, request::PaymasterParams, tx::primitives::PackedEthSignature, Address, Nonce,
 };
@@ -32,7 +33,11 @@ where
         Self {
             wallet,
             from,
-            contract_address: None,
+            contract_address: Some(H256([
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x80, 0x01,
+            ])),
             calldata: None,
             nonce: None,
             factory_deps: None,
@@ -97,17 +102,12 @@ where
     pub async fn send(self) -> Result<SyncTransactionHandle<'a, P>, ClientError> {
         let wallet = self.wallet;
         let tx = self.tx().await?;
-
+        // println!("tx: {:?}", tx);
         wallet.send_transaction(tx).await
     }
 
     pub fn calldata(mut self, calldata: Vec<u8>) -> Self {
         self.calldata = Some(calldata);
-        self
-    }
-
-    pub fn contract_address(mut self, address: Address) -> Self {
-        self.contract_address = Some(address);
         self
     }
 

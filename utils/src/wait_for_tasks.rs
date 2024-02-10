@@ -4,7 +4,7 @@ use tokio::task::JoinHandle;
 use crate::panic_extractor::try_extract_panic_message;
 
 pub async fn wait_for_tasks<Fut>(
-    task_futures: Vec<JoinHandle<()>>,
+    task_futures: Vec<JoinHandle<anyhow::Result<()>>>,
     graceful_shutdown: Option<Fut>,
     tasks_allowed_to_finish: bool,
 ) where
