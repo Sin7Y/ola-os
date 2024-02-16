@@ -38,3 +38,15 @@ DROP INDEX miniblocks_l1_batch_number_idx;
 DROP TABLE miniblocks;
 
 DROP TABLE storage;
+
+DROP INDEX events_tx_hash_idx;
+DROP INDEX events_address_idx;
+DROP INDEX events_topic1_idx;
+DROP INDEX events_topic2_idx;
+DROP INDEX events_topic3_idx;
+DROP INDEX events_topic4_idx;
+DROP INDEX events_block_number_tx_index;
+DROP INDEX events_tx_initiator_address_idx;
+DROP INDEX events_address_block_event_index_in_block_index;
+DROP INDEX ix_events_t1;
+DROP TABLE events;
