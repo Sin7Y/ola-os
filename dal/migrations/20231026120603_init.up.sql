@@ -186,3 +186,38 @@ CREATE TABLE call_traces (
     call_trace BYTEA NOT NULL,
     FOREIGN KEY (tx_hash) REFERENCES transactions (hash) ON DELETE CASCADE
 );
+
+CREATE TABLE events
+(
+    miniblock_number BIGINT NOT NULL REFERENCES miniblocks (number) ON DELETE CASCADE,
+    tx_hash BYTEA NOT NULL,
+    tx_index_in_block INT NOT NULL,
+    address BYTEA NOT NULL,
+
+    event_index_in_block INT NOT NULL,
+    event_index_in_tx INT NOT NULL,
+
+    topic1 BYTEA NOT NULL,
+    topic2 BYTEA NOT NULL,
+    topic3 BYTEA NOT NULL,
+    topic4 BYTEA NOT NULL,
+
+    value BYTEA NOT NULL,
+    tx_initiator_address BYTEA NOT NULL DEFAULT '\x0000000000000000000000000000000000000000'::bytea,
+
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL,
+
+    PRIMARY KEY (miniblock_number, event_index_in_block)
+);
+
+CREATE INDEX events_tx_hash_idx ON events USING hash (tx_hash);
+CREATE INDEX events_address_idx ON events USING btree (address);
+CREATE INDEX events_topic1_idx ON events USING btree (topic1);
+CREATE INDEX events_topic2_idx ON events USING btree (topic2);
+CREATE INDEX events_topic3_idx ON events USING btree (topic3);
+CREATE INDEX events_topic4_idx ON events USING btree (topic4);
+CREATE INDEX events_block_number_tx_index ON events (miniblock_number, tx_index_in_block);
+CREATE INDEX events_tx_initiator_address_idx ON events (tx_initiator_address);
+CREATE INDEX events_address_block_event_index_in_block_index ON events (address, miniblock_number, event_index_in_block);
+CREATE INDEX ix_events_t1 ON events USING btree (topic1, address, tx_hash);
