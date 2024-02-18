@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        SELECT\n                            address, topic1, topic2, topic3, topic4, value,\n                            Null::bytea as \"block_hash\", Null::bigint as \"l1_batch_number?\",\n                            miniblock_number, tx_hash, tx_index_in_block,\n                            event_index_in_block, event_index_in_tx\n                        FROM events\n                        WHERE tx_hash = $1\n                        ORDER BY miniblock_number ASC, event_index_in_block ASC\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "address",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 1,
+        "name": "topic1",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "topic2",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "topic3",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "topic4",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 5,
+        "name": "value",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "block_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 7,
+        "name": "l1_batch_number?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "miniblock_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "tx_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 10,
+        "name": "tx_index_in_block",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "event_index_in_block",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "event_index_in_tx",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a39f760d2cd879a78112e57d8611d7099802b03b7cc4933cafb4c47e133ad543"
+}

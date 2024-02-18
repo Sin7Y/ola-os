@@ -84,4 +84,15 @@ impl EventsDal<'_, '_> {
         // note: all the time spent in this function is spent in `copy.finish()`
         copy.finish().await.unwrap();
     }
+
+    /// Removes events with a block number strictly greater than the specified `block_number`.
+    pub async fn rollback_events(&mut self, block_number: MiniblockNumber) {
+        sqlx::query!(
+            "DELETE FROM events WHERE miniblock_number > $1",
+            block_number.0 as i64
+        )
+        .execute(self.storage.conn())
+        .await
+        .unwrap();
+    }
 }

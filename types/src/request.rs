@@ -4,7 +4,7 @@ use crate::{
     EIP_1559_TX_TYPE, EIP_712_TX_TYPE, OLA_RAW_TX_TYPE,
 };
 use ethabi::ethereum_types::U64;
-use ola_basic_types::{Address, Nonce, H256};
+use ola_basic_types::{Address, Bytes, Nonce, H256, U256};
 use ola_utils::{
     bytecode::{hash_bytecode, validate_bytecode, InvalidBytecodeError},
     bytes_to_u64s, h256_to_u64_array,
@@ -14,8 +14,6 @@ use ola_utils::{
 use rlp::{DecoderError, Rlp, RlpStream};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use web3::types::AccessList;
-pub use web3::types::{Bytes, U256};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum SerializationTransactionError {
