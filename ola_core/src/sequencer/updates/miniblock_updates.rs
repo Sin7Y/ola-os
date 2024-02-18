@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use ola_types::{
+    events::VmEvent,
     log::StorageLogQuery,
     tx::{
         tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
@@ -16,7 +17,7 @@ use crate::sequencer::extractors;
 #[derive(Debug, Clone, PartialEq)]
 pub struct MiniblockUpdates {
     pub executed_transactions: Vec<TransactionExecutionResult>,
-    // pub events: Vec<VmEvent>,
+    pub events: Vec<VmEvent>,
     pub storage_logs: Vec<StorageLogQuery>,
     pub new_factory_deps: HashMap<H256, Vec<u8>>,
     pub block_execution_metrics: ExecutionMetrics,
@@ -28,7 +29,7 @@ impl MiniblockUpdates {
     pub(crate) fn new(timestamp: u64) -> Self {
         Self {
             executed_transactions: vec![],
-            // events: vec![],
+            events: vec![],
             storage_logs: vec![],
             new_factory_deps: HashMap::new(),
             block_execution_metrics: ExecutionMetrics::default(),
@@ -73,8 +74,8 @@ impl MiniblockUpdates {
             .collect();
 
         self.new_factory_deps.extend(tx_factory_deps);
-
-        // self.events.extend(tx_execution_result.result.logs.events);
+        // TODO: check events
+        self.events.extend(tx_execution_result.result.logs.events);
         self.storage_logs
             .extend(tx_execution_result.result.logs.storage_logs);
 
@@ -92,7 +93,8 @@ impl MiniblockUpdates {
     }
 
     pub(crate) fn extend_from_fictive_transaction(&mut self, vm_execution_logs: VmExecutionLogs) {
-        // self.events.extend(vm_execution_logs.events);
+        // TODO: check events
+        self.events.extend(vm_execution_logs.events);
         self.storage_logs.extend(vm_execution_logs.storage_logs);
     }
 }

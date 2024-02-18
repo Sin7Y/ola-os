@@ -13,10 +13,11 @@ use std::{
 use ola_dal::StorageProcessor;
 use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
+    events::VmEvent,
     log::{LogQuery, StorageLog, StorageLogQuery},
-    tx::TransactionExecutionResult,
-    AccountTreeId, L1BatchNumber, MiniblockNumber, StorageKey, StorageValue, Transaction, H256,
-    U256,
+    tx::{IncludedTxLocation, TransactionExecutionResult},
+    AccountTreeId, Address, L1BatchNumber, MiniblockNumber, StorageKey, StorageValue, Transaction,
+    H256, U256,
 };
 use ola_utils::{misc::miniblock_hash, u256_to_h256};
 
@@ -97,8 +98,9 @@ impl MiniblockSealCommand {
         olaos_logs::info!(
             "Sealing miniblock {miniblock_number} (L1 batch {l1_batch_number}) \
              with {total_tx_count} ({l2_tx_count} L2 + {l1_tx_count} L1) txs, \
-             {reads_count} reads, {writes_count} writes",
-            total_tx_count = l1_tx_count + l2_tx_count
+             {event_count} events, {reads_count} reads, {writes_count} writes",
+            total_tx_count = l1_tx_count + l2_tx_count,
+            event_count = self.miniblock.events.len()
         );
 
         let mut transaction = storage.start_transaction().await;
@@ -168,25 +170,20 @@ impl MiniblockSealCommand {
         // }
         // progress.end_stage("insert_tokens", Some(added_tokens_len));
 
-        // TODO: events not supported 23/10/23
-        // let miniblock_events = self.extract_events(is_fictive);
-        // let miniblock_event_count = miniblock_events
-        //     .iter()
-        //     .map(|(_, events)| events.len())
-        //     .sum();
-        // progress.end_stage("extract_events", Some(miniblock_event_count));
-        // transaction
-        //     .events_dal()
-        //     .save_events(miniblock_number, &miniblock_events)
-        //     .await;
-        // progress.end_stage("insert_events", Some(miniblock_event_count));
+        let miniblock_events = self.extract_events(is_fictive);
+        let miniblock_event_count = miniblock_events
+            .iter()
+            .map(|(_, events)| events.len())
+            .sum();
+        progress.end_stage("extract_events", Some(miniblock_event_count));
+        transaction
+            .events_dal()
+            .save_events(miniblock_number, &miniblock_events)
+            .await;
+        progress.end_stage("insert_events", Some(miniblock_event_count));
 
         transaction.commit().await;
-        // progress.end_stage("commit_miniblock", None);
-        olaos_logs::info!(
-            "Sealed miniblock {miniblock_number} in {:?}",
-            started_at.elapsed()
-        );
+        progress.end_stage("commit_miniblock", None);
     }
 
     fn assert_valid_miniblock(&self, is_fictive: bool) {
@@ -200,11 +197,10 @@ impl MiniblockSealCommand {
             first_tx_index..next_tx_index
         };
 
-        // TODO: Event not supported yet.
-        // for event in &self.miniblock.events {
-        //     let tx_index = event.location.1 as usize;
-        //     assert!(tx_index_range.contains(&tx_index));
-        // }
+        for event in &self.miniblock.events {
+            let tx_index = event.location.1 as usize;
+            assert!(tx_index_range.contains(&tx_index));
+        }
         for storage_log in &self.miniblock.storage_logs {
             let tx_index = storage_log.log_query.tx_number_in_block as usize;
             assert!(tx_index_range.contains(&tx_index));
@@ -252,35 +248,35 @@ impl MiniblockSealCommand {
         count
     }
 
-    // fn extract_events(&self, is_fictive: bool) -> Vec<(IncludedTxLocation, Vec<&VmEvent>)> {
-    //     self.group_by_tx_location(&self.miniblock.events, is_fictive, |event| event.location.1)
-    // }
+    fn extract_events(&self, is_fictive: bool) -> Vec<(IncludedTxLocation, Vec<&VmEvent>)> {
+        self.group_by_tx_location(&self.miniblock.events, is_fictive, |event| event.location.1)
+    }
 
-    // fn group_by_tx_location<'a, T>(
-    //     &'a self,
-    //     entries: &'a [T],
-    //     is_fictive: bool,
-    //     tx_location: impl Fn(&T) -> u32,
-    // ) -> Vec<(IncludedTxLocation, Vec<&'a T>)> {
-    //     let grouped_entries = entries.iter().group_by(|&entry| tx_location(entry));
-    //     let grouped_entries = grouped_entries.into_iter().map(|(tx_index, entries)| {
-    //         let (tx_hash, tx_initiator_address) = if is_fictive {
-    //             assert_eq!(tx_index as usize, self.first_tx_index);
-    //             (H256::zero(), Address::zero())
-    //         } else {
-    //             let tx = self.transaction(tx_index as usize);
-    //             (tx.hash(), tx.initiator_account())
-    //         };
+    fn group_by_tx_location<'a, T>(
+        &'a self,
+        entries: &'a [T],
+        is_fictive: bool,
+        tx_location: impl Fn(&T) -> u32,
+    ) -> Vec<(IncludedTxLocation, Vec<&'a T>)> {
+        let grouped_entries = entries.iter().group_by(|&entry| tx_location(entry));
+        let grouped_entries = grouped_entries.into_iter().map(|(tx_index, entries)| {
+            let (tx_hash, tx_initiator_address) = if is_fictive {
+                assert_eq!(tx_index as usize, self.first_tx_index);
+                (H256::zero(), Address::zero())
+            } else {
+                let tx = self.transaction(tx_index as usize);
+                (tx.hash(), tx.initiator_account())
+            };
 
-    //         let location = IncludedTxLocation {
-    //             tx_hash,
-    //             tx_index_in_miniblock: tx_index - self.first_tx_index as u32,
-    //             tx_initiator_address,
-    //         };
-    //         (location, entries.collect())
-    //     });
-    //     grouped_entries.collect()
-    // }
+            let location = IncludedTxLocation {
+                tx_hash,
+                tx_index_in_miniblock: tx_index - self.first_tx_index as u32,
+                tx_initiator_address,
+            };
+            (location, entries.collect())
+        });
+        grouped_entries.collect()
+    }
 }
 
 impl UpdatesManager {
@@ -339,9 +335,10 @@ impl UpdatesManager {
         olaos_logs::info!(
             "Sealing L1 batch {current_l1_batch_number} with {total_tx_count} \
                 ({l2_tx_count} L2 + {l1_tx_count} L1) txs, \
-                {reads_count} reads ({dedup_reads_count} deduped), \
+                {event_count} events, {reads_count} reads ({dedup_reads_count} deduped), \
                 {writes_count} writes ({dedup_writes_count} deduped)",
-            total_tx_count = l1_tx_count + l2_tx_count
+            total_tx_count = l1_tx_count + l2_tx_count,
+            event_count = full_result.events.len()
         );
 
         let (prev_hash, prev_timestamp) =
