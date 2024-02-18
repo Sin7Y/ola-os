@@ -353,11 +353,12 @@ impl UpdatesManager {
             extractors::display_timestamp(prev_timestamp),
             extractors::display_timestamp(timestamp)
         );
-
+        // TODO: check fee_account_address has value
         let l1_batch = L1BatchHeader {
             number: current_l1_batch_number,
             is_finished: true,
             timestamp,
+            fee_account_address: block_context.context.operator_address,
             l1_tx_count: l1_tx_count as u16,
             l2_tx_count: l2_tx_count as u16,
             used_contract_hashes: vec![],

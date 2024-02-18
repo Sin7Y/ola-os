@@ -2,7 +2,7 @@ use ola_contracts::BaseSystemContractsHashes;
 use ola_types::{
     api,
     block::{L1BatchHeader, MiniblockHeader},
-    L1BatchNumber, MiniblockNumber, H256,
+    Address, L1BatchNumber, MiniblockNumber, H256,
 };
 use sqlx::{postgres::PgArguments, query::Query, Postgres};
 
@@ -13,6 +13,7 @@ pub struct StorageL1BatchHeader {
     pub is_finished: bool,
     pub l1_tx_count: i32,
     pub l2_tx_count: i32,
+    pub fee_account_address: Vec<u8>,
     pub used_contract_hashes: serde_json::Value,
     pub bootloader_code_hash: Option<Vec<u8>>,
     pub default_aa_code_hash: Option<Vec<u8>>,
@@ -25,6 +26,7 @@ impl From<StorageL1BatchHeader> for L1BatchHeader {
             number: L1BatchNumber(l1_batch.number as u32),
             is_finished: l1_batch.is_finished,
             timestamp: l1_batch.timestamp as u64,
+            fee_account_address: Address::from_slice(&l1_batch.fee_account_address),
             l1_tx_count: l1_batch.l1_tx_count as u16,
             l2_tx_count: l1_batch.l2_tx_count as u16,
 

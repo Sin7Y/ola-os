@@ -18,6 +18,7 @@ CREATE TABLE l1_batches
     is_finished BOOL NOT NULL,
     l1_tx_count INT NOT NULL,
     l2_tx_count INT NOT NULL,
+    fee_account_address BYTEA NOT NULL,
 
     hash BYTEA,
     parent_hash BYTEA,
