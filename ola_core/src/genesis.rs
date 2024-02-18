@@ -6,7 +6,7 @@ use ola_types::{
     get_full_code_key, get_system_context_init_logs,
     log::{LogQuery, StorageLog, StorageLogKind, Timestamp},
     protocol_version::{ProtocolVersion, ProtocolVersionId},
-    AccountTreeId, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
+    AccountTreeId, Address, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
 };
 use ola_utils::{bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256};
 
@@ -16,6 +16,7 @@ use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 
 #[derive(Debug, Clone)]
 pub struct GenesisParams {
+    pub first_validator: Address,
     pub base_system_contracts: BaseSystemContracts,
     pub system_contracts: Vec<DeployedContract>,
 }
@@ -39,6 +40,7 @@ pub async fn ensure_genesis_state(
 
     olaos_logs::info!("running regenesis");
     let GenesisParams {
+        first_validator,
         base_system_contracts,
         system_contracts,
     } = genesis_params;
@@ -47,6 +49,7 @@ pub async fn ensure_genesis_state(
 
     create_genesis_l1_batch(
         &mut transaction,
+        *first_validator,
         ola_chain_id,
         base_system_contracts,
         system_contracts,
@@ -107,6 +110,7 @@ pub async fn ensure_genesis_state(
 
 pub(crate) async fn create_genesis_l1_batch(
     storage: &mut StorageProcessor<'_>,
+    first_validator_address: Address,
     chain_id: L2ChainId,
     base_system_contracts: &BaseSystemContracts,
     system_contracts: &[DeployedContract],
@@ -121,6 +125,7 @@ pub(crate) async fn create_genesis_l1_batch(
     let mut genesis_l1_batch_header = L1BatchHeader::new(
         L1BatchNumber(0),
         0,
+        first_validator_address,
         base_system_contracts.hashes(),
         ProtocolVersionId::latest(),
     );

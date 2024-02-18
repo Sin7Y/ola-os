@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT number, l1_tx_count, l2_tx_count, timestamp, is_finished, used_contract_hashes, bootloader_code_hash, default_aa_code_hash, protocol_version FROM l1_batches ORDER BY number DESC LIMIT 1",
+  "query": "SELECT number, l1_tx_count, l2_tx_count, timestamp, is_finished, fee_account_address, used_contract_hashes, bootloader_code_hash, default_aa_code_hash, protocol_version FROM l1_batches WHERE number = $1",
   "describe": {
     "columns": [
       {
@@ -30,29 +30,37 @@
       },
       {
         "ordinal": 5,
+        "name": "fee_account_address",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
         "name": "used_contract_hashes",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "bootloader_code_hash",
         "type_info": "Bytea"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "default_aa_code_hash",
         "type_info": "Bytea"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "protocol_version",
         "type_info": "Int4"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Int8"
+      ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -64,5 +72,5 @@
       true
     ]
   },
-  "hash": "50d9ad6f59ca918516d69d043f411742e32727fdef4f8bd979dc1053607ea807"
+  "hash": "c90b7e3febf009b9490f861266db761d6fce185629bd54552cbdaf577f6be2ad"
 }

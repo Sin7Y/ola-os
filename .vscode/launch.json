@@ -26,6 +26,7 @@
                 "OLAOS_HEALTHCHECK_PORT": "13002",
                 "OLAOS_MEMPOOL_CAPACITY": "1000000",
                 "OLAOS_OPERATIONS_MANAGER_DELAY_INTERVAL": "100",
+                "OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY": "123",
             }
         },
         {
