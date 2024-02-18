@@ -378,6 +378,7 @@ impl BatchExecutor {
                 }
             })
             .collect();
+        // TODO: add events
         let mut full_result = VmExecutionResult::default();
         full_result.storage_log_queries = storage_logs;
         VmBlockResult {

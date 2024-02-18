@@ -1,5 +1,9 @@
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
-use ola_types::{api::TransactionDetails, request::CallRequest, Bytes, H256};
+use ola_types::{
+    api::{TransactionDetails, TransactionReceipt},
+    request::CallRequest,
+    Bytes, H256,
+};
 
 #[cfg_attr(
     all(feature = "client", feature = "server"),
@@ -22,4 +26,7 @@ pub trait OlaNamespace {
 
     #[method(name = "getTransactionDetails")]
     async fn get_transaction_details(&self, hash: H256) -> RpcResult<Option<TransactionDetails>>;
+
+    #[method(name = "getTransactionReceipt")]
+    async fn get_transaction_receipt(&self, hash: H256) -> RpcResult<Option<TransactionReceipt>>;
 }

@@ -1,5 +1,9 @@
 use jsonrpsee::core::{async_trait, RpcResult};
-use ola_types::{api::TransactionDetails, request::CallRequest, Bytes, H256};
+use ola_types::{
+    api::{TransactionDetails, TransactionReceipt},
+    request::CallRequest,
+    Bytes, H256,
+};
 use ola_web3_decl::namespaces::ola::OlaNamespaceServer;
 
 use crate::api_server::web3::{backend::into_rpc_error, namespaces::ola::OlaNamespace};
@@ -18,6 +22,12 @@ impl OlaNamespaceServer for OlaNamespace {
 
     async fn get_transaction_details(&self, hash: H256) -> RpcResult<Option<TransactionDetails>> {
         self.get_transaction_details_impl(hash)
+            .await
+            .map_err(into_rpc_error)
+    }
+
+    async fn get_transaction_receipt(&self, hash: H256) -> RpcResult<Option<TransactionReceipt>> {
+        self.get_transaction_receipt_impl(hash)
             .await
             .map_err(into_rpc_error)
     }
