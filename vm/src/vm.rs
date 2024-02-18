@@ -38,6 +38,7 @@ pub struct VmPartialExecutionResult {
 }
 
 impl VmPartialExecutionResult {
+    // TODO: add events
     pub fn new(storage_queries: &Vec<StorageQuery>, tx_index_in_l1_batch: u32) -> Self {
         let storage_logs: Vec<StorageLogQuery> = storage_queries
             .iter()
