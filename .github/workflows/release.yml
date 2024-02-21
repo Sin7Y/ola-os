@@ -2,7 +2,7 @@ name: ola_node Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '*'
   workflow_dispatch:
 
 env:
