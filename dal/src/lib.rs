@@ -7,6 +7,7 @@ use events_dal::EventsDal;
 use fri_protocol_versions_dal::FriProtocolVersionsDal;
 use fri_prover_dal::FriProverDal;
 use fri_witness_generator_dal::FriWitnessGeneratorDal;
+use proof_generation_dal::ProofGenerationDal;
 use protocol_version_dal::ProtocolVersionsDal;
 pub use sqlx::Error as SqlxError;
 use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres, Transaction};
@@ -29,6 +30,7 @@ pub mod fri_prover_dal;
 pub mod fri_witness_generator_dal;
 pub mod healthcheck;
 pub mod models;
+pub mod proof_generation_dal;
 pub mod protocol_version_dal;
 pub mod storage_dal;
 pub mod storage_logs_dal;
@@ -167,6 +169,10 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn protocol_versions_dal(&mut self) -> ProtocolVersionsDal<'_, 'a> {
         ProtocolVersionsDal { storage: self }
+    }
+
+    pub fn proof_generation_dal(&mut self) -> ProofGenerationDal<'_, 'a> {
+        ProofGenerationDal { storage: self }
     }
 
     pub fn fri_protocol_versions_dal(&mut self) -> FriProtocolVersionsDal<'_, 'a> {

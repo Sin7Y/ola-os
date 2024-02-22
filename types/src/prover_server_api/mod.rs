@@ -3,7 +3,10 @@ use std::vec::Vec;
 use ola_basic_types::L1BatchNumber;
 use serde::{Deserialize, Serialize};
 
-use crate::protocol_version::FriProtocolVersionId;
+use crate::{
+    proofs::PrepareBasicCircuitsJob,
+    protocol_version::{FriProtocolVersionId, L1VerifierConfig},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProofGenerationDataRequest {}
@@ -26,7 +29,7 @@ pub enum SubmitProofResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProofGenerationData {
     pub l1_batch_number: L1BatchNumber,
-    // TODO:
-    pub data: Vec<u8>,
+    pub data: PrepareBasicCircuitsJob,
     pub fri_protocol_version_id: FriProtocolVersionId,
+    pub l1_verifier_config: L1VerifierConfig,
 }

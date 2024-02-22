@@ -4,7 +4,10 @@ use anyhow::{Context, Ok};
 use axum::{extract::Path, routing::post, Json, Router};
 use ola_config::proof_data_handler::ProofDataHandlerConfig;
 use ola_dal::connection::ConnectionPool;
-use ola_types::prover_server_api::{ProofGenerationDataRequest, SubmitProofRequest};
+use ola_types::{
+    protocol_version::L1VerifierConfig,
+    prover_server_api::{ProofGenerationDataRequest, SubmitProofRequest},
+};
 use olaos_object_store::ObjectStore;
 use tokio::sync::watch;
 
@@ -20,7 +23,10 @@ pub(crate) async fn run_server(
 ) -> anyhow::Result<()> {
     let bind_address = SocketAddr::from(([0, 0, 0, 0], config.http_port));
     olaos_logs::info!("Starting proof data handler server on {bind_address}");
-    let get_proof_gen_processor = RequestProcessor::new(blob_store, pool, config);
+    // TODO: add l1_verifier_config
+    let l1_verifier_config = L1VerifierConfig::default();
+    let get_proof_gen_processor =
+        RequestProcessor::new(blob_store, pool, config, Some(l1_verifier_config));
     let submit_proof_processor = get_proof_gen_processor.clone();
     let app = Router::new()
         .route(

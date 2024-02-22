@@ -149,3 +149,16 @@ pub struct ProtocolVersion {
     /// L2 Upgrade transaction.
     pub tx: Option<ProtocolUpgradeTx>,
 }
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct VerifierParams {
+    pub recursion_node_level_vk_hash: H256,
+    pub recursion_leaf_level_vk_hash: H256,
+    pub recursion_circuits_set_vks_hash: H256,
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct L1VerifierConfig {
+    pub params: VerifierParams,
+    pub recursion_scheduler_level_vk_hash: H256,
+}
