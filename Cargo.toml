@@ -18,7 +18,7 @@ members = [
     "client/sdk",
     "object_store",
     "queued_job_processor",
-    # "prover/prover_fri_gateway",
+    "prover/prover_fri_gateway",
     # "prover/witness_generator",
 ]
 resolver = "2"
