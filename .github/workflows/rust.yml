@@ -51,7 +51,7 @@ jobs:
           
   build:
 
-    runs-on: ubuntu-22.04.3
+    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -65,7 +65,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly
+          toolchain: nightly-2024-01-19
           override: true
           components: rustfmt, clippy
       - name: fmt
@@ -78,6 +78,6 @@ jobs:
           cargo install --version=0.7.2 sqlx-cli --no-default-features --features postgres
           SKIP_DOCKER=true cd dal && ./scripts/init_main_db.sh
       - name: Build
-        run: cargo +nightly build
+        run: cargo build
       - name: Run tests
         run: cargo test

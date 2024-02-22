@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use ola_config::{contracts::load_contracts_config, sequencer::load_network_config};
+use ola_config::{
+    contracts::load_contracts_config, eth_sender::load_eth_sender_config,
+    sequencer::load_network_config,
+};
 use ola_core::{
     genesis_init, initialize_components, is_genesis_needed, setup_sigint_handler, Component,
 };
@@ -15,9 +18,10 @@ async fn main() -> anyhow::Result<()> {
     olaos_logs::info!("init_subscriber finished");
 
     if is_genesis_needed().await {
+        let eth_sender = load_eth_sender_config().expect("failed to load eth sender config");
         let network = load_network_config().expect("failed to load network config");
         let contracts = load_contracts_config().expect("failed to laod contract config");
-        genesis_init(&network, &contracts).await;
+        genesis_init(&eth_sender, &network, &contracts).await;
         olaos_logs::info!("genesis_init finished");
     }
 

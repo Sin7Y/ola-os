@@ -18,6 +18,7 @@ use ola_config::{
     },
     contracts::{load_contracts_config, ContractsConfig},
     database::{load_db_config, DBConfig},
+    eth_sender::ETHSenderConfig,
     object_store::load_object_store_config,
     proof_data_handler::load_proof_data_handler_config,
     sequencer::{load_network_config, load_sequencer_config, NetworkConfig, SequencerConfig},
@@ -29,7 +30,9 @@ use ola_dal::{
     StorageProcessor,
 };
 use ola_state::postgres::PostgresStorageCaches;
-use ola_types::{system_contracts::get_system_smart_contracts, L2ChainId};
+use ola_types::{
+    system_contracts::get_system_smart_contracts, tx::primitives::PackedEthSignature, L2ChainId,
+};
 use olaos_health_check::{CheckHealth, ReactiveHealthCheck};
 use olaos_object_store::ObjectStoreFactory;
 use olaos_queued_job_processor::JobProcessor;
@@ -343,13 +346,26 @@ async fn add_sequencer_to_task_futures(
     task_futures.push(mempool_fetcher_handle);
 }
 
-pub async fn genesis_init(network_config: &NetworkConfig, _contracts_config: &ContractsConfig) {
+pub async fn genesis_init(
+    eth_sender: &ETHSenderConfig,
+    network_config: &NetworkConfig,
+    _contracts_config: &ContractsConfig,
+) {
     let mut storage: StorageProcessor<'_> = StorageProcessor::establish_connection(true).await;
+    // TODO: check operator_address is correct
+    let operator_address = PackedEthSignature::address_from_private_key(
+        &eth_sender
+            .sender
+            .private_key()
+            .expect("Private key is required for genesis init"),
+    )
+    .expect("Failed to restore operator address from private key");
 
     genesis::ensure_genesis_state(
         &mut storage,
         L2ChainId(network_config.ola_network_id),
         &genesis::GenesisParams {
+            first_validator: operator_address,
             base_system_contracts: BaseSystemContracts::load_from_disk(),
             system_contracts: get_system_smart_contracts(),
         },

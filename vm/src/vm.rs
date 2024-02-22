@@ -1,4 +1,5 @@
 use ola_types::{
+    events::VmEvent,
     log::{LogQuery, StorageLogQuery},
     tx::tx_execution_info::{TxExecutionStatus, VmExecutionLogs},
     vm_trace::Call,
@@ -11,6 +12,7 @@ use crate::{errors::VmRevertReasonParsingResult, Word};
 
 #[derive(Debug, PartialEq, Default)]
 pub struct VmExecutionResult {
+    pub events: Vec<VmEvent>,
     pub storage_log_queries: Vec<StorageLogQuery>,
     pub used_contract_hashes: Vec<U256>,
     pub return_data: Vec<Word>,
@@ -36,6 +38,7 @@ pub struct VmPartialExecutionResult {
 }
 
 impl VmPartialExecutionResult {
+    // TODO: add events
     pub fn new(storage_queries: &Vec<StorageQuery>, tx_index_in_l1_batch: u32) -> Self {
         let storage_logs: Vec<StorageLogQuery> = storage_queries
             .iter()
