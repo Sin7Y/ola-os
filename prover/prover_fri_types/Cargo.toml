@@ -1,0 +1,11 @@
+[package]
+name = "olaos_prover_fri_types"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+olaos_object_store = { path = "../../object_store" }
+ola_types = { path = "../../types" }
+
+serde = { version = "1.0", features = ["derive"] }

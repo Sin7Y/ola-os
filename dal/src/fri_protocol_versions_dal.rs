@@ -27,9 +27,7 @@ impl FriProtocolVersionsDal<'_, '_> {
         .unwrap();
     }
 
-    pub async fn protocol_versions(
-        &mut self,
-    ) -> Vec<FriProtocolVersionId> {
+    pub async fn protocol_versions(&mut self) -> Vec<FriProtocolVersionId> {
         sqlx::query!(
             r#"
             SELECT

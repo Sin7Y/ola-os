@@ -1,3 +1,5 @@
+use crate::block::L1BatchHeader;
+
 use super::storage::writes::{InitialStorageWrite, RepeatedStorageWrite};
 use ola_basic_types::H256;
 use ola_utils::hash::hash_bytes;
@@ -15,6 +17,13 @@ pub struct L1BatchMetadata {
     pub aux_data_hash: H256,
     pub meta_parameters_hash: H256,
     pub pass_through_data_hash: H256,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct L1BatchWithMetadata {
+    pub header: L1BatchHeader,
+    pub metadata: L1BatchMetadata,
+    pub factory_deps: Vec<Vec<u8>>,
 }
 
 pub trait SerializeCommitment {

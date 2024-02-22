@@ -1,11 +1,15 @@
-use anyhow::Ok;
+use anyhow::{anyhow, Ok};
 use ola_config::{
     fri_witness_generator::load_fri_witness_generator_config,
     object_store::load_object_store_config,
 };
 use ola_dal::connection::{ConnectionPool, DbVariant};
+use ola_types::proofs::AggregationRound;
 use olaos_logs::telemetry::{get_subscriber, init_subscriber};
 use olaos_object_store::ObjectStoreFactory;
+use olaos_witness_generator::basic_circuits::BasicWitnessGenerator;
+use structopt::StructOpt;
+use tokio::sync::watch;
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -35,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
     let config =
         load_fri_witness_generator_config().expect("failed to load fri witness generator config");
-    let pool = ConnectionPool::builder(DbVariant::Master).build().await;
+    let connection_pool = ConnectionPool::builder(DbVariant::Master).build().await;
     let prover_connection_pool = ConnectionPool::builder(DbVariant::Prover).build().await;
     let object_store_config =
         load_object_store_config().expect("failed to load object store config");
@@ -45,7 +49,6 @@ async fn main() -> anyhow::Result<()> {
     let protocol_versions = prover_connection_pool
         .access_storage()
         .await
-        .unwrap()
         .fri_protocol_versions_dal()
         .protocol_versions()
         .await;
