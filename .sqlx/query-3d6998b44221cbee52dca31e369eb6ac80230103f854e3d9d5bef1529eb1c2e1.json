@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                WITH sl AS (\n                    SELECT * FROM storage_logs\n                    WHERE storage_logs.address = $1 AND storage_logs.tx_hash = $2\n                    ORDER BY storage_logs.miniblock_number DESC, storage_logs.operation_number DESC\n                    LIMIT 1\n                )\n                SELECT\n                     transactions.hash as tx_hash,\n                     transactions.index_in_block as index_in_block,\n                     transactions.l1_batch_tx_index as l1_batch_tx_index,\n                     transactions.miniblock_number as block_number,\n                     transactions.error as error,\n                     transactions.initiator_address as initiator_address,\n                     transactions.data->'to' as \"transfer_to?\",\n                     transactions.data->'contractAddress' as \"execute_contract_address?\",\n                     transactions.tx_format as \"tx_format?\",\n                     miniblocks.hash as \"block_hash?\",\n                     miniblocks.l1_batch_number as \"l1_batch_number?\",\n                     sl.key as \"contract_address?\"\n                FROM transactions\n                LEFT JOIN miniblocks\n                    ON miniblocks.number = transactions.miniblock_number\n                LEFT JOIN sl\n                    ON sl.value != $3\n                WHERE transactions.hash = $2\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tx_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 1,
+        "name": "index_in_block",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "l1_batch_tx_index",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "block_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "error",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "initiator_address",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "transfer_to?",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "execute_contract_address?",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "tx_format?",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "block_hash?",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 10,
+        "name": "l1_batch_number?",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "contract_address?",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bytea",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      null,
+      null,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "3d6998b44221cbee52dca31e369eb6ac80230103f854e3d9d5bef1529eb1c2e1"
+}

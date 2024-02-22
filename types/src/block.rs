@@ -1,3 +1,4 @@
+use ola_basic_types::Address;
 pub use ola_basic_types::{
     AccountTreeId, L1BatchNumber, L1ChainId, MiniblockNumber, PriorityOpId, H256, U256,
 };
@@ -52,6 +53,8 @@ pub struct L1BatchHeader {
     pub is_finished: bool,
     /// Timestamp when block was first created.
     pub timestamp: u64,
+    /// Address of the fee account that was used when block was created
+    pub fee_account_address: Address,
     /// Total number of processed priority operations in the block
     pub l1_tx_count: u16,
     /// Total number of processed txs that was requested offchain
@@ -67,6 +70,7 @@ impl L1BatchHeader {
     pub fn new(
         number: L1BatchNumber,
         timestamp: u64,
+        fee_account_address: Address,
         base_system_contracts_hashes: BaseSystemContractsHashes,
         protocol_version: ProtocolVersionId,
     ) -> L1BatchHeader {
@@ -74,6 +78,7 @@ impl L1BatchHeader {
             number,
             is_finished: false,
             timestamp,
+            fee_account_address,
             l1_tx_count: 0,
             l2_tx_count: 0,
             used_contract_hashes: vec![],

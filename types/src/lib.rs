@@ -4,10 +4,9 @@ pub use self::{
     block::{AccountTreeId, L1BatchNumber, L1ChainId, MiniblockNumber, PriorityOpId},
     l2::Nonce,
     protocol_version::U256,
-    request::Bytes,
 };
 use l2::L2TxCommonData;
-pub use ola_basic_types::H256;
+pub use ola_basic_types::*;
 use ola_utils::{bytes_to_u64s, h256_to_u64_array, hash::PoseidonBytes, u64s_to_bytes};
 use protocol_version::ProtocolUpgradeTxCommonData;
 use serde::{Deserialize, Serialize};

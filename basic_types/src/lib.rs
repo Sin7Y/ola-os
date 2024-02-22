@@ -5,9 +5,11 @@ use std::num::ParseIntError;
 use std::ops::{Add, Deref, DerefMut, Sub};
 use std::str::FromStr;
 
-pub use web3::types::{Bytes, H160, H256, U256};
+pub use web3::types::{Bytes, H160, H256, U256, U64};
 
 pub type Address = H256;
+/// Index in block
+pub type Index = U64;
 
 #[macro_use]
 mod macros;

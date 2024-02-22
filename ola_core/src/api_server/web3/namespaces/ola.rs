@@ -1,4 +1,4 @@
-use ola_types::api::TransactionDetails;
+use ola_types::api::{TransactionDetails, TransactionReceipt};
 use ola_types::H256;
 use ola_types::{l2::L2Tx, request::CallRequest, Bytes};
 use ola_web3_decl::error::Web3Error;
@@ -87,8 +87,33 @@ impl OlaNamespace {
             .await
             .map_err(|err| internal_error(METHOD_NAME, err));
 
-        olaos_logs::info!("return transaction details: {:?}", tx_details);
+        olaos_logs::info!("api.web3.call get_transaction_details: {:?}", tx_details);
 
         tx_details
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_transaction_receipt_impl(
+        &self,
+        hash: H256,
+    ) -> Result<Option<TransactionReceipt>, Web3Error> {
+        const METHOD_NAME: &str = "get_transaction_receipt";
+
+        let start = Instant::now();
+        let receipt = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await
+            .transactions_web3_dal()
+            .get_transaction_receipt(hash)
+            .await
+            .map_err(|err| internal_error(METHOD_NAME, err));
+
+        olaos_logs::info!(
+            "api.web3.call get_transaction_receipt: cost {:?}",
+            start.elapsed()
+        );
+        receipt
     }
 }

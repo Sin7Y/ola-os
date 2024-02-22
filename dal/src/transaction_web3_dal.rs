@@ -1,9 +1,16 @@
-use ola_types::{
-    api::{BlockId, BlockNumber, TransactionDetails},
-    Address, H256,
+use ola_config::constants::contracts::{
+    ACCOUNT_CODE_STORAGE_ADDRESS, FAILED_CONTRACT_DEPLOYMENT_BYTECODE_HASH,
 };
+use ola_types::{
+    api::{self, BlockId, BlockNumber, TransactionDetails},
+    Address, H256, U64,
+};
+use ola_utils::h256_to_account_address;
 
-use crate::{models::storage_transaction::StorageTransactionDetails, SqlxError, StorageProcessor};
+use crate::{
+    models::{storage_event::StorageWeb3Log, storage_transaction::StorageTransactionDetails},
+    SqlxError, StorageProcessor,
+};
 
 #[derive(Debug)]
 pub struct TransactionsWeb3Dal<'a, 'c> {
@@ -70,6 +77,123 @@ impl TransactionsWeb3Dal<'_, '_> {
         }
 
         Ok(pending_nonce)
+    }
+
+    pub async fn get_transaction_receipt(
+        &mut self,
+        hash: H256,
+    ) -> Result<Option<api::TransactionReceipt>, SqlxError> {
+        {
+            // TODO: check transactions.data->'to' as "transfer_to?",
+            // and transactions.data->'contractAddress' as "execute_contract_address?",
+            // TODO: is storage_log.key == contractAddress?
+            let receipt = sqlx::query!(
+                r#"
+                WITH sl AS (
+                    SELECT * FROM storage_logs
+                    WHERE storage_logs.address = $1 AND storage_logs.tx_hash = $2
+                    ORDER BY storage_logs.miniblock_number DESC, storage_logs.operation_number DESC
+                    LIMIT 1
+                )
+                SELECT
+                     transactions.hash as tx_hash,
+                     transactions.index_in_block as index_in_block,
+                     transactions.l1_batch_tx_index as l1_batch_tx_index,
+                     transactions.miniblock_number as block_number,
+                     transactions.error as error,
+                     transactions.initiator_address as initiator_address,
+                     transactions.data->'to' as "transfer_to?",
+                     transactions.data->'contractAddress' as "execute_contract_address?",
+                     transactions.tx_format as "tx_format?",
+                     miniblocks.hash as "block_hash?",
+                     miniblocks.l1_batch_number as "l1_batch_number?",
+                     sl.key as "contract_address?"
+                FROM transactions
+                LEFT JOIN miniblocks
+                    ON miniblocks.number = transactions.miniblock_number
+                LEFT JOIN sl
+                    ON sl.value != $3
+                WHERE transactions.hash = $2
+                "#,
+                ACCOUNT_CODE_STORAGE_ADDRESS.as_bytes(),
+                hash.as_bytes(),
+                FAILED_CONTRACT_DEPLOYMENT_BYTECODE_HASH.as_bytes()
+            )
+            .fetch_optional(self.storage.conn())
+            .await?
+            .map(|db_row| {
+                let status = match (db_row.block_number, db_row.error) {
+                    (_, Some(_)) => Some(U64::from(0)),
+                    (Some(_), None) => Some(U64::from(1)),
+                    // tx not executed yet
+                    _ => None,
+                };
+                let tx_type = db_row.tx_format.map(U64::from).unwrap_or_default();
+                let transaction_index = db_row.index_in_block.map(U64::from).unwrap_or_default();
+
+                let block_hash = db_row.block_hash.map(|bytes| H256::from_slice(&bytes));
+                api::TransactionReceipt {
+                    transaction_hash: H256::from_slice(&db_row.tx_hash),
+                    transaction_index,
+                    block_hash,
+                    block_number: db_row.block_number.map(U64::from),
+                    l1_batch_tx_index: db_row.l1_batch_tx_index.map(U64::from),
+                    l1_batch_number: db_row.l1_batch_number.map(U64::from),
+                    from: H256::from_slice(&db_row.initiator_address),
+                    to: db_row
+                        .transfer_to
+                        .or(db_row.execute_contract_address)
+                        .map(|addr| {
+                            serde_json::from_value::<Address>(addr)
+                                .expect("invalid address value in the database")
+                        })
+                        // For better compatibility with various clients, we never return null.
+                        .or_else(|| Some(Address::default())),
+                    contract_address: db_row
+                        .contract_address
+                        .map(|addr| h256_to_account_address(&H256::from_slice(&addr))),
+                    logs: vec![],
+                    status,
+                    root: block_hash,
+                    // Even though the Rust SDK recommends us to supply "None" for legacy transactions
+                    // we always supply some number anyway to have the same behaviour as most popular RPCs
+                    transaction_type: Some(tx_type),
+                }
+            });
+            match receipt {
+                Some(mut receipt) => {
+                    let logs: Vec<_> = sqlx::query_as!(
+                        StorageWeb3Log,
+                        r#"
+                        SELECT
+                            address, topic1, topic2, topic3, topic4, value,
+                            Null::bytea as "block_hash", Null::bigint as "l1_batch_number?",
+                            miniblock_number, tx_hash, tx_index_in_block,
+                            event_index_in_block, event_index_in_tx
+                        FROM events
+                        WHERE tx_hash = $1
+                        ORDER BY miniblock_number ASC, event_index_in_block ASC
+                        "#,
+                        hash.as_bytes()
+                    )
+                    .fetch_all(self.storage.conn())
+                    .await?
+                    .into_iter()
+                    .map(|storage_log| {
+                        let mut log = api::Log::from(storage_log);
+                        log.block_hash = receipt.block_hash;
+                        log.l1_batch_number = receipt.l1_batch_number;
+                        log
+                    })
+                    .collect();
+
+                    receipt.logs = logs;
+
+                    Ok(Some(receipt))
+                }
+                None => Ok(None),
+            }
+        }
     }
 
     pub async fn get_transaction_details(

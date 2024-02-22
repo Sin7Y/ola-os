@@ -139,7 +139,7 @@ mod tests {
                 path: "./db/main/tree".to_string(),
                 backup_path: "./db/main/backups".to_string(),
                 mode: Default::default(),
-                multi_get_chunk_size: 1000,
+                multi_get_chunk_size: 500,
                 block_cache_size_mb: 128,
                 max_l1_batches_per_iter: 50,
             },

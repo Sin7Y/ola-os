@@ -15,14 +15,15 @@ use ola_config::{
 use ola_contracts::BaseSystemContracts;
 use ola_dal::{connection::ConnectionPool, transactions_dal::L2TxSubmissionResult};
 use ola_state::postgres::PostgresStorageCaches;
-use ola_types::{fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Nonce, H256};
+use ola_types::{
+    fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Bytes, Nonce, H256,
+};
 use ola_utils::{time::millis_since_epoch, u64s_to_bytes};
 
 use self::{error::SubmitTxError, proxy::TxProxy};
 
 use super::execution_sandbox::{TxSharedArgs, VmConcurrencyLimiter};
 
-use web3::types::Bytes;
 use zk_vm::{BlockInfo, CallInfo, VmManager as OlaVmManager};
 
 pub mod error;

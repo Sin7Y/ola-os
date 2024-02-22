@@ -131,7 +131,7 @@ impl BlocksDal<'_, '_> {
         let last_l1_batch = sqlx::query_as!(
             StorageL1BatchHeader,
             "SELECT number, l1_tx_count, l2_tx_count, \
-                timestamp, is_finished, used_contract_hashes, \
+                timestamp, is_finished, fee_account_address, used_contract_hashes, \
                 bootloader_code_hash, default_aa_code_hash, protocol_version \
             FROM l1_batches \
             ORDER BY number DESC \
@@ -342,7 +342,7 @@ impl BlocksDal<'_, '_> {
         sqlx::query_as!(
             StorageL1BatchHeader,
             "SELECT number, l1_tx_count, l2_tx_count, \
-                timestamp, is_finished, used_contract_hashes, \
+                timestamp, is_finished, fee_account_address, used_contract_hashes, \
                 bootloader_code_hash, default_aa_code_hash, protocol_version \
             FROM l1_batches \
             WHERE number = $1",

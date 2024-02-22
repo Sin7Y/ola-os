@@ -1,9 +1,8 @@
 pub use crate::request::{SerializationTransactionError, TransactionRequest};
 use chrono::{DateTime, Utc};
-use ola_basic_types::{Address, H256, U256};
+use ola_basic_types::{Address, Bytes, Index, H256, U256, U64};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use strum::Display;
-use web3::types::U64;
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize, Display)]
 #[serde(untagged)]
@@ -139,6 +138,65 @@ pub enum TransactionStatus {
     Failed,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransactionReceipt {
+    /// Transaction hash.
+    #[serde(rename = "transactionHash")]
+    pub transaction_hash: H256,
+    /// Index within the block.
+    #[serde(rename = "transactionIndex")]
+    pub transaction_index: Index,
+    /// Hash of the block this transaction was included within.
+    #[serde(rename = "blockHash")]
+    pub block_hash: Option<H256>,
+    /// Number of the miniblock this transaction was included within.
+    #[serde(rename = "blockNumber")]
+    pub block_number: Option<U64>,
+    /// Index of transaction in l1 batch
+    #[serde(rename = "l1BatchTxIndex")]
+    pub l1_batch_tx_index: Option<Index>,
+    /// Number of the l1 batch this transaction was included within.
+    #[serde(rename = "l1BatchNumber")]
+    pub l1_batch_number: Option<U64>,
+    /// Sender
+    /// Note: default address if the client did not return this value
+    #[serde(default)]
+    pub from: Address,
+    /// Recipient (None when contract creation)
+    /// Note: Also `None` if the client did not return this value
+    #[serde(default)]
+    pub to: Option<Address>,
+    /// Cumulative gas used within the block after this was executed.
+    // #[serde(rename = "cumulativeGasUsed")]
+    // pub cumulative_gas_used: U256,
+    /// Gas used by this transaction alone.
+    ///
+    /// Gas used is `None` if the the client is running in light client mode.
+    // #[serde(rename = "gasUsed")]
+    // pub gas_used: Option<U256>,
+    /// Contract address created, or `None` if not a deployment.
+    #[serde(rename = "contractAddress")]
+    pub contract_address: Option<Address>,
+    /// Logs generated within this transaction.
+    pub logs: Vec<Log>,
+    /// L2 to L1 logs generated within this transaction.
+    // #[serde(rename = "l2ToL1Logs")]
+    // pub l2_to_l1_logs: Vec<L2ToL1Log>,
+    /// Status: either 1 (success) or 0 (failure).
+    pub status: Option<U64>,
+    /// State root.
+    pub root: Option<H256>,
+    /// Logs bloom
+    // #[serde(rename = "logsBloom")]
+    // pub logs_bloom: H2048,
+    /// Transaction type
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub transaction_type: Option<U64>,
+    // Effective gas price
+    // #[serde(rename = "effectiveGasPrice")]
+    // pub effective_gas_price: Option<U256>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionDetails {
@@ -151,4 +209,57 @@ pub struct TransactionDetails {
     pub eth_commit_tx_hash: Option<H256>,
     pub eth_prove_tx_hash: Option<H256>,
     pub eth_execute_tx_hash: Option<H256>,
+}
+
+/// A log produced by a transaction.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Log {
+    /// H256
+    pub address: H256,
+    /// Topics
+    pub topics: Vec<H256>,
+    /// Data
+    pub data: Bytes,
+    /// Block Hash
+    #[serde(rename = "blockHash")]
+    pub block_hash: Option<H256>,
+    /// Block Number
+    #[serde(rename = "blockNumber")]
+    pub block_number: Option<U64>,
+    /// L1 batch number the log is included in.
+    #[serde(rename = "l1BatchNumber")]
+    pub l1_batch_number: Option<U64>,
+    /// Transaction Hash
+    #[serde(rename = "transactionHash")]
+    pub transaction_hash: Option<H256>,
+    /// Transaction Index
+    #[serde(rename = "transactionIndex")]
+    pub transaction_index: Option<Index>,
+    /// Log Index in Block
+    #[serde(rename = "logIndex")]
+    pub log_index: Option<U256>,
+    /// Log Index in Transaction
+    #[serde(rename = "transactionLogIndex")]
+    pub transaction_log_index: Option<U256>,
+    /// Log Type
+    #[serde(rename = "logType")]
+    pub log_type: Option<String>,
+    /// Removed
+    pub removed: Option<bool>,
+}
+
+impl Log {
+    /// Returns true if the log has been removed.
+    pub fn is_removed(&self) -> bool {
+        if let Some(val_removed) = self.removed {
+            return val_removed;
+        }
+
+        if let Some(ref val_log_type) = self.log_type {
+            if val_log_type == "removed" {
+                return true;
+            }
+        }
+        false
+    }
 }
