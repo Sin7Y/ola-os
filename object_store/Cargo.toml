@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 ola_config = { path = "../config" }
 olaos_logs = { path = "../logs" }
+ola_types = { path = "../types" }
 anyhow = "1.0"
 async-trait = "0.1"
 bincode = "1"

@@ -5,6 +5,7 @@ use blocks_web3_dal::BlocksWeb3Dal;
 use connection::holder::ConnectionHolder;
 use events_dal::EventsDal;
 use fri_protocol_versions_dal::FriProtocolVersionsDal;
+use fri_prover_dal::FriProverDal;
 use fri_witness_generator_dal::FriWitnessGeneratorDal;
 use protocol_version_dal::ProtocolVersionsDal;
 pub use sqlx::Error as SqlxError;
@@ -24,6 +25,7 @@ pub mod blocks_web3_dal;
 pub mod connection;
 pub mod events_dal;
 pub mod fri_protocol_versions_dal;
+pub mod fri_prover_dal;
 pub mod fri_witness_generator_dal;
 pub mod healthcheck;
 pub mod models;
@@ -173,6 +175,10 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn fri_witness_generator_dal(&mut self) -> FriWitnessGeneratorDal<'_, 'a> {
         FriWitnessGeneratorDal { storage: self }
+    }
+
+    pub fn fri_prover_jobs_dal(&mut self) -> FriProverDal<'_, 'a> {
+        FriProverDal { storage: self }
     }
 
     pub fn conn(&mut self) -> &mut PgConnection {

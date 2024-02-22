@@ -776,6 +776,7 @@ mod tests {
         tx.rlp(&mut rlp, 1027, Some(&signature));
         let mut data = rlp.out().to_vec();
         data.insert(0, EIP_712_TX_TYPE);
+        println!("data= {:?}", hex::encode(&data));
         tx.raw = Some(Bytes(data.clone()));
         tx.v = Some(U64::from(signature.v()));
         tx.r = Some(U256::from_big_endian(signature.r()));

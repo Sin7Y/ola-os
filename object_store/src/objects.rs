@@ -1,3 +1,5 @@
+use ola_types::{proofs::PrepareBasicCircuitsJob, L1BatchNumber};
+
 use crate::{
     raw::{BoxedError, Bucket},
     ObjectStore, ObjectStoreError,
@@ -27,6 +29,25 @@ pub trait StoredObject: Sized {
     ///
     /// Returns an error if deserialization fails.
     fn deserialize(bytes: Vec<u8>) -> Result<Self, BoxedError>;
+}
+
+/// Derives [`StoredObject::serialize()`] and [`StoredObject::deserialize()`] using
+/// the `bincode` (de)serializer. Should be used in `impl StoredObject` blocks.
+#[macro_export]
+macro_rules! serialize_using_bincode {
+    () => {
+        fn serialize(
+            &self,
+        ) -> std::result::Result<std::vec::Vec<u8>, $crate::_reexports::BoxedError> {
+            $crate::bincode::serialize(self).map_err(std::convert::From::from)
+        }
+
+        fn deserialize(
+            bytes: std::vec::Vec<u8>,
+        ) -> std::result::Result<Self, $crate::_reexports::BoxedError> {
+            $crate::bincode::deserialize(&bytes).map_err(std::convert::From::from)
+        }
+    };
 }
 
 impl dyn ObjectStore + '_ {
@@ -62,4 +83,15 @@ impl dyn ObjectStore + '_ {
     pub fn get_storage_prefix<V: StoredObject>(&self) -> String {
         self.storage_prefix_raw(V::BUCKET)
     }
+}
+
+impl StoredObject for PrepareBasicCircuitsJob {
+    const BUCKET: Bucket = Bucket::WitnessInput;
+    type Key<'a> = L1BatchNumber;
+
+    fn encode_key(key: Self::Key<'_>) -> String {
+        format!("merkel_tree_paths_{key}.bin")
+    }
+
+    serialize_using_bincode!();
 }

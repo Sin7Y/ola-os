@@ -10,6 +10,8 @@ ola_dal = { path = "../../dal" }
 ola_config = { path = "../../config" }
 ola_types = { path = "../../types" }
 ola_utils = { path = "../../utils" }
+olaos_queued_job_processor = { path = "../../queued_job_processor" }
+olaos_prover_fri_types = { path = "../prover_fri_types" }
 anyhow = "1.0"
 tokio = { version = "1", features = ["time"] }
 futures = { version = "0.3", features = ["compat"] }

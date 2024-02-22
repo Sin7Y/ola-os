@@ -8,7 +8,7 @@ use ola_types::{
 };
 
 use crate::{
-    models::storage_block::{StorageL1BatchHeader, StorageMiniblockHeader},
+    models::storage_block::{StorageL1Batch, StorageL1BatchHeader, StorageMiniblockHeader},
     StorageProcessor,
 };
 
@@ -143,6 +143,84 @@ impl BlocksDal<'_, '_> {
 
         last_l1_batch.into()
     }
+
+    // pub async fn get_l1_batch_metadata(
+    //     &mut self,
+    //     number: L1BatchNumber,
+    // ) -> anyhow::Result<Option<L1BatchWithMetadata>> {
+    //     let Some(l1_batch) = self
+    //         .get_storage_l1_batch(number)
+    //         .await
+    //         .context("get_storage_l1_batch()")?
+    //     else {
+    //         return Ok(None);
+    //     };
+    //     self.get_l1_batch_with_metadata(l1_batch)
+    //         .await
+    //         .context("get_l1_batch_with_metadata")
+    // }
+
+    // pub async fn get_storage_l1_batch(
+    //     &mut self,
+    //     number: L1BatchNumber,
+    // ) -> sqlx::Result<Option<StorageL1Batch>> {
+    //     sqlx::query_as!(
+    //         StorageL1Batch,
+    //         r#"
+    //         SELECT
+    //             number,
+    //             timestamp,
+    //             is_finished,
+    //             l1_tx_count,
+    //             l2_tx_count,
+    //             fee_account_address,
+    //             bloom,
+    //             priority_ops_onchain_data,
+    //             hash,
+    //             parent_hash,
+    //             commitment,
+    //             compressed_write_logs,
+    //             compressed_contracts,
+    //             eth_prove_tx_id,
+    //             eth_commit_tx_id,
+    //             eth_execute_tx_id,
+    //             merkle_root_hash,
+    //             l2_to_l1_logs,
+    //             l2_to_l1_messages,
+    //             used_contract_hashes,
+    //             compressed_initial_writes,
+    //             compressed_repeated_writes,
+    //             l2_l1_compressed_messages,
+    //             l2_l1_merkle_root,
+    //             l1_gas_price,
+    //             l2_fair_gas_price,
+    //             rollup_last_leaf_index,
+    //             zkporter_is_available,
+    //             bootloader_code_hash,
+    //             default_aa_code_hash,
+    //             base_fee_per_gas,
+    //             aux_data_hash,
+    //             pass_through_data_hash,
+    //             meta_parameters_hash,
+    //             protocol_version,
+    //             system_logs,
+    //             compressed_state_diffs,
+    //             events_queue_commitment,
+    //             bootloader_initial_content_commitment,
+    //             pubdata_input
+    //         FROM
+    //             l1_batches
+    //             LEFT JOIN commitments ON commitments.l1_batch_number = l1_batches.number
+    //         WHERE
+    //             number = $1
+    //         "#,
+    //         number.0 as i64
+    //     )
+    //     .instrument("get_storage_l1_batch")
+    //     .with_arg("number", &number)
+    //     .fetch_optional(self.storage.conn())
+    //     .await
+    // }
 
     // #[tracing::instrument(name = "get_sealed_l1_batch_number", skip_all)]
     pub async fn get_sealed_l1_batch_number(&mut self) -> L1BatchNumber {
