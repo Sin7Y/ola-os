@@ -7,25 +7,24 @@ use crate::api_data_fetcher::{PeriodicApi, PeriodicApiStruct};
 
 impl PeriodicApiStruct {
     async fn save_proof_gen_data(&self, data: ProofGenerationData) {
-        // TODO:
-        // let store = &*self.blob_store;
-        // let blob_url = store
-        //     .put(data.l1_batch_number, &data.data)
-        //     .await
-        //     .expect("Failed to save proof generation data to GCS");
-        // let mut connection = self.pool.access_storage().await;
-        // connection
-        //     .fri_protocol_versions_dal()
-        //     .save_prover_protocol_version(data.fri_protocol_version_id)
-        //     .await;
-        // connection
-        //     .fri_witness_generator_dal()
-        //     .save_witness_inputs(
-        //         data.l1_batch_number,
-        //         &blob_url,
-        //         data.fri_protocol_version_id,
-        //     )
-        //     .await;
+        let store = &*self.blob_store;
+        let blob_url = store
+            .put(data.l1_batch_number, &data.data)
+            .await
+            .expect("Failed to save proof generation data to GCS");
+        let mut connection = self.pool.access_storage().await;
+        connection
+            .fri_protocol_versions_dal()
+            .save_prover_protocol_version(data.fri_protocol_version_id)
+            .await;
+        connection
+            .fri_witness_generator_dal()
+            .save_witness_inputs(
+                data.l1_batch_number,
+                &blob_url,
+                data.fri_protocol_version_id,
+            )
+            .await;
     }
 }
 
