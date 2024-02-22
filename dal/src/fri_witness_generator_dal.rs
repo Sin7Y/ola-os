@@ -88,7 +88,7 @@ impl FriWitnessGeneratorDal<'_, '_> {
                         SKIP LOCKED
                 )
             RETURNING
-                witness_inputs_fri.*
+                witness_inputs_fri.l1_batch_number
             "#,
             last_l1_batch_to_process as i64,
             &protocol_versions[..],

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO\n                prover_fri_protocol_versions (\n                    id,\n                    created_at\n                )\n            VALUES\n                ($1, NOW())\n            ON CONFLICT (id) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c8dd41bdf879d0a230de08d408b80f23dd42749608b274994113564c70f8e82b"
+}
