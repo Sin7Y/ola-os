@@ -2,7 +2,7 @@ name: ola_node Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '*'
   workflow_dispatch:
 
 env:
@@ -14,18 +14,14 @@ jobs:
     name: Linux x86-64
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
       with:
-        submodules: recursive   
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rustfmt
-    - name: Install LLVM and Clang
-      uses: KyleMayes/install-llvm-action@v1
-      with:
-        version: 15    
+        profile: minimal
+        toolchain: nightly-2024-01-19
+        override: true
+        components: rustfmt, clippy
     - name: Build
       run: SQLX_OFFLINE=true cargo build --release
     - name: Upload Ola node binary
@@ -46,10 +42,14 @@ jobs:
     name: Mac Intel
     runs-on: macos-latest
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
       with:
-        submodules: recursive   
+        profile: minimal
+        toolchain: nightly-2024-01-19
+        override: true
+        components: rustfmt, clippy
     - name: Install Rust
       uses: dtolnay/rust-toolchain@nightly
       with:
@@ -78,14 +78,14 @@ jobs:
     name: Mac ARM
     runs-on: macos-latest-xlarge
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
       with:
-        submodules: recursive  
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rustfmt
+        profile: minimal
+        toolchain: nightly-2024-01-19
+        override: true
+        components: rustfmt, clippy
     - name: Get LLVM
       run: curl -sSL --output clang+llvm-15.0.7-arm64-apple-darwin22.0.tar.xz https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.7/clang+llvm-15.0.7-arm64-apple-darwin22.0.tar.xz
     - name: Extract LLVM
@@ -112,14 +112,14 @@ jobs:
     name: Windows
     runs-on: windows-latest
     steps:
-    - name: Checkout sources
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+    - name: Install latest nightly
+      uses: actions-rs/toolchain@v1
       with:
-        submodules: recursive   
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rustfmt
+        profile: minimal
+        toolchain: nightly-2024-01-19
+        override: true
+        components: rustfmt, clippy
     - name: Download LLVM
       run: curl -sSL -o c:\llvm.zip https://github.com/hyperledger/solang-llvm/releases/download/llvm15-1/llvm15.0-win.zip
     - name: Extract LLVM
