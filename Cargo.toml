@@ -20,5 +20,6 @@ members = [
     "queued_job_processor",
     "prover/prover_fri_gateway",
     # "prover/witness_generator",
+    "merkle_tree"
 ]
 resolver = "2"

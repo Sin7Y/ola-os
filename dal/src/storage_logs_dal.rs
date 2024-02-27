@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use ola_types::{
-    log::StorageLog, AccountTreeId, Address, L1BatchNumber, MiniblockNumber, StorageKey, H256,
+    log::StorageLog, AccountTreeId, Address, L1BatchNumber, MiniblockNumber, StorageKey, H256, U256,
 };
 use sqlx::types::chrono::Utc;
 
-use crate::StorageProcessor;
+use crate::{models::storage_log::StorageTreeEntry, StorageProcessor};
 
 #[derive(Debug)]
 pub struct StorageLogsDal<'a, 'c> {
@@ -93,18 +93,26 @@ impl StorageLogsDal<'_, '_> {
         touched_slots.collect()
     }
 
-    pub async fn get_l1_batches_for_initial_writes(
+    pub async fn get_l1_batches_and_indices_for_initial_writes(
         &mut self,
         hashed_keys: &[H256],
-    ) -> HashMap<H256, L1BatchNumber> {
+    ) -> HashMap<H256, (L1BatchNumber, u64)> {
         if hashed_keys.is_empty() {
             return HashMap::new(); // Shortcut to save time on communication with DB in the common case
         }
 
         let hashed_keys: Vec<_> = hashed_keys.iter().map(H256::as_bytes).collect();
         let rows = sqlx::query!(
-            "SELECT hashed_key, l1_batch_number FROM initial_writes \
-            WHERE hashed_key = ANY($1::bytea[])",
+            r#"
+            SELECT
+                hashed_key,
+                l1_batch_number,
+                INDEX
+            FROM
+                initial_writes
+            WHERE
+                hashed_key = ANY ($1::bytea[])
+            "#,
             &hashed_keys as &[&[u8]],
         )
         .fetch_all(self.storage.conn())
@@ -115,7 +123,10 @@ impl StorageLogsDal<'_, '_> {
             .map(|row| {
                 (
                     H256::from_slice(&row.hashed_key),
-                    L1BatchNumber(row.l1_batch_number as u32),
+                    (
+                        L1BatchNumber(row.l1_batch_number as u32),
+                        row.index.map_or(0, |n| n as u64),
+                    ),
                 )
             })
             .collect()
@@ -193,5 +204,116 @@ impl StorageLogsDal<'_, '_> {
             self.get_storage_values(hashed_keys, miniblock_number - 1)
                 .await
         }
+    }
+
+    /// Counts the total number of storage logs in the specified miniblock,
+    // TODO(PLA-596): add storage log count to snapshot metadata instead?
+    pub async fn count_miniblock_storage_logs(
+        &mut self,
+        miniblock_number: MiniblockNumber,
+    ) -> sqlx::Result<u64> {
+        let count = sqlx::query_scalar!(
+            "SELECT COUNT(*) FROM storage_logs WHERE miniblock_number = $1",
+            miniblock_number.0 as i32
+        )
+        .fetch_one(self.storage.conn())
+        .await?;
+        Ok(count.unwrap_or(0) as u64)
+    }
+
+    /// Gets a starting tree entry for each of the supplied `key_ranges` for the specified
+    /// `miniblock_number`. This method is used during Merkle tree recovery.
+    pub async fn get_chunk_starts_for_miniblock(
+        &mut self,
+        miniblock_number: MiniblockNumber,
+        key_ranges: &[core::ops::RangeInclusive<H256>],
+    ) -> sqlx::Result<Vec<Option<StorageTreeEntry>>> {
+        let (start_keys, end_keys): (Vec<_>, Vec<_>) = key_ranges
+            .iter()
+            .map(|range| (range.start().as_bytes(), range.end().as_bytes()))
+            .unzip();
+        let rows = sqlx::query!(
+            r#"
+            WITH
+                sl AS (
+                    SELECT
+                        (
+                            SELECT
+                                ARRAY[hashed_key, value] AS kv
+                            FROM
+                                storage_logs
+                            WHERE
+                                storage_logs.miniblock_number = $1
+                                AND storage_logs.hashed_key >= u.start_key
+                                AND storage_logs.hashed_key <= u.end_key
+                            ORDER BY
+                                storage_logs.hashed_key
+                            LIMIT
+                                1
+                        )
+                    FROM
+                        UNNEST($2::bytea[], $3::bytea[]) AS u (start_key, end_key)
+                )
+            SELECT
+                sl.kv[1] AS "hashed_key?",
+                sl.kv[2] AS "value?",
+                initial_writes.index
+            FROM
+                sl
+                LEFT OUTER JOIN initial_writes ON initial_writes.hashed_key = sl.kv[1]
+            "#,
+            miniblock_number.0 as i64,
+            &start_keys as &[&[u8]],
+            &end_keys as &[&[u8]],
+        )
+        .fetch_all(self.storage.conn())
+        .await?;
+
+        let rows = rows.into_iter().map(|row| {
+            Some(StorageTreeEntry {
+                key: U256::from_little_endian(row.hashed_key.as_ref()?),
+                value: H256::from_slice(row.value.as_ref()?),
+                leaf_index: row.index? as u64,
+            })
+        });
+        Ok(rows.collect())
+    }
+
+    /// Fetches tree entries for the specified `miniblock_number` and `key_range`. This is used during
+    /// Merkle tree recovery.
+    pub async fn get_tree_entries_for_miniblock(
+        &mut self,
+        miniblock_number: MiniblockNumber,
+        key_range: core::ops::RangeInclusive<H256>,
+    ) -> sqlx::Result<Vec<StorageTreeEntry>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                storage_logs.hashed_key,
+                storage_logs.value,
+                initial_writes.index
+            FROM
+                storage_logs
+                INNER JOIN initial_writes ON storage_logs.hashed_key = initial_writes.hashed_key
+            WHERE
+                storage_logs.miniblock_number = $1
+                AND storage_logs.hashed_key >= $2::bytea
+                AND storage_logs.hashed_key <= $3::bytea
+            ORDER BY
+                storage_logs.hashed_key
+            "#,
+            miniblock_number.0 as i64,
+            key_range.start().as_bytes(),
+            key_range.end().as_bytes()
+        )
+        .fetch_all(self.storage.conn())
+        .await?;
+
+        let rows = rows.into_iter().map(|row| StorageTreeEntry {
+            key: U256::from_little_endian(&row.hashed_key),
+            value: H256::from_slice(&row.value),
+            leaf_index: row.index.map_or(0, |n| n as u64),
+        });
+        Ok(rows.collect())
     }
 }

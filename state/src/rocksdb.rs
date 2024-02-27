@@ -47,7 +47,7 @@ impl RocksdbStorage {
 
     /// Creates a new storage with the provided RocksDB `path`.
     pub fn new(path: &Path) -> Self {
-        let db = RocksDB::new(path, true);
+        let db = RocksDB::new(path);
         Self {
             db: Arc::new(db),
             pending_patch: InMemoryStorage::default(),

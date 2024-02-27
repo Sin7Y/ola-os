@@ -396,9 +396,9 @@ impl BlocksDal<'_, '_> {
     pub async fn save_l1_batch_metadata(
         &mut self,
         block_number: L1BatchNumber,
-        block_metadata: L1BatchMetadata,
+        block_metadata: &L1BatchMetadata,
         previous_root_hash: H256,
-    ) {
+    ) -> anyhow::Result<()> {
         let update_result = sqlx::query!(
             "
                 UPDATE l1_batches SET
@@ -422,8 +422,7 @@ impl BlocksDal<'_, '_> {
             block_number.0 as i64,
         )
         .execute(self.storage.conn())
-        .await
-        .unwrap();
+        .await?;
 
         if update_result.rows_affected() == 0 {
             olaos_logs::info!(
@@ -451,11 +450,27 @@ impl BlocksDal<'_, '_> {
                 previous_root_hash.0.to_vec(),
             )
             .fetch_one(self.storage.conn())
-            .await
-            .unwrap()
+            .await?
             .count;
 
             assert_eq!(matched, 1, "Root hash verification failed. Hashes for some of previously processed blocks do not match");
         }
+        Ok(())
+    }
+
+    /// Returns the number of the earliest L1 batch present in the DB, or `None` if there are no L1 batches.
+    pub async fn get_earliest_l1_batch_number(&mut self) -> sqlx::Result<Option<L1BatchNumber>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT
+                MIN(number) AS "number"
+            FROM
+                l1_batches
+            "#
+        )
+        .fetch_one(self.storage.conn())
+        .await?;
+
+        Ok(row.number.map(|num| L1BatchNumber(num as u32)))
     }
 }

@@ -132,4 +132,9 @@ impl ConnectionPool {
             .await
             .unwrap_or_else(|err| panic!("Failed getting a DB connection: {}", err))
     }
+
+    pub fn max_size(&self) -> u32 {
+        // TODO:
+        4
+    }
 }
