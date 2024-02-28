@@ -34,12 +34,14 @@ enum Operation {
 #[derive(Debug)]
 struct TreeUpdater {
     patch_set: WorkingPatchSet,
+    pub new_leaves: u64,
 }
 
 impl TreeUpdater {
     fn new(version: u64, root: Root) -> Self {
         Self {
             patch_set: WorkingPatchSet::new(version, root),
+            new_leaves: 0,
         }
     }
 

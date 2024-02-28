@@ -167,11 +167,13 @@ impl TreeUpdater {
     fn split(self) -> [Self; SUBTREE_COUNT] {
         self.patch_set.split().map(|patch_set| Self {
             patch_set,
+            new_leaves: 0,
         })
     }
 
     fn merge(mut self, other: Self) -> Self {
         self.patch_set.merge(other.patch_set);
+        self.new_leaves += other.new_leaves;
         self
     }
 
@@ -234,6 +236,7 @@ impl<'a, DB: Database + ?Sized> Storage<'a, DB> {
 
         let instruction_parts = InstructionWithPrecomputes::split(instructions, parent_nibbles);
         let initial_root = self.updater.patch_set.ensure_internal_root_node();
+        let initial_leaves = self.updater.new_leaves;
         let storage_parts = self.updater.split();
 
         // `into_par_iter()` below uses `rayon` to parallelize tree traversal and proof generation.
@@ -256,6 +259,7 @@ impl<'a, DB: Database + ?Sized> Storage<'a, DB> {
             .reduce(TreeUpdater::merge)
             .unwrap();
         // ^ `unwrap()` is safe: `storage_parts` is non-empty
+        self.updater.new_leaves += initial_leaves;
 
         let logs = merge_by_index(logs);
         let mut hasher = self.hasher.with_stats();
@@ -271,8 +275,7 @@ impl<'a, DB: Database + ?Sized> Storage<'a, DB> {
         root: InternalNode,
         logs: Vec<(usize, TreeLogEntryWithProof<MerklePath>)>,
     ) -> (BlockOutputWithProofs, PatchSet) {
-        // TODO:
-        // self.leaf_count += self.updater.metrics.new_leaves;
+        self.leaf_count += self.updater.new_leaves;
 
         let logs = self.updater.finalize_logs(hasher, root, logs);
 
