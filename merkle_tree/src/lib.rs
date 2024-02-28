@@ -1,5 +1,4 @@
-// Linter settings.
-#![warn(missing_debug_implementations, missing_docs, bare_trait_objects)]
+#![warn(missing_debug_implementations, bare_trait_objects)]
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(
     clippy::must_use_candidate,
