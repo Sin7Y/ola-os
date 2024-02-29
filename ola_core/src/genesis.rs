@@ -1,6 +1,5 @@
 use ola_contracts::BaseSystemContracts;
 use ola_dal::StorageProcessor;
-use olaos_merkle_tree::domain::OlaTree;
 use ola_types::{
     block::{DeployedContract, L1BatchHeader, MiniblockHeader},
     commitment::{L1BatchCommitment, L1BatchMetadata},
@@ -10,9 +9,10 @@ use ola_types::{
     AccountTreeId, Address, L1BatchNumber, L2ChainId, MiniblockNumber, StorageKey, H256,
 };
 use ola_utils::{bytecode::hash_bytecode, h256_to_u256, misc::miniblock_hash, u256_to_h256};
+use olaos_merkle_tree::domain::OlaTree;
 
-use olavm_core::types::merkle_tree::tree_key_to_h256;
 use crate::metadata_calculator::L1BatchWithLogs;
+use olavm_core::types::merkle_tree::tree_key_to_h256;
 
 use crate::sequencer::io::sort_storage_access::sort_storage_access_queries;
 

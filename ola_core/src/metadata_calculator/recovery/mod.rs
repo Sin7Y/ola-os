@@ -30,20 +30,17 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+use super::helpers::{AsyncTree, AsyncTreeRecovery, GenericAsyncTree};
 use anyhow::Context as _;
 use async_trait::async_trait;
 use futures::future;
-use serde::{Deserialize, Serialize};
-use tokio::sync::{watch, Mutex, Semaphore};
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use olaos_health_check::{Health, HealthStatus, HealthUpdater};
-use olaos_merkle_tree::TreeEntry;
 use ola_types::{snapshots::SnapshotRecoveryStatus, MiniblockNumber, H256, U256};
 use ola_utils::u256_to_h256;
-
-use super::{
-    helpers::{AsyncTree, AsyncTreeRecovery, GenericAsyncTree},
-};
+use olaos_health_check::{Health, HealthStatus, HealthUpdater};
+use olaos_merkle_tree::TreeEntry;
+use serde::{Deserialize, Serialize};
+use tokio::sync::{watch, Mutex, Semaphore};
 
 /// Handler of recovery life cycle events. This functionality is encapsulated in a trait to be able
 /// to control recovery behavior in tests.
@@ -170,12 +167,12 @@ impl GenericAsyncTree {
                     "Snapshot L1 batch in Postgres ({snapshot_recovery:?}) differs from the recovered Merkle tree version \
                      ({recovered_version})"
                 );
-                tracing::info!("Resuming tree recovery with status: {snapshot_recovery:?}");
+                olaos_logs::info!("Resuming tree recovery with status: {snapshot_recovery:?}");
                 (tree, snapshot_recovery)
             }
             Self::Empty { db, mode } => {
                 if let Some(snapshot_recovery) = get_snapshot_recovery(pool).await? {
-                    tracing::info!(
+                    olaos_logs::info!(
                         "Starting Merkle tree recovery with status {snapshot_recovery:?}"
                     );
                     let l1_batch = snapshot_recovery.l1_batch_number;
@@ -189,7 +186,6 @@ impl GenericAsyncTree {
         };
 
         let snapshot = SnapshotParameters::new(pool, &snapshot_recovery).await?;
-        tracing::debug!("Obtained snapshot parameters: {snapshot:?}");
         let recovery_options = RecoveryOptions {
             chunk_count: snapshot.chunk_count(),
             concurrency_limit: pool.max_size() as usize,
@@ -210,7 +206,7 @@ impl AsyncTreeRecovery {
     ) -> anyhow::Result<Option<AsyncTree>> {
         let chunk_count = options.chunk_count;
         let chunks: Vec<_> = Self::hashed_key_ranges(chunk_count).collect();
-        tracing::info!(
+        olaos_logs::info!(
             "Recovering Merkle tree from Postgres snapshot in {chunk_count} concurrent chunks"
         );
 
@@ -222,7 +218,7 @@ impl AsyncTreeRecovery {
         options
             .events
             .recovery_started(chunk_count, chunk_count - remaining_chunks.len());
-        tracing::info!(
+        olaos_logs::info!(
             "Filtered recovered key chunks; {} / {chunk_count} chunks remaining",
             remaining_chunks.len()
         );

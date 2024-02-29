@@ -2,9 +2,7 @@
 
 use std::{fmt, sync::mpsc, time::Duration};
 
-use crate::{
-    storage::{PruneDatabase, PrunePatchSet},
-};
+use crate::storage::{PruneDatabase, PrunePatchSet};
 
 /// Handle for a [`MerkleTreePruner`] allowing to abort its operation.
 ///

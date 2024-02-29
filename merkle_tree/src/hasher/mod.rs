@@ -2,14 +2,12 @@
 
 use std::{fmt, iter};
 
+use ola_utils::hash::{hash_bytes as poseidon_hash_bytes, Hasher, PoseidonHasher};
 use once_cell::sync::Lazy;
-use ola_utils::hash::{Hasher, PoseidonHasher, hash_bytes as poseidon_hash_bytes};
 
 pub(crate) use self::nodes::{InternalNodeCache, MerklePath};
 pub use self::proofs::TreeRangeDigest;
-use crate::{
-    types::{TreeEntry, ValueHash, TREE_DEPTH},
-};
+use crate::types::{TreeEntry, ValueHash, TREE_DEPTH};
 
 mod nodes;
 mod proofs;

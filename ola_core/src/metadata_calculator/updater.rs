@@ -4,13 +4,13 @@ use std::{ops, sync::Arc, time::Instant};
 
 use anyhow::Context as _;
 use futures::{future, FutureExt};
-use tokio::sync::watch;
 use ola_config::database::MerkleTreeMode;
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
+use ola_types::{block::L1BatchHeader, writes::InitialStorageWrite, L1BatchNumber, H256, U256};
 use olaos_health_check::HealthUpdater;
 use olaos_merkle_tree::domain::TreeMetadata;
 use olaos_object_store::ObjectStore;
-use ola_types::{block::L1BatchHeader, writes::InitialStorageWrite, L1BatchNumber, H256, U256};
+use tokio::sync::watch;
 
 use super::{
     helpers::{AsyncTree, Delayer, L1BatchWithLogs},
@@ -54,7 +54,7 @@ impl TreeUpdater {
                 .await
                 .unwrap();
 
-            tracing::info!(
+            olaos_logs::info!(
                 "Saved witnesses for L1 batch #{l1_batch_number} to object storage at `{object_key}`"
             );
             Some(object_key)
@@ -82,7 +82,7 @@ impl TreeUpdater {
         l1_batch_numbers: ops::RangeInclusive<u32>,
     ) -> L1BatchNumber {
         let start = Instant::now();
-        tracing::info!("Processing L1 batches #{l1_batch_numbers:?}");
+        olaos_logs::info!("Processing L1 batches #{l1_batch_numbers:?}");
         let first_l1_batch_number = L1BatchNumber(*l1_batch_numbers.start());
         let last_l1_batch_number = L1BatchNumber(*l1_batch_numbers.end());
         let mut l1_batch_data = L1BatchWithLogs::new(storage, first_l1_batch_number).await;
@@ -115,20 +115,13 @@ impl TreeUpdater {
             )
             .await;
 
-            let metadata = MetadataCalculator::build_l1_batch_metadata(
-                metadata,
-                &header,
-            );
+            let metadata = MetadataCalculator::build_l1_batch_metadata(metadata, &header);
 
             // TODO: gas
             // MetadataCalculator::reestimate_l1_batch_commit_gas(storage, &header, &metadata).await;
             storage
                 .blocks_dal()
-                .save_l1_batch_metadata(
-                    l1_batch_number,
-                    &metadata,
-                    previous_root_hash,
-                )
+                .save_l1_batch_metadata(l1_batch_number, &metadata, previous_root_hash)
                 .await
                 .unwrap();
             // ^ Note that `save_l1_batch_metadata()` will not blindly overwrite changes if L1 batch
@@ -147,7 +140,7 @@ impl TreeUpdater {
                     .insert_proof_generation_details(l1_batch_number, object_key)
                     .await;
             }
-            tracing::info!("Updated metadata for L1 batch #{l1_batch_number} in Postgres");
+            olaos_logs::info!("Updated metadata for L1 batch #{l1_batch_number} in Postgres");
 
             previous_root_hash = metadata.merkle_root_hash;
             updated_headers.push(header);
@@ -164,20 +157,17 @@ impl TreeUpdater {
         mut storage: StorageProcessor<'_>,
         next_l1_batch_to_seal: &mut L1BatchNumber,
     ) {
-        let last_sealed_l1_batch = storage
-            .blocks_dal()
-            .get_sealed_l1_batch_number()
-            .await;
+        let last_sealed_l1_batch = storage.blocks_dal().get_sealed_l1_batch_number().await;
         let last_requested_l1_batch =
             next_l1_batch_to_seal.0 + self.max_l1_batches_per_iter as u32 - 1;
         let last_requested_l1_batch = last_requested_l1_batch.min(last_sealed_l1_batch.0);
         let l1_batch_numbers = next_l1_batch_to_seal.0..=last_requested_l1_batch;
         if l1_batch_numbers.is_empty() {
-            tracing::trace!(
+            olaos_logs::trace!(
                 "No L1 batches to seal: batch numbers range to be loaded {l1_batch_numbers:?} is empty"
             );
         } else {
-            tracing::info!("Updating Merkle tree with L1 batches #{l1_batch_numbers:?}");
+            olaos_logs::info!("Updating Merkle tree with L1 batches #{l1_batch_numbers:?}");
             *next_l1_batch_to_seal = self
                 .process_multiple_batches(&mut storage, l1_batch_numbers)
                 .await;
@@ -222,7 +212,7 @@ impl TreeUpdater {
             .await;
         drop(storage);
 
-        tracing::info!(
+        olaos_logs::info!(
             "Initialized metadata calculator with {max_batches_per_iter} max L1 batches per iteration. \
              Next L1 batch for Merkle tree: {next_l1_batch_to_seal}, current Postgres L1 batch: {current_db_batch:?}, \
              last L1 batch with metadata: {last_l1_batch_with_metadata:?}",
@@ -237,11 +227,11 @@ impl TreeUpdater {
         if next_l1_batch_to_seal > last_l1_batch_with_metadata + 1 {
             // Check stop signal before proceeding with a potentially time-consuming operation.
             if *stop_receiver.borrow_and_update() {
-                tracing::info!("Stop signal received, metadata_calculator is shutting down");
+                olaos_logs::info!("Stop signal received, metadata_calculator is shutting down");
                 return Ok(());
             }
 
-            tracing::warn!(
+            olaos_logs::warn!(
                 "Next L1 batch of the tree ({next_l1_batch_to_seal}) is greater than last L1 batch with metadata in Postgres \
                     ({last_l1_batch_with_metadata}); this may be a result of restoring Postgres from a snapshot. \
                     Truncating Merkle tree versions so that this mismatch is fixed..."
@@ -249,7 +239,7 @@ impl TreeUpdater {
             tree.revert_logs(last_l1_batch_with_metadata);
             tree.save().await;
             next_l1_batch_to_seal = tree.next_l1_batch_number();
-            tracing::info!("Truncated Merkle tree to L1 batch #{next_l1_batch_to_seal}");
+            olaos_logs::info!("Truncated Merkle tree to L1 batch #{next_l1_batch_to_seal}");
 
             let tree_info = tree.reader().info().await;
             health_updater.update(tree_info.into());
@@ -257,7 +247,7 @@ impl TreeUpdater {
 
         loop {
             if *stop_receiver.borrow_and_update() {
-                tracing::info!("Stop signal received, metadata_calculator is shutting down");
+                olaos_logs::info!("Stop signal received, metadata_calculator is shutting down");
                 break;
             }
             let storage = pool.access_storage_tagged("metadata_calculator").await;
@@ -265,7 +255,7 @@ impl TreeUpdater {
             let snapshot = *next_l1_batch_to_seal;
             self.step(storage, &mut next_l1_batch_to_seal).await;
             let delay = if snapshot == *next_l1_batch_to_seal {
-                tracing::trace!(
+                olaos_logs::trace!(
                     "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) \
                      didn't make any progress; delaying it using {delayer:?}"
                 );
@@ -274,7 +264,7 @@ impl TreeUpdater {
                 let tree_info = self.tree.reader().info().await;
                 health_updater.update(tree_info.into());
 
-                tracing::trace!(
+                olaos_logs::trace!(
                     "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) made progress from #{snapshot}"
                 );
                 future::ready(()).right_future()
@@ -284,7 +274,7 @@ impl TreeUpdater {
             // and the stop receiver still allows to be more responsive during shutdown.
             tokio::select! {
                 _ = stop_receiver.changed() => {
-                    tracing::info!("Stop signal received, metadata_calculator is shutting down");
+                    olaos_logs::info!("Stop signal received, metadata_calculator is shutting down");
                     break;
                 }
                 () = delay => { /* The delay has passed */ }

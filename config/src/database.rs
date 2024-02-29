@@ -50,10 +50,6 @@ impl MerkleTreeConfig {
         "./db/lightweight-new".to_owned()
     }
 
-    fn default_backup_path() -> String {
-        "./db/backups".to_owned()
-    }
-
     const fn default_multi_get_chunk_size() -> usize {
         500
     }

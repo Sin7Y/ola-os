@@ -1,12 +1,12 @@
 //! Tying the Merkle tree implementation to the problem domain.
 
-use rayon::{ThreadPool, ThreadPoolBuilder};
 use ola_types::{
     proofs::{PrepareBasicCircuitsJob, StorageLogMetadata},
     writes::{InitialStorageWrite, RepeatedStorageWrite},
     L1BatchNumber, StorageKey, U256,
 };
 use ola_utils::{h256_to_u256, hash::PoseidonHasher};
+use rayon::{ThreadPool, ThreadPoolBuilder};
 
 use crate::{
     storage::{PatchSet, Patched, RocksDBWrapper},

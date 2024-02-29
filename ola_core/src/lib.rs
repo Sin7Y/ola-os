@@ -34,7 +34,7 @@ use ola_types::{
     system_contracts::get_system_smart_contracts, tx::primitives::PackedEthSignature, L2ChainId,
 };
 use olaos_health_check::{CheckHealth, ReactiveHealthCheck};
-use olaos_object_store::{ObjectStoreFactory, ObjectStore};
+use olaos_object_store::{ObjectStore, ObjectStoreFactory};
 use olaos_queued_job_processor::JobProcessor;
 use sequencer::{
     create_sequencer, io::MiniblockSealer, mempool_actor::MempoolFetcher, types::MempoolGuard,
@@ -48,8 +48,8 @@ pub mod metadata_calculator;
 pub mod proof_data_handler;
 pub mod sequencer;
 pub mod tests;
-pub mod witness_input_producer;
 pub mod utils;
+pub mod witness_input_producer;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Component {
@@ -394,7 +394,8 @@ async fn add_trees_to_task_futures(
         MerkleTreeMode::Lightweight => None,
         MerkleTreeMode::Full => Some(store_factory.create_store().await),
     };
-    let (future, tree_health_check) = run_tree(&db_config, &operation_config, object_store, stop_receiver).await;
+    let (future, tree_health_check) =
+        run_tree(&db_config, &operation_config, object_store, stop_receiver).await;
     task_futures.push(future);
     healthchecks.push(Box::new(tree_health_check));
 }
@@ -406,9 +407,12 @@ async fn run_tree(
     stop_receiver: watch::Receiver<bool>,
 ) -> (JoinHandle<anyhow::Result<()>>, ReactiveHealthCheck) {
     let started_at = Instant::now();
-    let config =
-        metadata_calculator::MetadataCalculatorConfig::for_main_node(&config.merkle_tree, operation_manager);
-    let metadata_calculator = metadata_calculator::MetadataCalculator::new(config, object_store).await;
+    let config = metadata_calculator::MetadataCalculatorConfig::for_main_node(
+        &config.merkle_tree,
+        operation_manager,
+    );
+    let metadata_calculator =
+        metadata_calculator::MetadataCalculator::new(config, object_store).await;
     let tree_health_check = metadata_calculator.tree_health_check();
     let pool = ConnectionPool::singleton(DbVariant::Master).build().await;
     let future = tokio::spawn(metadata_calculator.run(pool, stop_receiver));

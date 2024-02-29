@@ -258,8 +258,8 @@ impl Node {
 
 #[cfg(test)]
 mod tests {
-    use ola_utils::hash::{Hasher, PoseidonHasher};
     use ola_types::H256;
+    use ola_utils::hash::{Hasher, PoseidonHasher};
 
     use super::*;
 

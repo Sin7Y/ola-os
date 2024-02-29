@@ -35,8 +35,8 @@
 //! before extending the tree; these nodes are guaranteed to be the *only* DB reads necessary
 //! to insert new entries.
 
-use std::time::Instant;
 use ola_utils::hash::PoseidonHasher;
+use std::time::Instant;
 
 use crate::{
     hasher::{HashTree, HasherWithStats},
