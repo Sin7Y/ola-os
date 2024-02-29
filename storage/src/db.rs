@@ -104,10 +104,12 @@ impl RocksDBInner {
         let property = self.db.property_int_value_cf(cf, name);
         let property = property.unwrap_or_else(|err| {
             let name_str = name.to_str().unwrap_or("(non-UTF8 string)");
+            olaos_logs::warn!(%err, "Failed getting RocksDB property `{name_str}`");
             None
         });
         if property.is_none() {
             let name_str = name.to_str().unwrap_or("(non-UTF8 string)");
+            olaos_logs::warn!("Property `{name_str}` is not defined");
         }
         property
     }
@@ -126,6 +128,11 @@ impl RocksDBInner {
             if cfs_with_stopped_writes.is_empty() {
                 return;
             } else {
+                olaos_logs::info!(
+                    "Writes are stopped for column families {cfs_with_stopped_writes:?} in DB `{}` \
+                     (retry #{retry_idx})",
+                    self.db_name
+                );
                 thread::sleep(retry_interval);
             }
         }
@@ -230,9 +237,7 @@ impl<CF: NamedColumnFamily> RocksDB<CF> {
     pub fn with_options(path: &Path, options: RocksDBOptions) -> Self {
         let caches = RocksDBCaches::new(options.block_cache_capacity);
         let db_options = Self::rocksdb_options(None, None);
-        let existing_cfs = DB::list_cf(&db_options, path).unwrap_or_else(|err| {
-            vec![]
-        });
+        let existing_cfs = DB::list_cf(&db_options, path).unwrap_or_else(|_err| vec![]);
 
         let cfs_and_options: HashMap<_, _> = CF::ALL
             .iter()

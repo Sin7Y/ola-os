@@ -26,6 +26,7 @@ pub mod proofs;
 pub mod protocol_version;
 pub mod prover_server_api;
 pub mod request;
+pub mod snapshots;
 pub mod storage;
 pub mod storage_writes_deduplicator;
 pub mod system_contracts;
@@ -33,7 +34,6 @@ pub mod tokens;
 pub mod tx;
 pub mod utils;
 pub mod vm_trace;
-pub mod snapshots;
 
 pub const EIP_712_TX_TYPE: u8 = 0x71;
 pub const EIP_1559_TX_TYPE: u8 = 0x02;

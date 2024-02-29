@@ -1,14 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
 use assert_matches::assert_matches;
+use ola_types::{H256, U256};
+use ola_utils::hash::{Hasher, PoseidonHasher};
 use rand::{
     rngs::StdRng,
     seq::{IteratorRandom, SliceRandom},
     Rng, SeedableRng,
 };
 use test_casing::test_casing;
-use ola_utils::hash::{Hasher, PoseidonHasher};
-use ola_types::{H256, U256};
 
 use super::*;
 use crate::{

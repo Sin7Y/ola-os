@@ -2,8 +2,8 @@
 
 use std::path::Path;
 
-use rayon::prelude::*;
 use olaos_storage::{db::NamedColumnFamily, rocksdb::DBPinnableSlice, RocksDB};
+use rayon::prelude::*;
 
 use crate::{
     errors::{DeserializeError, ErrorContext},

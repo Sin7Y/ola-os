@@ -5,19 +5,19 @@ use std::{
     time::Duration,
 };
 
-use serde::{Deserialize, Serialize};
-#[cfg(test)]
-use tokio::sync::mpsc;
 use ola_config::database::MerkleTreeMode;
 use ola_dal::StorageProcessor;
+use ola_types::{block::L1BatchHeader, L1BatchNumber, StorageKey, H256};
 use olaos_health_check::{Health, HealthStatus};
 use olaos_merkle_tree::{
-    domain::{TreeMetadata, OlaTree, OlaTreeReader},
+    domain::{OlaTree, OlaTreeReader, TreeMetadata},
     recovery::MerkleTreeRecovery,
     Database, Key, NoVersionError, RocksDBWrapper, TreeEntry, TreeEntryWithProof, TreeInstruction,
 };
 use olaos_storage::{RocksDB, RocksDBOptions, StalledWritesRetries};
-use ola_types::{block::L1BatchHeader, L1BatchNumber, StorageKey, H256};
+use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use tokio::sync::mpsc;
 
 /// General information about the Merkle tree.
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,7 +62,7 @@ fn create_db_sync(
     stalled_writes_timeout: Duration,
     multi_get_chunk_size: usize,
 ) -> RocksDBWrapper {
-    tracing::info!(
+    olaos_logs::info!(
         "Initializing Merkle tree database at `{path}` with {multi_get_chunk_size} multi-get chunk size, \
          {block_cache_capacity}B block cache, {memtable_capacity}B memtable capacity, \
          {stalled_writes_timeout:?} stalled writes timeout",
@@ -355,8 +355,6 @@ impl L1BatchWithLogs {
         storage: &mut StorageProcessor<'_>,
         l1_batch_number: L1BatchNumber,
     ) -> Option<Self> {
-        tracing::debug!("Loading storage logs data for L1 batch #{l1_batch_number}");
-
         let header = storage
             .blocks_dal()
             .get_l1_batch_header(l1_batch_number)
@@ -389,10 +387,6 @@ impl L1BatchWithLogs {
             let log = TreeInstruction::Read(storage_key);
             storage_logs.insert(storage_key, log);
         }
-        tracing::debug!(
-            "Made touched slots disjoint with protective reads; remaining touched slots: {}",
-            touched_slots.len()
-        );
 
         for (storage_key, value) in touched_slots {
             if let Some(&(initial_write_batch_for_key, leaf_index)) =
@@ -417,9 +411,9 @@ impl L1BatchWithLogs {
 
 #[cfg(test)]
 mod tests {
-    use tempfile::TempDir;
     use ola_dal::connection::ConnectionPool;
-    use ola_types::{proofs::PrepareBasicCircuitsJob, L2ChainId, StorageKey, log::StorageLog};
+    use ola_types::{log::StorageLog, proofs::PrepareBasicCircuitsJob, L2ChainId, StorageKey};
+    use tempfile::TempDir;
 
     use super::*;
     use crate::{

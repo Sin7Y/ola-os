@@ -4,20 +4,20 @@ use std::{
     time::Duration,
 };
 
-use tokio::sync::watch;
 use ola_config::{
     chain::OperationsManagerConfig,
     database::{MerkleTreeConfig, MerkleTreeMode},
 };
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
-use olaos_merkle_tree::domain::TreeMetadata;
-use olaos_object_store::ObjectStore;
 use ola_types::{
     block::L1BatchHeader,
     commitment::{L1BatchCommitment, L1BatchMetadata},
     H256,
 };
+use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
+use olaos_merkle_tree::domain::TreeMetadata;
+use olaos_object_store::ObjectStore;
+use tokio::sync::watch;
 
 pub(crate) use self::helpers::{AsyncTreeReader, L1BatchWithLogs, MerkleTreeInfo};
 use self::{
@@ -126,7 +126,9 @@ impl MetadataCalculator {
                     break reader;
                 }
                 if receiver.changed().await.is_err() {
-                    tracing::info!("Tree dropped without getting ready; not resolving tree reader");
+                    olaos_logs::info!(
+                        "Tree dropped without getting ready; not resolving tree reader"
+                    );
                     future::pending::<()>().await;
                 }
             }
@@ -190,7 +192,7 @@ impl MetadataCalculator {
             header.base_system_contracts_hashes.default_aa,
         );
         let commitment_hash = commitment.hash();
-        tracing::trace!("L1 batch commitment: {commitment:?}");
+        olaos_logs::trace!("L1 batch commitment: {commitment:?}");
 
         let metadata = L1BatchMetadata {
             root_hash: merkle_root_hash,
@@ -208,7 +210,7 @@ impl MetadataCalculator {
             // bootloader_initial_content_commitment,
         };
 
-        tracing::trace!("L1 batch metadata: {metadata:?}");
+        olaos_logs::trace!("L1 batch metadata: {metadata:?}");
         metadata
     }
 }

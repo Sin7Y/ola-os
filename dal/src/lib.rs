@@ -1,5 +1,6 @@
 use std::env;
 
+use basic_witness_input_producer_dal::BasicWitnessInputProducerDal;
 use blocks_dal::BlocksDal;
 use blocks_web3_dal::BlocksWeb3Dal;
 use connection::holder::ConnectionHolder;
@@ -9,7 +10,6 @@ use fri_prover_dal::FriProverDal;
 use fri_witness_generator_dal::FriWitnessGeneratorDal;
 use proof_generation_dal::ProofGenerationDal;
 use protocol_version_dal::ProtocolVersionsDal;
-use basic_witness_input_producer_dal::BasicWitnessInputProducerDal;
 use snapshot_recovery_dal::SnapshotRecoveryDal;
 pub use sqlx::Error as SqlxError;
 use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres, Transaction};
@@ -23,6 +23,7 @@ use transactions_dal::TransactionsDal;
 
 #[macro_use]
 mod macro_utils;
+pub mod basic_witness_input_producer_dal;
 pub mod blocks_dal;
 pub mod blocks_web3_dal;
 pub mod connection;
@@ -34,6 +35,7 @@ pub mod healthcheck;
 pub mod models;
 pub mod proof_generation_dal;
 pub mod protocol_version_dal;
+pub mod snapshot_recovery_dal;
 pub mod storage_dal;
 pub mod storage_logs_dal;
 pub mod storage_logs_dedup_dal;
@@ -42,8 +44,6 @@ pub mod time_utils;
 pub mod token_dal;
 pub mod transaction_web3_dal;
 pub mod transactions_dal;
-pub mod basic_witness_input_producer_dal;
-pub mod snapshot_recovery_dal;
 
 pub fn get_master_database_url() -> String {
     // FIXME:

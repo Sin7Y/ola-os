@@ -270,8 +270,8 @@ mod tests {
     use std::num::NonZeroU64;
 
     use assert_matches::assert_matches;
-    use rayon::ThreadPoolBuilder;
     use ola_types::{H256, U256};
+    use rayon::ThreadPoolBuilder;
 
     use super::*;
     use crate::{

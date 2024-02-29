@@ -68,8 +68,7 @@ impl TreeUpdater {
         db: &DB,
     ) -> Vec<Nibbles> {
         let LoadAncestorsResult {
-            longest_prefixes,
-            ..
+            longest_prefixes, ..
         } = self.patch_set.load_ancestors(sorted_keys, db);
 
         longest_prefixes
@@ -303,12 +302,9 @@ impl<'a, DB: Database + ?Sized> Storage<'a, DB> {
     }
 
     fn finalize(self) -> (ValueHash, PatchSet) {
-        self.updater.patch_set.finalize(
-            self.manifest,
-            self.leaf_count,
-            self.operation,
-            self.hasher,
-        )
+        self.updater
+            .patch_set
+            .finalize(self.manifest, self.leaf_count, self.operation, self.hasher)
     }
 }
 

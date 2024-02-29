@@ -1,11 +1,8 @@
 use std::time::Duration;
 
-use tokio::sync::watch;
 use ola_dal::connection::ConnectionPool;
 use ola_types::L1BatchNumber;
-
-#[cfg(test)]
-pub(crate) mod testonly;
+use tokio::sync::watch;
 
 /// Repeatedly polls the DB until there is an L1 batch. We may not have such a batch initially
 /// if the DB is recovered from an application-level snapshot.

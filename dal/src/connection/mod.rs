@@ -134,7 +134,7 @@ impl ConnectionPool {
     }
 
     pub fn max_size(&self) -> u32 {
-        // TODO:
-        4
+        // TODO: DATABASE_POOL_SIZE
+        50
     }
 }
