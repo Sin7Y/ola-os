@@ -53,15 +53,16 @@ impl BlocksDal<'_, '_> {
         sqlx::query!(
             "INSERT INTO l1_batches (\
                 number, l1_tx_count, l2_tx_count, timestamp, is_finished, \
-                initial_bootloader_heap_content, used_contract_hashes, \
+                fee_account_address, initial_bootloader_heap_content, used_contract_hashes, \
                 bootloader_code_hash, default_aa_code_hash, protocol_version, \
                 created_at, updated_at \
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now(), now())",
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now())",
             header.number.0 as i64,
             header.l1_tx_count as i32,
             header.l2_tx_count as i32,
             header.timestamp as i64,
             header.is_finished,
+            header.fee_account_address.as_bytes(),
             initial_bootloader_contents,
             used_contract_hashes,
             header.base_system_contracts_hashes.entrypoint.as_bytes(),

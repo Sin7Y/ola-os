@@ -20,5 +20,6 @@ members = [
     "queued_job_processor",
     "prover/prover_fri_gateway",
     # "prover/witness_generator",
+    "offchain_verifier",
 ]
 resolver = "2"

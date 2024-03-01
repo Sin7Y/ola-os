@@ -20,7 +20,7 @@ use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
 use self::{
     backend::error::internal_error,
     namespaces::{eth::EthNamespace, ola::OlaNamespace},
-    state::{InternalApiconfig, RpcState},
+    state::{InternalApiConfig, RpcState},
 };
 
 use super::{execution_sandbox::VmConcurrencyBarrier, tx_sender::TxSender};
@@ -42,28 +42,32 @@ enum ApiTransport {
 pub enum Namespace {
     Ola,
     Eth,
+    OffChainVerifier,
 }
 
 impl Namespace {
-    pub const ALL: &'static [Namespace] = &[Namespace::Ola, Namespace::Eth];
+    pub const HTTP: &'static [Namespace] = &[Namespace::Ola, Namespace::Eth];
 }
 
 #[derive(Debug)]
 pub struct ApiBuilder {
+    pool: ConnectionPool,
+    config: InternalApiConfig,
     transport: Option<ApiTransport>,
-    config: InternalApiconfig,
-    namespaces: Option<Vec<Namespace>>,
-    threads: Option<usize>,
     tx_sender: Option<TxSender>,
     vm_barrier: Option<VmConcurrencyBarrier>,
+    filters_limit: Option<usize>,
+    subscriptions_limit: Option<usize>,
     batch_request_size_limit: Option<usize>,
     response_body_size_limit: Option<usize>,
-    filters_limit: Option<usize>,
-    pool: ConnectionPool,
+    threads: Option<usize>,
+    vm_concurrency_limit: Option<usize>,
+    polling_interval: Option<Duration>,
+    namespaces: Option<Vec<Namespace>>,
 }
 
 impl ApiBuilder {
-    pub fn new(config: InternalApiconfig, pool: ConnectionPool) -> Self {
+    pub fn http_backend(config: InternalApiConfig, pool: ConnectionPool) -> Self {
         Self {
             transport: None,
             config,
@@ -75,6 +79,27 @@ impl ApiBuilder {
             response_body_size_limit: None,
             filters_limit: None,
             pool,
+            subscriptions_limit: None,
+            vm_concurrency_limit: None,
+            polling_interval: None,
+        }
+    }
+
+    pub fn offchain_verifier_backend(config: InternalApiConfig, pool: ConnectionPool) -> Self {
+        Self {
+            transport: None,
+            pool,
+            tx_sender: None,
+            vm_barrier: None,
+            filters_limit: None,
+            subscriptions_limit: None,
+            batch_request_size_limit: None,
+            response_body_size_limit: None,
+            threads: None,
+            vm_concurrency_limit: None,
+            polling_interval: None,
+            namespaces: None,
+            config,
         }
     }
 
@@ -93,8 +118,18 @@ impl ApiBuilder {
         self
     }
 
+    pub fn with_subscriptions_limit(mut self, subscriptions_limit: usize) -> Self {
+        self.subscriptions_limit = Some(subscriptions_limit);
+        self
+    }
+
     pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = Some(threads);
+        self
+    }
+
+    pub fn with_polling_interval(mut self, polling_interval: Duration) -> Self {
+        self.polling_interval = Some(polling_interval);
         self
     }
 
@@ -110,6 +145,11 @@ impl ApiBuilder {
 
     pub fn with_tx_sender(mut self, tx_sender: TxSender, vm_barrier: VmConcurrencyBarrier) -> Self {
         self.tx_sender = Some(tx_sender);
+        self.vm_barrier = Some(vm_barrier);
+        self
+    }
+
+    pub fn with_vm_barrier(mut self, vm_barrier: VmConcurrencyBarrier) -> Self {
         self.vm_barrier = Some(vm_barrier);
         self
     }
@@ -195,7 +235,7 @@ impl ApiBuilder {
         let rpc = self.build_rpc_module().await;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
-            .thread_name("ola-rpc-ws-worder")
+            .thread_name("ola-rpc-ws-worker")
             .worker_threads(self.threads.unwrap())
             .build()
             .unwrap();
@@ -285,7 +325,6 @@ impl ApiBuilder {
     }
 
     async fn build_rpc_module(&self) -> RpcModule<()> {
-        let _ola_network_id = self.config.l2_chain_id;
         let rpc_app = self.build_rpc_state();
         let namespaces = self.namespaces.as_ref().unwrap();
         let mut rpc = RpcModule::new(());
@@ -304,7 +343,7 @@ impl ApiBuilder {
         RpcState {
             api_config: self.config.clone(),
             connection_pool: self.pool.clone(),
-            tx_sender: self.tx_sender.clone().expect("failed to clone tx_sender"),
+            tx_sender: self.tx_sender.clone(),
         }
     }
 
