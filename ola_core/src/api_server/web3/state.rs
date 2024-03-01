@@ -9,13 +9,13 @@ use ola_web3_decl::error::Web3Error;
 use crate::api_server::tx_sender::TxSender;
 
 #[derive(Debug, Clone)]
-pub struct InternalApiconfig {
+pub struct InternalApiConfig {
     pub l1_chain_id: L1ChainId,
     pub l2_chain_id: L2ChainId,
     pub max_tx_size: usize,
 }
 
-impl InternalApiconfig {
+impl InternalApiConfig {
     pub fn new(
         eth_config: &NetworkConfig,
         web3_config: &Web3JsonRpcConfig,
@@ -31,8 +31,8 @@ impl InternalApiconfig {
 
 #[derive(Debug)]
 pub struct RpcState {
-    pub api_config: InternalApiconfig,
-    pub tx_sender: TxSender,
+    pub api_config: InternalApiConfig,
+    pub tx_sender: Option<TxSender>,
     pub connection_pool: ConnectionPool,
 }
 

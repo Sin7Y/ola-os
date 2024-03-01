@@ -38,7 +38,7 @@ impl OlaNamespace {
             return Err(Web3Error::InvalidChainId(tx_chain_id));
         }
 
-        let submit_result = self.state.tx_sender.submit_tx(tx).await;
+        let submit_result = self.state.tx_sender.as_ref().unwrap().submit_tx(tx).await;
 
         let res = submit_result.map(|_| hash).map_err(|err| {
             olaos_logs::info!("Send raw transaction error: {err}");
@@ -57,7 +57,13 @@ impl OlaNamespace {
         let tx = L2Tx::from_request(request.into(), self.state.api_config.max_tx_size)?;
         olaos_logs::info!("parsed call request transaction: {:?}", tx);
 
-        let call_result = self.state.tx_sender.call_transaction_impl(tx).await;
+        let call_result = self
+            .state
+            .tx_sender
+            .as_ref()
+            .unwrap()
+            .call_transaction_impl(tx)
+            .await;
         let res_bytes = call_result.map_err(|err| {
             olaos_logs::info!("Send raw transaction error: {err}");
             Web3Error::SubmitTransactionError(err.to_string(), err.data())

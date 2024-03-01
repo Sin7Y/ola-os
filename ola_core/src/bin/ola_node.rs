@@ -25,7 +25,12 @@ async fn main() -> anyhow::Result<()> {
         olaos_logs::info!("genesis_init finished");
     }
 
-    let components = vec![Component::HttpApi, Component::Sequencer, Component::Tree];
+    let components = vec![
+        Component::HttpApi,
+        Component::Sequencer,
+        Component::Tree,
+        Component::OffChainVerifier,
+    ];
     let (core_task_handles, stop_sender, health_check_handle) = initialize_components(components)
         .await
         .expect("Unable to start Core actors");

@@ -5,7 +5,7 @@ use api_server::{
     execution_sandbox::{VmConcurrencyBarrier, VmConcurrencyLimiter},
     healthcheck::HealthCheckHandle,
     tx_sender::{ApiContracts, TxSender, TxSenderBuilder, TxSenderConfig},
-    web3::{self, state::InternalApiconfig, Namespace},
+    web3::{self, state::InternalApiConfig, Namespace},
 };
 use futures::channel::oneshot;
 use ola_config::{
@@ -20,6 +20,7 @@ use ola_config::{
     database::{load_db_config, DBConfig},
     eth_sender::ETHSenderConfig,
     object_store::load_object_store_config,
+    offchain_verifier::load_offchain_verifier_config,
     proof_data_handler::load_proof_data_handler_config,
     sequencer::{load_network_config, load_sequencer_config, NetworkConfig, SequencerConfig},
 };
@@ -58,7 +59,9 @@ pub enum Component {
     Tree,
     WitnessInputProducer,
     ProofDataHandler,
+    OffChainVerifier,
 }
+
 pub async fn initialize_components(
     components: Vec<Component>,
 ) -> anyhow::Result<(
@@ -82,12 +85,13 @@ pub async fn initialize_components(
 
     let mut task_futures: Vec<JoinHandle<anyhow::Result<()>>> = vec![];
 
-    if components.contains(&Component::HttpApi) {
+    if components.contains(&Component::HttpApi) || components.contains(&Component::OffChainVerifier)
+    {
         let api_config = load_api_config().expect("failed to load api config");
         let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
         let network_config = load_network_config().expect("failed to load network config");
         let tx_sender_config = TxSenderConfig::new(&sequencer_config, &api_config.web3_json_rpc);
-        let internal_api_config = InternalApiconfig::new(
+        let internal_api_config = InternalApiConfig::new(
             &network_config,
             &api_config.web3_json_rpc,
             &contracts_config,
@@ -117,6 +121,37 @@ pub async fn initialize_components(
             task_futures.extend(futures);
             healthchecks.push(Box::new(health_check));
             olaos_logs::info!("initialized HTTP API in {:?}", started_at.elapsed());
+        }
+
+        if components.contains(&Component::OffChainVerifier) {
+            let started_at = Instant::now();
+            olaos_logs::info!("initializing OffChainVerifier API");
+            let offchain_verifier_config =
+                load_offchain_verifier_config().expect("failed to load offchain verifier config");
+            let max_concurrency = api_config.web3_json_rpc.vm_concurrency_limit();
+            let (_, vm_barrier) = VmConcurrencyLimiter::new(max_concurrency);
+
+            let (futures, health_check) = web3::ApiBuilder::offchain_verifier_backend(
+                internal_api_config,
+                replica_connection_pool.clone(),
+            )
+            .ws(offchain_verifier_config.port)
+            .with_filters_limit(api_config.web3_json_rpc.filters_limit())
+            .with_subscriptions_limit(api_config.web3_json_rpc.subscriptions_limit())
+            .with_batch_request_size_limit(api_config.web3_json_rpc.max_batch_request_size())
+            .with_response_body_size_limit(api_config.web3_json_rpc.max_response_body_size())
+            .with_polling_interval(api_config.web3_json_rpc.pubsub_interval())
+            .with_threads(api_config.web3_json_rpc.ws_server_threads())
+            .with_vm_barrier(vm_barrier)
+            .enable_api_namespaces(vec![Namespace::OffChainVerifier])
+            .build(stop_receiver.clone())
+            .await;
+            task_futures.extend(futures);
+            healthchecks.push(Box::new(health_check));
+            olaos_logs::info!(
+                "initialized OffChainVerifier API in {:?}",
+                started_at.elapsed()
+            );
         }
     }
 
@@ -200,7 +235,7 @@ pub async fn initialize_components(
 async fn run_http_api(
     api_config: &ApiConfig,
     sequencer_config: &SequencerConfig,
-    internal_api: &InternalApiconfig,
+    internal_api: &InternalApiConfig,
     tx_sender_config: &TxSenderConfig,
     master_connection_pool: ConnectionPool,
     replica_connection_pool: ConnectionPool,
@@ -217,9 +252,9 @@ async fn run_http_api(
     )
     .await;
 
-    let namespaces = Namespace::ALL.to_vec();
+    let namespaces = Namespace::HTTP.to_vec();
 
-    web3::ApiBuilder::new(internal_api.clone(), replica_connection_pool)
+    web3::ApiBuilder::http_backend(internal_api.clone(), replica_connection_pool)
         .http(api_config.web3_json_rpc.http_port)
         .with_filters_limit(api_config.web3_json_rpc.filters_limit())
         .with_threads(api_config.web3_json_rpc.http_server_threads())

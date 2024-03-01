@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, time::Duration};
 
 use serde::Deserialize;
 
@@ -39,6 +39,8 @@ pub struct Web3JsonRpcConfig {
     pub factory_deps_cache_size_mb: Option<usize>,
     pub initial_writes_cache_size_mb: Option<usize>,
     pub latest_values_cache_size_mb: Option<usize>,
+    pub subscriptions_limit: Option<u32>,
+    pub pubsub_polling_interval: Option<u64>,
 }
 
 impl Web3JsonRpcConfig {
@@ -48,6 +50,14 @@ impl Web3JsonRpcConfig {
 
     pub fn filters_limit(&self) -> usize {
         self.filters_limit.unwrap_or(10_000) as usize
+    }
+
+    pub fn subscriptions_limit(&self) -> usize {
+        self.subscriptions_limit.unwrap_or(10000) as usize
+    }
+
+    pub fn pubsub_interval(&self) -> Duration {
+        Duration::from_millis(self.pubsub_polling_interval.unwrap_or(200))
     }
 
     pub fn http_server_threads(&self) -> usize {
@@ -144,6 +154,8 @@ mod tests {
                 factory_deps_cache_size_mb: Some(128),
                 initial_writes_cache_size_mb: Some(32),
                 latest_values_cache_size_mb: Some(128),
+                subscriptions_limit: Some(10000),
+                pubsub_polling_interval: Some(200),
             },
             healthcheck: HealthCheckConfig { port: 8081 },
         }

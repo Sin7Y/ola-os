@@ -18,7 +18,10 @@ impl SenderConfig {
     pub fn private_key(&self) -> Option<H256> {
         std::env::var("OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY")
             .ok()
-            .map(|pk| pk.parse().unwrap())
+            .map(|pk| {
+                pk.parse()
+                    .expect("failed to load OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY")
+            })
     }
 }
 

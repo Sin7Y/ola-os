@@ -13,6 +13,7 @@ pub mod eth_sender;
 pub mod fri_prover_gateway;
 pub mod fri_witness_generator;
 pub mod object_store;
+pub mod offchain_verifier;
 pub mod proof_data_handler;
 pub mod sequencer;
 pub mod utils;
