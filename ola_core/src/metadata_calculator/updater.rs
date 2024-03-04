@@ -88,14 +88,12 @@ impl TreeUpdater {
         let mut l1_batch_data = L1BatchWithLogs::new(storage, first_l1_batch_number).await;
 
         let mut previous_root_hash = self.tree.root_hash();
-        let mut total_logs = 0;
         let mut updated_headers = vec![];
         for l1_batch_number in l1_batch_numbers {
             let l1_batch_number = L1BatchNumber(l1_batch_number);
             let Some(current_l1_batch_data) = l1_batch_data else {
                 return l1_batch_number;
             };
-            total_logs += current_l1_batch_data.storage_logs.len();
 
             let process_l1_batch_task = self.process_l1_batch(current_l1_batch_data);
             let load_next_l1_batch_task = async {

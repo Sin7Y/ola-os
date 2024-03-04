@@ -126,7 +126,7 @@ impl<DB: PruneDatabase> MerkleTreePruner<DB> {
 
     /// Runs this pruner indefinitely until it is aborted by dropping its handle.
     pub fn run(mut self) {
-        tracing::info!("Started Merkle tree pruner {self:?}");
+        olaos_logs::info!("Started Merkle tree pruner {self:?}");
         loop {
             let timeout = if let Some(has_more_work) = self.run_once() {
                 if has_more_work {
@@ -135,14 +135,14 @@ impl<DB: PruneDatabase> MerkleTreePruner<DB> {
                     self.poll_interval
                 }
             } else {
-                tracing::debug!("No pruning required per specified policies; waiting");
+                olaos_logs::debug!("No pruning required per specified policies; waiting");
                 self.poll_interval
             };
 
             match self.aborted_receiver.recv_timeout(timeout) {
                 Ok(()) => break, // Abort was requested
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    tracing::warn!("Pruner handle is dropped without calling `abort()`; exiting");
+                    olaos_logs::warn!("Pruner handle is dropped without calling `abort()`; exiting");
                     break;
                 }
                 Err(mpsc::RecvTimeoutError::Timeout) => {

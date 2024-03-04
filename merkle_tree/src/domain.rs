@@ -68,7 +68,7 @@ impl OlaTree {
     /// create a persistent tree.
     pub fn process_genesis_batch(storage_logs: &[TreeInstruction<StorageKey>]) -> BlockOutput {
         let kvs = Self::filter_write_instructions(storage_logs);
-        tracing::info!(
+        olaos_logs::info!(
             "Creating Merkle tree for genesis batch with {instr_count} writes",
             instr_count = kvs.len()
         );
@@ -81,7 +81,7 @@ impl OlaTree {
         let mut in_memory_tree = MerkleTree::new(PatchSet::default());
         let output = in_memory_tree.extend(kvs);
 
-        tracing::info!(
+        olaos_logs::info!(
             "Processed genesis batch; root hash is {root_hash}, {leaf_count} leaves in total",
             root_hash = output.root_hash,
             leaf_count = output.leaf_count
@@ -201,7 +201,7 @@ impl OlaTree {
             .map(|instr| instr.map_key(StorageKey::hashed_key_u256))
             .collect();
 
-        tracing::info!(
+        olaos_logs::info!(
             "Extending Merkle tree with batch #{l1_batch_number} with {instr_count} ops in full mode",
             instr_count = instructions.len()
         );
@@ -271,7 +271,7 @@ impl OlaTree {
             });
         let (initial_writes, repeated_writes) = Self::extract_writes(logs, kvs);
 
-        tracing::info!(
+        olaos_logs::info!(
             "Processed batch #{l1_batch_number}; root hash is {root_hash}, \
              {leaf_count} leaves in total, \
              {initial_writes} initial writes, {repeated_writes} repeated writes",
@@ -353,7 +353,7 @@ impl OlaTree {
     ) -> TreeMetadata {
         let kvs = Self::filter_write_instructions(instructions);
         let l1_batch_number = self.next_l1_batch_number();
-        tracing::info!(
+        olaos_logs::info!(
             "Extending Merkle tree with batch #{l1_batch_number} with {kv_count} writes \
              in lightweight mode",
             kv_count = kvs.len()
@@ -372,7 +372,7 @@ impl OlaTree {
         let (initial_writes, repeated_writes) =
             Self::extract_writes(output.logs.into_iter(), kvs.into_iter());
 
-        tracing::info!(
+        olaos_logs::info!(
             "Processed batch #{l1_batch_number}; root hash is {root_hash}, \
              {leaf_count} leaves in total, \
              {initial_writes} initial writes, {repeated_writes} repeated writes",
@@ -417,7 +417,7 @@ impl OlaTree {
     pub fn save(&mut self) {
         let mut l1_batch_numbers = self.tree.db.patched_versions();
         l1_batch_numbers.sort_unstable();
-        tracing::info!("Flushing L1 batches #{l1_batch_numbers:?} to RocksDB");
+        olaos_logs::info!("Flushing L1 batches #{l1_batch_numbers:?} to RocksDB");
         self.tree.db.flush();
     }
 
