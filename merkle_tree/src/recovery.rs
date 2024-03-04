@@ -147,16 +147,16 @@ impl<DB: PruneDatabase, H: HashTree> MerkleTreeRecovery<DB, H> {
         ),
     )]
     pub fn extend_linear(&mut self, entries: Vec<TreeEntry>) {
-        tracing::debug!("Started extending tree");
+        olaos_logs::debug!("Started extending tree");
 
         let started_at = Instant::now();
         let storage = Storage::new(&self.db, &self.hasher, self.recovered_version, false);
         let patch = storage.extend_during_linear_recovery(entries);
-        tracing::debug!("Finished processing keys; took {:?}", started_at.elapsed());
+        olaos_logs::debug!("Finished processing keys; took {:?}", started_at.elapsed());
 
         let started_at = Instant::now();
         self.db.apply_patch(patch);
-        tracing::debug!("Finished persisting to DB; took {:?}", started_at.elapsed());
+        olaos_logs::debug!("Finished persisting to DB; took {:?}", started_at.elapsed());
     }
 
     /// Extends a tree with a chunk of entries. Unlike [`Self::extend_linear()`], entries may be
@@ -170,16 +170,16 @@ impl<DB: PruneDatabase, H: HashTree> MerkleTreeRecovery<DB, H> {
         ),
     )]
     pub fn extend_random(&mut self, entries: Vec<TreeEntry>) {
-        tracing::debug!("Started extending tree");
+        olaos_logs::debug!("Started extending tree");
 
         let started_at = Instant::now();
         let storage = Storage::new(&self.db, &self.hasher, self.recovered_version, false);
         let patch = storage.extend_during_random_recovery(entries);
-        tracing::debug!("Finished processing keys; took {:?}", started_at.elapsed());
+        olaos_logs::debug!("Finished processing keys; took {:?}", started_at.elapsed());
 
         let started_at = Instant::now();
         self.db.apply_patch(patch);
-        tracing::debug!("Finished persisting to DB; took {:?}", started_at.elapsed());
+        olaos_logs::debug!("Finished persisting to DB; took {:?}", started_at.elapsed());
     }
 
     /// Finalizes the recovery process marking it as complete in the tree manifest.
@@ -201,20 +201,20 @@ impl<DB: PruneDatabase, H: HashTree> MerkleTreeRecovery<DB, H> {
             self.db.apply_patch(patch);
             0
         };
-        tracing::debug!(
+        olaos_logs::debug!(
             "Finalizing recovery of the Merkle tree with {leaf_count} key–value entries"
         );
 
         let started_at = Instant::now();
         let stale_keys = self.db.stale_keys(self.recovered_version);
         let stale_keys_len = stale_keys.len();
-        tracing::debug!("Pruning {stale_keys_len} accumulated stale keys");
+        olaos_logs::debug!("Pruning {stale_keys_len} accumulated stale keys");
         let prune_patch = PrunePatchSet::new(
             stale_keys,
             self.recovered_version..self.recovered_version + 1,
         );
         self.db.prune(prune_patch);
-        tracing::debug!(
+        olaos_logs::debug!(
             "Pruned {stale_keys_len} stale keys in {:?}",
             started_at.elapsed()
         );
@@ -224,7 +224,7 @@ impl<DB: PruneDatabase, H: HashTree> MerkleTreeRecovery<DB, H> {
             .get_or_insert_with(|| TreeTags::new(&self.hasher))
             .is_recovering = false;
         self.db.apply_patch(PatchSet::from_manifest(manifest));
-        tracing::debug!("Updated tree manifest to mark recovery as complete");
+        olaos_logs::debug!("Updated tree manifest to mark recovery as complete");
 
         self.db
     }
