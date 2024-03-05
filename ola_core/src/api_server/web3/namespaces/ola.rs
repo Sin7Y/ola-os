@@ -25,7 +25,7 @@ impl OlaNamespace {
         Self { state }
     }
 
-    #[tracing::instrument(skip(self, tx_bytes))]
+    #[olaos_logs::instrument(skip(self, tx_bytes))]
     pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
         olaos_logs::info!("received a send transaction: {:?}", Instant::now());
         let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
@@ -50,7 +50,7 @@ impl OlaNamespace {
         res
     }
 
-    #[tracing::instrument(skip(self, request))]
+    #[olaos_logs::instrument(skip(self, request))]
     pub async fn call_impl(&self, request: CallRequest) -> Result<Bytes, Web3Error> {
         olaos_logs::info!("received a call transaction request: {:?}", request);
 
@@ -74,7 +74,7 @@ impl OlaNamespace {
         Ok(res_bytes.into())
     }
 
-    #[tracing::instrument(skip(self))]
+    #[olaos_logs::instrument(skip(self))]
     pub async fn get_transaction_details_impl(
         &self,
         hash: H256,
@@ -98,7 +98,7 @@ impl OlaNamespace {
         tx_details
     }
 
-    #[tracing::instrument(skip(self))]
+    #[olaos_logs::instrument(skip(self))]
     pub async fn get_transaction_receipt_impl(
         &self,
         hash: H256,

@@ -1,25 +1,39 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{net::SocketAddr, num::NonZeroU32, time::Duration};
 
-use anyhow::Ok;
+use anyhow::{Context, Ok};
 use futures::future;
 use jsonrpsee::{
-    server::{BatchRequestConfig, ServerBuilder},
+    server::{BatchRequestConfig, RpcServiceBuilder, ServerBuilder},
     RpcModule,
 };
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{api::BlockId, MiniblockNumber};
 use ola_web3_decl::{
     error::Web3Error,
-    namespaces::{eth::EthNamespaceServer, ola::OlaNamespaceServer},
+    namespaces::{
+        eth::{EthNamespaceServer, EthPubSubServer},
+        ola::OlaNamespaceServer,
+    },
 };
 use olaos_health_check::{HealthStatus, HealthUpdater, ReactiveHealthCheck};
 use serde::Deserialize;
-use tokio::sync::watch;
+use tokio::{
+    sync::{mpsc, oneshot, watch},
+    task::JoinHandle,
+};
 use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
+
+use crate::{
+    api_server::web3::{
+        backend::batch_limiter_middleware::LimitMiddleware, pubsub::EthSubscriptionIdProvider,
+    },
+    utils::wait_for_l1_batch,
+};
 
 use self::{
     backend::error::internal_error,
     namespaces::{eth::EthNamespace, ola::OlaNamespace},
+    pubsub::{EthSubscribe, PubSubEvent},
     state::{InternalApiConfig, RpcState},
 };
 
@@ -27,7 +41,10 @@ use super::{execution_sandbox::VmConcurrencyBarrier, tx_sender::TxSender};
 
 pub mod backend;
 pub mod namespaces;
+pub mod pubsub;
 pub mod state;
+#[cfg(test)]
+pub(crate) mod tests;
 
 const SERVER_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -42,11 +59,47 @@ enum ApiTransport {
 pub enum Namespace {
     Ola,
     Eth,
-    OffChainVerifier,
+    Pubsub,
 }
 
 impl Namespace {
-    pub const HTTP: &'static [Namespace] = &[Namespace::Ola, Namespace::Eth];
+    pub const HTTP: &'static [Namespace] = &[Namespace::Ola, Namespace::Eth, Namespace::Pubsub];
+}
+
+/// Handles to the initialized API server.
+#[derive(Debug)]
+pub struct ApiServerHandles {
+    pub tasks: Vec<JoinHandle<anyhow::Result<()>>>,
+    pub health_check: ReactiveHealthCheck,
+    // #[allow(unused)] // only used in tests
+    // pub(crate) local_addr: future::TryMaybeDone<oneshot::Receiver<SocketAddr>>,
+}
+
+/// Optional part of the API server parameters.
+#[derive(Debug, Default)]
+struct OptionalApiParams {
+    // sync_state: Option<SyncState>,
+    filters_limit: Option<usize>,
+    subscriptions_limit: Option<usize>,
+    batch_request_size_limit: Option<usize>,
+    response_body_size_limit: Option<usize>,
+    websocket_requests_per_minute_limit: Option<NonZeroU32>,
+    // tree_api_url: Option<String>,
+    pub_sub_events_sender: Option<mpsc::UnboundedSender<PubSubEvent>>,
+}
+
+/// Full API server parameters.
+#[derive(Debug)]
+struct FullApiParams {
+    pool: ConnectionPool,
+    // last_miniblock_pool: ConnectionPool,
+    config: InternalApiConfig,
+    transport: ApiTransport,
+    // tx_sender: TxSender,
+    vm_barrier: VmConcurrencyBarrier,
+    polling_interval: Duration,
+    namespaces: Vec<Namespace>,
+    optional: OptionalApiParams,
 }
 
 #[derive(Debug)]
@@ -85,7 +138,7 @@ impl ApiBuilder {
         }
     }
 
-    pub fn offchain_verifier_backend(config: InternalApiConfig, pool: ConnectionPool) -> Self {
+    pub fn pubsub_backend(config: InternalApiConfig, pool: ConnectionPool) -> Self {
         Self {
             transport: None,
             pool,
@@ -168,7 +221,8 @@ impl ApiBuilder {
         Vec<tokio::task::JoinHandle<anyhow::Result<()>>>,
         ReactiveHealthCheck,
     ) {
-        match self.transport.take() {
+        let transport = self.transport.clone();
+        match transport {
             Some(ApiTransport::Http(addr)) => {
                 let (api_health_check, health_updater) = ReactiveHealthCheck::new("http_api");
                 (
@@ -185,6 +239,14 @@ impl ApiBuilder {
             }
             None => panic!("ApiTransport is not specified"),
         }
+    }
+
+    pub async fn build_ws_new(
+        self,
+        stop_receiver: watch::Receiver<bool>,
+    ) -> anyhow::Result<ApiServerHandles> {
+        // self.into_full_params()?.spawn_server(stop_receiver).await
+        self.build_jsonrpsee(stop_receiver).await
     }
 
     async fn build_http(
@@ -266,6 +328,186 @@ impl ApiBuilder {
         })
     }
 
+    async fn build_jsonrpsee(
+        self,
+        stop_receiver: watch::Receiver<bool>,
+    ) -> anyhow::Result<ApiServerHandles> {
+        let transport = self.transport.expect("failed to specify transport");
+        let health_check_name = match transport {
+            ApiTransport::Http(_) => "http_api",
+            ApiTransport::WebSocket(_) => "ws_api",
+        };
+        let (health_check, health_updater) = ReactiveHealthCheck::new(health_check_name);
+
+        let mut tasks = vec![];
+        let namespaces = self.namespaces.as_ref().unwrap();
+        let pub_sub = if matches!(transport, ApiTransport::WebSocket(_))
+            && namespaces.contains(&Namespace::Pubsub)
+        {
+            let pub_sub = EthSubscribe::new();
+            // if let Some(sender) = &self.optional.pub_sub_events_sender {
+            //     pub_sub.set_events_sender(sender.clone());
+            // }
+
+            tasks.extend(
+                pub_sub.spawn_notifiers(
+                    self.pool.clone(),
+                    self.polling_interval
+                        .expect("polling_interval not specified"),
+                    stop_receiver.clone(),
+                ),
+            );
+            Some(pub_sub)
+        } else {
+            None
+        };
+        // Start the server in a separate tokio runtime from a dedicated thread.
+        let (local_addr_sender, local_addr) = oneshot::channel();
+        let server_task = tokio::spawn(self.run_jsonrpsee_server(
+            stop_receiver,
+            pub_sub,
+            local_addr_sender,
+            health_updater,
+        ));
+        tasks.push(server_task);
+        Ok(ApiServerHandles {
+            health_check,
+            tasks,
+            // local_addr: future::try_maybe_done(local_addr),
+        })
+    }
+
+    async fn run_jsonrpsee_server(
+        self,
+        mut stop_receiver: watch::Receiver<bool>,
+        pub_sub: Option<EthSubscribe>,
+        local_addr_sender: oneshot::Sender<SocketAddr>,
+        health_updater: HealthUpdater,
+    ) -> anyhow::Result<()> {
+        let transport = self.transport.expect("transport is not specified");
+        let (transport_str, is_http, addr) = match transport {
+            ApiTransport::Http(addr) => ("HTTP", true, addr),
+            ApiTransport::WebSocket(addr) => ("WS", false, addr),
+        };
+
+        olaos_logs::info!(
+            "Waiting for at least one L1 batch in Postgres to start {transport_str} API server"
+        );
+        // Starting the server before L1 batches are present in Postgres can lead to some invariants the server logic
+        // implicitly assumes not being upheld. The only case when we'll actually wait here is immediately after snapshot recovery.
+        let polling_interval = self
+            .polling_interval
+            .expect("polling_interval is not specified");
+        let earliest_l1_batch_number =
+            wait_for_l1_batch(&self.pool, polling_interval, &mut stop_receiver)
+                .await
+                .context("error while waiting for L1 batch in Postgres")?;
+        if let Some(number) = earliest_l1_batch_number {
+            olaos_logs::info!("Successfully waited for at least one L1 batch in Postgres; the earliest one is #{number}");
+        } else {
+            olaos_logs::info!("Received shutdown signal before {transport_str} API server is started; shutting down");
+            return Ok(());
+        }
+
+        let rpc = self.build_rpc_module_new(pub_sub).await?;
+        // Setup CORS.
+        let cors = is_http.then(|| {
+            CorsLayer::new()
+                // Allow `POST` when accessing the resource
+                .allow_methods([reqwest::Method::POST])
+                // Allow requests from any origin
+                .allow_origin(tower_http::cors::Any)
+                .allow_headers([reqwest::header::CONTENT_TYPE])
+        });
+        // Setup metrics for the number of in-flight requests.
+        let transport = if is_http { "HTTP" } else { "WS" };
+        let (in_flight_requests, counter) = InFlightRequestsLayer::pair();
+        tokio::spawn(
+            counter.run_emitter(Duration::from_millis(100), move |count| {
+                metrics::histogram!("api.web3.in_flight_requests", count as f64, "scheme" => transport);
+                future::ready(())
+            }),
+        );
+        // Assemble server middleware.
+        let middleware = tower::ServiceBuilder::new()
+            .layer(in_flight_requests)
+            .option_layer(cors);
+
+        // Settings shared by HTTP and WS servers.
+        let max_connections = !is_http
+            .then_some(self.subscriptions_limit)
+            .flatten()
+            .unwrap_or(5_000);
+        let batch_request_config = if let Some(limit) = self.batch_request_size_limit {
+            BatchRequestConfig::Limit(limit as u32)
+        } else {
+            BatchRequestConfig::Unlimited
+        };
+        let server_builder = ServerBuilder::default()
+            .max_connections(max_connections as u32)
+            .set_http_middleware(middleware)
+            .max_response_body_size(
+                self.response_body_size_limit
+                    .expect("response_body_size_limit not specified") as u32,
+            )
+            .set_batch_request_config(batch_request_config);
+
+        let (local_addr, server_handle) = if is_http {
+            // HTTP-specific settings
+            let server = server_builder
+                .http_only()
+                .build(addr)
+                .await
+                .context("Failed building HTTP JSON-RPC server")?;
+            (server.local_addr(), server.start(rpc))
+        } else {
+            // WS specific settings
+            // TODO: websocket_requests_per_minute_limit read from config
+            let server = server_builder
+                .set_rpc_middleware(
+                    RpcServiceBuilder::new()
+                        .layer_fn(move |a| LimitMiddleware::new(a, NonZeroU32::new(5))),
+                )
+                .set_id_provider(EthSubscriptionIdProvider)
+                .build(addr)
+                .await
+                .context("Failed building WS JSON-RPC server")?;
+            (server.local_addr(), server.start(rpc))
+        };
+        let local_addr = local_addr.with_context(|| {
+            format!("Failed getting local address for {transport_str} JSON-RPC server")
+        })?;
+        tracing::info!("Initialized {transport_str} API on {local_addr:?}");
+        local_addr_sender.send(local_addr).ok();
+
+        let close_handle = server_handle.clone();
+        let vm_barrier = self
+            .vm_barrier
+            .clone()
+            .expect("vm_barrier is not specified");
+        let closing_vm_barrier = vm_barrier.clone();
+        tokio::spawn(async move {
+            if stop_receiver.changed().await.is_err() {
+                tracing::warn!(
+                    "Stop signal sender for {transport_str} JSON-RPC server was dropped \
+                     without sending a signal"
+                );
+            }
+            tracing::info!(
+                "Stop signal received, {transport_str} JSON-RPC server is shutting down"
+            );
+            closing_vm_barrier.close();
+            close_handle.stop().ok();
+        });
+        health_updater.update(HealthStatus::Ready.into());
+
+        server_handle.stopped().await;
+        drop(health_updater);
+        tracing::info!("{transport_str} JSON-RPC server stopped");
+        Self::wait_for_vm(vm_barrier, transport_str).await;
+        Ok(())
+    }
+
     async fn run_rpc_server(
         is_http: bool,
         rpc: RpcModule<()>,
@@ -300,7 +542,7 @@ impl ApiBuilder {
 
         let server = server_builder
             .set_batch_request_config(batch_request_config)
-            .set_middleware(middleware)
+            .set_http_middleware(middleware)
             .max_response_body_size(response_body_size_limit)
             .build(addr)
             .await
@@ -328,6 +570,7 @@ impl ApiBuilder {
         let rpc_app = self.build_rpc_state();
         let namespaces = self.namespaces.as_ref().unwrap();
         let mut rpc = RpcModule::new(());
+
         if namespaces.contains(&Namespace::Ola) {
             rpc.merge(OlaNamespace::new(rpc_app.clone()).into_rpc())
                 .expect("Can't merge ola namespace");
@@ -336,7 +579,36 @@ impl ApiBuilder {
             rpc.merge(EthNamespace::new(rpc_app.clone()).into_rpc())
                 .expect("Can't merge eth namespace");
         }
+
         rpc
+    }
+
+    async fn build_rpc_module_new(
+        &self,
+        pub_sub: Option<EthSubscribe>,
+    ) -> anyhow::Result<RpcModule<()>> {
+        let namespaces = self
+            .namespaces
+            .as_ref()
+            .expect("namespaces not specified")
+            .clone();
+        let rpc_state = self.build_rpc_state();
+
+        let mut rpc = RpcModule::new(());
+        if let Some(pub_sub) = pub_sub {
+            rpc.merge(pub_sub.into_rpc())
+                .expect("Can't merge eth pubsub namespace");
+        }
+        if namespaces.contains(&Namespace::Ola) {
+            rpc.merge(OlaNamespace::new(rpc_state.clone()).into_rpc())
+                .expect("Can't merge ola namespace");
+        }
+        if namespaces.contains(&Namespace::Eth) {
+            rpc.merge(EthNamespace::new(rpc_state.clone()).into_rpc())
+                .expect("Can't merge eth namespace");
+        }
+
+        Ok(rpc)
     }
 
     fn build_rpc_state(&self) -> RpcState {
@@ -352,6 +624,25 @@ impl ApiBuilder {
             tokio::time::timeout(SERVER_SHUTDOWN_TIMEOUT, vm_barrier.wait_until_stopped());
         let _ = wait_for_vm.await;
     }
+
+    // fn into_full_params(self) -> anyhow::Result<FullApiParams> {
+    //     Ok(FullApiParams {
+    //         pool: self.pool,
+    //         // last_miniblock_pool: self.last_miniblock_pool,
+    //         config: self.config,
+    //         transport: self.transport.context("API transport not set")?,
+    //         // tx_sender: self.tx_sender.context("Transaction sender not set")?,
+    //         vm_barrier: self.vm_barrier.context("VM barrier not set")?,
+    //         polling_interval: self.polling_interval,
+    //         namespaces: self.namespaces.unwrap_or_else(|| {
+    //             olaos_logs::info!(
+    //                 "debug_ and snapshots_ API namespace will be disabled by default in ApiBuilder"
+    //             );
+    //             Namespace::HTTP.to_vec()
+    //         }),
+    //         // optional: self.optional,
+    //     })
+    // }
 }
 
 async fn resolve_block(

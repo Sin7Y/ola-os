@@ -1,5 +1,6 @@
 use ola_types::l2::error::TxCheckError;
 
+use ola_web3_decl::error::EnrichedClientError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -51,7 +52,7 @@ pub enum SubmitTxError {
     InsufficientFundsForTransfer,
     /// Error returned from main node
     #[error("{0}")]
-    ProxyError(#[from] ola_web3_decl::jsonrpsee::core::Error),
+    ProxyError(#[from] EnrichedClientError),
     #[error("tx call vm failed: {0}")]
     TxCallTxError(String),
 }

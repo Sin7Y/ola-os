@@ -1,6 +1,7 @@
 use jsonrpsee::types::{error::ErrorCode, ErrorObjectOwned};
 use ola_web3_decl::error::Web3Error;
 
+pub mod batch_limiter_middleware;
 pub mod error;
 pub mod namespaces;
 

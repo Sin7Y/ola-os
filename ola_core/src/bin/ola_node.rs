@@ -27,9 +27,9 @@ async fn main() -> anyhow::Result<()> {
 
     let components = vec![
         Component::HttpApi,
+        Component::PubsubApi,
         Component::Sequencer,
         Component::Tree,
-        Component::OffChainVerifier,
     ];
     let (core_task_handles, stop_sender, health_check_handle) = initialize_components(components)
         .await

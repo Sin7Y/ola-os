@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use jsonrpsee::http_client::{HttpClient, HttpClientBuilder};
 use ola_types::l2::L2Tx;
 use ola_types::H256;
+use ola_web3_decl::error::{ClientRpcContext, EnrichedClientResult};
 use ola_web3_decl::namespaces::ola::OlaNamespaceClient;
 use ola_web3_decl::namespaces::RpcResult;
 use tokio::sync::RwLock;
@@ -26,11 +27,16 @@ impl TxProxy {
         self.tx_cache.write().await.insert(tx_hash, tx);
     }
 
-    pub async fn submit_tx(&self, tx: &L2Tx) -> RpcResult<H256> {
+    pub async fn submit_tx(&self, tx: &L2Tx) -> EnrichedClientResult<H256> {
         let input_data = tx.common_data.input_data().expect("raw tx is absent");
         let raw_tx = ola_types::Bytes(input_data.to_vec());
-        olaos_logs::info!("Proxying tx {}", tx.hash());
-        self.client.send_raw_transaction(raw_tx).await
+        let tx_hash = tx.hash();
+        olaos_logs::info!("Proxying tx {}", tx_hash);
+        self.client
+            .send_raw_transaction(raw_tx)
+            .rpc_context("send_raw_transaction")
+            .with_arg("tx_hash", &tx_hash)
+            .await
     }
 
     pub async fn forget_tx(&self, tx_hash: H256) {

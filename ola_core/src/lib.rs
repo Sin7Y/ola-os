@@ -49,17 +49,18 @@ pub mod metadata_calculator;
 pub mod proof_data_handler;
 pub mod sequencer;
 pub mod tests;
+pub mod utils;
 pub mod witness_input_producer;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Component {
     HttpApi,
     WsApi,
+    PubsubApi,
     Sequencer,
     Tree,
     WitnessInputProducer,
     ProofDataHandler,
-    OffChainVerifier,
 }
 
 pub async fn initialize_components(
@@ -85,8 +86,7 @@ pub async fn initialize_components(
 
     let mut task_futures: Vec<JoinHandle<anyhow::Result<()>>> = vec![];
 
-    if components.contains(&Component::HttpApi) || components.contains(&Component::OffChainVerifier)
-    {
+    if components.contains(&Component::HttpApi) || components.contains(&Component::PubsubApi) {
         let api_config = load_api_config().expect("failed to load api config");
         let sequencer_config = load_sequencer_config().expect("failed to load sequencer config");
         let network_config = load_network_config().expect("failed to load network config");
@@ -123,15 +123,15 @@ pub async fn initialize_components(
             olaos_logs::info!("initialized HTTP API in {:?}", started_at.elapsed());
         }
 
-        if components.contains(&Component::OffChainVerifier) {
+        if components.contains(&Component::PubsubApi) {
             let started_at = Instant::now();
-            olaos_logs::info!("initializing OffChainVerifier API");
+            olaos_logs::info!("initializing PubsubApi API");
             let offchain_verifier_config =
                 load_offchain_verifier_config().expect("failed to load offchain verifier config");
             let max_concurrency = api_config.web3_json_rpc.vm_concurrency_limit();
             let (_, vm_barrier) = VmConcurrencyLimiter::new(max_concurrency);
 
-            let (futures, health_check) = web3::ApiBuilder::offchain_verifier_backend(
+            let server_handles = web3::ApiBuilder::pubsub_backend(
                 internal_api_config,
                 replica_connection_pool.clone(),
             )
@@ -143,15 +143,14 @@ pub async fn initialize_components(
             .with_polling_interval(api_config.web3_json_rpc.pubsub_interval())
             .with_threads(api_config.web3_json_rpc.ws_server_threads())
             .with_vm_barrier(vm_barrier)
-            .enable_api_namespaces(vec![Namespace::OffChainVerifier])
-            .build(stop_receiver.clone())
-            .await;
-            task_futures.extend(futures);
-            healthchecks.push(Box::new(health_check));
-            olaos_logs::info!(
-                "initialized OffChainVerifier API in {:?}",
-                started_at.elapsed()
-            );
+            .enable_api_namespaces(vec![Namespace::Pubsub])
+            .build_ws_new(stop_receiver.clone())
+            .await
+            .context("run_pubsub_api")?;
+
+            task_futures.extend(server_handles.tasks);
+            healthchecks.push(Box::new(server_handles.health_check));
+            olaos_logs::info!("initialized PubsubApi API in {:?}", started_at.elapsed());
         }
     }
 

@@ -5,8 +5,12 @@ edition = "2021"
 
 [dependencies]
 ola_types = { path = "../types" }
-jsonrpsee = { version = "0.19.0", default-features = false, features = ["macros"] }
+jsonrpsee = { version = "0.21.0", default-features = false, features = ["macros"] }
 thiserror = "1.0"
+serde = "1.0"
+serde_json = "1.0"
+itertools = "0.10.1"
+pin-project-lite = "0.2.13"
 
 [features]
 default = ["server", "client"]
