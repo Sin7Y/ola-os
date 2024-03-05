@@ -24,7 +24,7 @@ impl EthNamespace {
         Self { state }
     }
 
-    #[tracing::instrument(skip(self, address, block_id))]
+    #[olaos_logs::instrument(skip(self, address, block_id))]
     pub async fn get_transaction_count_impl(
         &self,
         address: Address,

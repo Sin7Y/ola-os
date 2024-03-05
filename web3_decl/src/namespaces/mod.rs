@@ -1,7 +1,6 @@
-use jsonrpsee::core::Error;
+pub use jsonrpsee::core::RpcResult;
 
 pub mod eth;
-pub mod offchain_verifier;
 pub mod ola;
 
-pub type RpcResult<T> = Result<T, Error>;
+// pub type RpcResult<T> = Result<T, Error>;

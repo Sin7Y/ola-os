@@ -24,7 +24,7 @@ impl TxExecutionArgs {
     }
 }
 
-#[tracing::instrument(skip_all)]
+#[olaos_logs::instrument(skip_all)]
 pub(crate) async fn execute_tx_with_pending_state(
     vm_permit: VmPermit,
     shared_args: TxSharedArgs,
@@ -39,7 +39,7 @@ pub(crate) async fn execute_tx_with_pending_state(
 }
 
 #[allow(clippy::too_many_arguments)]
-#[tracing::instrument(skip_all)]
+#[olaos_logs::instrument(skip_all)]
 async fn execute_tx_in_sandbox(
     vm_permit: VmPermit,
     shared_args: TxSharedArgs,

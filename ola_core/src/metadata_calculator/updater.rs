@@ -36,7 +36,7 @@ impl TreeUpdater {
         }
     }
 
-    #[tracing::instrument(skip_all)]
+    #[olaos_logs::instrument(skip_all)]
     async fn process_multiple_blocks(
         &mut self,
         storage: &mut StorageProcessor<'_>,

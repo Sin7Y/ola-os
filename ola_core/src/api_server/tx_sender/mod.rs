@@ -77,7 +77,7 @@ impl Debug for TxSender {
 }
 
 impl TxSender {
-    #[tracing::instrument(skip(self, tx))]
+    #[olaos_logs::instrument(skip(self, tx))]
     pub async fn submit_tx(&self, tx: L2Tx) -> Result<L2TxSubmissionResult, SubmitTxError> {
         olaos_logs::info!("Start submit tx {:?}", tx.hash());
 
@@ -174,7 +174,7 @@ impl TxSender {
         res
     }
 
-    #[tracing::instrument(skip(self, tx))]
+    #[olaos_logs::instrument(skip(self, tx))]
     pub async fn call_transaction_impl(&self, tx: L2Tx) -> Result<Bytes, SubmitTxError> {
         olaos_logs::info!(
             "Start call tx from {:?}, to {:?}",
