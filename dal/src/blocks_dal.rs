@@ -116,7 +116,7 @@ impl BlocksDal<'_, '_> {
         .unwrap();
     }
 
-    #[tracing::instrument(name = "get_sealed_miniblock_number", skip_all)]
+    #[olaos_logs::instrument(name = "get_sealed_miniblock_number", skip_all)]
     pub async fn get_sealed_miniblock_number(&mut self) -> MiniblockNumber {
         let number: i64 = sqlx::query!("SELECT MAX(number) as \"number\" FROM miniblocks")
             .fetch_one(self.storage.conn())
@@ -127,7 +127,22 @@ impl BlocksDal<'_, '_> {
         MiniblockNumber(number as u32)
     }
 
-    #[tracing::instrument(name = "get_newest_l1_batch_header", skip_all)]
+    pub async fn get_earliest_l1_batch_number(&mut self) -> sqlx::Result<Option<L1BatchNumber>> {
+        let row = sqlx::query!(
+            r#"
+            SELECT
+                MIN(number) AS "number"
+            FROM
+                l1_batches
+            "#
+        )
+        .fetch_one(self.storage.conn())
+        .await?;
+
+        Ok(row.number.map(|num| L1BatchNumber(num as u32)))
+    }
+
+    #[olaos_logs::instrument(name = "get_newest_l1_batch_header", skip_all)]
     pub async fn get_newest_l1_batch_header(&mut self) -> L1BatchHeader {
         let last_l1_batch = sqlx::query_as!(
             StorageL1BatchHeader,
@@ -223,7 +238,7 @@ impl BlocksDal<'_, '_> {
     //     .await
     // }
 
-    // #[tracing::instrument(name = "get_sealed_l1_batch_number", skip_all)]
+    // #[olaos_logs::instrument(name = "get_sealed_l1_batch_number", skip_all)]
     pub async fn get_sealed_l1_batch_number(&mut self) -> L1BatchNumber {
         let number = sqlx::query!(
             "SELECT MAX(number) as \"number\" FROM l1_batches WHERE is_finished = TRUE"
@@ -338,7 +353,7 @@ impl BlocksDal<'_, '_> {
         }
     }
 
-    #[tracing::instrument(name = "get_l1_batch_header", skip_all)]
+    #[olaos_logs::instrument(name = "get_l1_batch_header", skip_all)]
     pub async fn get_l1_batch_header(&mut self, number: L1BatchNumber) -> Option<L1BatchHeader> {
         sqlx::query_as!(
             StorageL1BatchHeader,
