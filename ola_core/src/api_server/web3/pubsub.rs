@@ -80,33 +80,33 @@ impl PubSubNotifier {
 
 impl PubSubNotifier {
     // async fn notify_blocks(self, stop_receiver: watch::Receiver<bool>) -> anyhow::Result<()> {
-        //     let mut last_block_number = self.get_starting_miniblock_number().await?;
-        //     let mut timer = Interval(self.polling_interval);
-        //     loop {
-        //         if *stop_receiver.borrow() {
-        //             tracing::info!("Stop signal received, pubsub_block_notifier is shutting down");
-        //             break;
-        //         }
-        //         timer.tick().await;
+    //     let mut last_block_number = self.get_starting_miniblock_number().await?;
+    //     let mut timer = Interval(self.polling_interval);
+    //     loop {
+    //         if *stop_receiver.borrow() {
+    //             tracing::info!("Stop signal received, pubsub_block_notifier is shutting down");
+    //             break;
+    //         }
+    //         timer.tick().await;
 
-        //         let db_latency = PUB_SUB_METRICS.db_poll_latency[&SubscriptionType::Blocks].start();
-        //         let new_blocks = self.new_blocks(last_block_number).await?;
-        //         db_latency.observe();
+    //         let db_latency = PUB_SUB_METRICS.db_poll_latency[&SubscriptionType::Blocks].start();
+    //         let new_blocks = self.new_blocks(last_block_number).await?;
+    //         db_latency.observe();
 
-        //         if let Some(last_block) = new_blocks.last() {
-        //             last_block_number = MiniblockNumber(last_block.number.unwrap().as_u32());
-        //             let new_blocks = new_blocks.into_iter().map(PubSubResult::Header).collect();
-        //             self.send_pub_sub_results(new_blocks, SubscriptionType::Blocks);
-        //             self.emit_event(PubSubEvent::MiniblockAdvanced(
-        //                 SubscriptionType::Blocks,
-        //                 last_block_number,
-        //             ));
-        //         }
-        //         self.emit_event(PubSubEvent::NotifyIterationFinished(
-        //             SubscriptionType::Blocks,
-        //         ));
-        //     }
-        // Ok(())
+    //         if let Some(last_block) = new_blocks.last() {
+    //             last_block_number = MiniblockNumber(last_block.number.unwrap().as_u32());
+    //             let new_blocks = new_blocks.into_iter().map(PubSubResult::Header).collect();
+    //             self.send_pub_sub_results(new_blocks, SubscriptionType::Blocks);
+    //             self.emit_event(PubSubEvent::MiniblockAdvanced(
+    //                 SubscriptionType::Blocks,
+    //                 last_block_number,
+    //             ));
+    //         }
+    //         self.emit_event(PubSubEvent::NotifyIterationFinished(
+    //             SubscriptionType::Blocks,
+    //         ));
+    //     }
+    // Ok(())
     // }
 
     fn send_pub_sub_results(&self, results: Vec<PubSubResult>, sub_type: SubscriptionType) {
@@ -130,27 +130,27 @@ impl PubSubNotifier {
     // }
 
     // async fn notify_txs(self, stop_receiver: watch::Receiver<bool>) -> anyhow::Result<()> {
-        //     let mut last_time = chrono::Utc::now().naive_utc();
-        //     let mut timer = interval(self.polling_interval);
-        //     loop {
-        //         if *stop_receiver.borrow() {
-        //             tracing::info!("Stop signal received, pubsub_tx_notifier is shutting down");
-        //             break;
-        //         }
-        //         timer.tick().await;
+    //     let mut last_time = chrono::Utc::now().naive_utc();
+    //     let mut timer = interval(self.polling_interval);
+    //     loop {
+    //         if *stop_receiver.borrow() {
+    //             tracing::info!("Stop signal received, pubsub_tx_notifier is shutting down");
+    //             break;
+    //         }
+    //         timer.tick().await;
 
-        //         // let db_latency = PUB_SUB_METRICS.db_poll_latency[&SubscriptionType::Txs].start();
-        //         let (new_txs, new_last_time) = self.new_txs(last_time).await?;
-        //         // db_latency.observe();
+    //         // let db_latency = PUB_SUB_METRICS.db_poll_latency[&SubscriptionType::Txs].start();
+    //         let (new_txs, new_last_time) = self.new_txs(last_time).await?;
+    //         // db_latency.observe();
 
-        //         if let Some(new_last_time) = new_last_time {
-        //             last_time = new_last_time;
-        //             let new_txs = new_txs.into_iter().map(PubSubResult::TxHash).collect();
-        //             self.send_pub_sub_results(new_txs, SubscriptionType::Txs);
-        //         }
-        //         self.emit_event(PubSubEvent::NotifyIterationFinished(SubscriptionType::Txs));
-        //     }
-        // Ok(())
+    //         if let Some(new_last_time) = new_last_time {
+    //             last_time = new_last_time;
+    //             let new_txs = new_txs.into_iter().map(PubSubResult::TxHash).collect();
+    //             self.send_pub_sub_results(new_txs, SubscriptionType::Txs);
+    //         }
+    //         self.emit_event(PubSubEvent::NotifyIterationFinished(SubscriptionType::Txs));
+    //     }
+    // Ok(())
     // }
 
     // async fn new_txs(
@@ -168,32 +168,32 @@ impl PubSubNotifier {
     // }
 
     // async fn notify_logs(self, stop_receiver: watch::Receiver<bool>) -> anyhow::Result<()> {
-        //     let mut last_block_number = self.get_starting_miniblock_number().await?;
+    //     let mut last_block_number = self.get_starting_miniblock_number().await?;
 
-        //     let mut timer = interval(self.polling_interval);
-        //     loop {
-        //         if *stop_receiver.borrow() {
-        //             tracing::info!("Stop signal received, pubsub_logs_notifier is shutting down");
-        //             break;
-        //         }
-        //         timer.tick().await;
+    //     let mut timer = interval(self.polling_interval);
+    //     loop {
+    //         if *stop_receiver.borrow() {
+    //             tracing::info!("Stop signal received, pubsub_logs_notifier is shutting down");
+    //             break;
+    //         }
+    //         timer.tick().await;
 
-        //         let db_latency = PUB_SUB_METRICS.db_poll_latency[&SubscriptionType::Logs].start();
-        //         let new_logs = self.new_logs(last_block_number).await?;
-        //         db_latency.observe();
+    //         let db_latency = PUB_SUB_METRICS.db_poll_latency[&SubscriptionType::Logs].start();
+    //         let new_logs = self.new_logs(last_block_number).await?;
+    //         db_latency.observe();
 
-        //         if let Some(last_log) = new_logs.last() {
-        //             last_block_number = MiniblockNumber(last_log.block_number.unwrap().as_u32());
-        //             let new_logs = new_logs.into_iter().map(PubSubResult::Log).collect();
-        //             self.send_pub_sub_results(new_logs, SubscriptionType::Logs);
-        //             self.emit_event(PubSubEvent::MiniblockAdvanced(
-        //                 SubscriptionType::Logs,
-        //                 last_block_number,
-        //             ));
-        //         }
-        //         self.emit_event(PubSubEvent::NotifyIterationFinished(SubscriptionType::Logs));
-        //     }
-        // Ok(())
+    //         if let Some(last_log) = new_logs.last() {
+    //             last_block_number = MiniblockNumber(last_log.block_number.unwrap().as_u32());
+    //             let new_logs = new_logs.into_iter().map(PubSubResult::Log).collect();
+    //             self.send_pub_sub_results(new_logs, SubscriptionType::Logs);
+    //             self.emit_event(PubSubEvent::MiniblockAdvanced(
+    //                 SubscriptionType::Logs,
+    //                 last_block_number,
+    //             ));
+    //         }
+    //         self.emit_event(PubSubEvent::NotifyIterationFinished(SubscriptionType::Logs));
+    //     }
+    // Ok(())
     // }
 
     // async fn new_logs(&self, last_block_number: MiniblockNumber) -> anyhow::Result<Vec<Log>> {
@@ -217,9 +217,14 @@ impl PubSubNotifier {
             timer.tick().await;
 
             let new_proofs = self.new_block_proofs().await?;
-            let new_proofs = new_proofs.into_iter().map(PubSubResult::BlockProof).collect();
+            let new_proofs = new_proofs
+                .into_iter()
+                .map(PubSubResult::BlockProof)
+                .collect();
             self.send_pub_sub_results(new_proofs, SubscriptionType::BlockProofs);
-            self.emit_event(PubSubEvent::NotifyIterationFinished(SubscriptionType::BlockProofs));
+            self.emit_event(PubSubEvent::NotifyIterationFinished(
+                SubscriptionType::BlockProofs,
+            ));
         }
         Ok(())
     }
