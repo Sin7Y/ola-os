@@ -12,7 +12,7 @@ pub struct BlocksWeb3Dal<'a, 'c> {
 }
 
 impl BlocksWeb3Dal<'_, '_> {
-    #[tracing::instrument(name = "get_sealed_block_number", skip_all)]
+    #[olaos_logs::instrument(name = "get_sealed_block_number", skip_all)]
     pub async fn get_sealed_miniblock_number(&mut self) -> Result<MiniblockNumber, SqlxError> {
         let number = sqlx::query!("SELECT MAX(number) as \"number\" FROM miniblocks")
             .fetch_one(self.storage.conn())

@@ -26,7 +26,7 @@ impl StorageWeb3Dal<'_, '_> {
         Ok(full_nonce)
     }
 
-    #[tracing::instrument(name = "get_historical_value_unchecked", skip_all)]
+    #[olaos_logs::instrument(name = "get_historical_value_unchecked", skip_all)]
     pub async fn get_historical_value_unchecked(
         &mut self,
         key: &StorageKey,

@@ -1,5 +1,5 @@
 use ethereum_types::Secret;
-pub use ola_web3_decl::jsonrpsee::core::Error as RpcError;
+pub use ola_web3_decl::jsonrpsee::core::ClientError as RpcError;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
