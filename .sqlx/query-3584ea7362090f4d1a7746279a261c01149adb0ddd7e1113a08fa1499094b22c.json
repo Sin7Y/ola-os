@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO\n                proof_offchain_verification_details (l1_batch_number, status, created_at, updated_at)\n            VALUES\n                ($1, $2, NOW(), NOW())\n            ON CONFLICT (l1_batch_number) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3584ea7362090f4d1a7746279a261c01149adb0ddd7e1113a08fa1499094b22c"
+}
