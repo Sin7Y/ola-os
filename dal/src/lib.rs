@@ -31,6 +31,7 @@ pub mod fri_witness_generator_dal;
 pub mod healthcheck;
 pub mod models;
 pub mod proof_generation_dal;
+pub mod proof_offchain_verification_dal;
 pub mod protocol_version_dal;
 pub mod storage_dal;
 pub mod storage_logs_dal;
