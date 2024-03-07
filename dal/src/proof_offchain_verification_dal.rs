@@ -79,6 +79,30 @@ impl ProofVerificationDal<'_, '_> {
         .ok_or(sqlx::Error::RowNotFound)
     }
 
+    pub async fn mark_l1_batch_as_picked(
+        &mut self,
+        block_number: L1BatchNumber,
+    ) -> Result<(), SqlxError> {
+        sqlx::query!(
+            r#"
+            UPDATE proof_offchain_verification_details
+            SET
+                status = $1,
+                updated_at = NOW()
+            WHERE
+                l1_batch_number = $2
+            "#,
+            ProofVerificationStatus::PickedByOffChainVerifier.to_string(),
+            block_number.0 as i64,
+        )
+        .execute(self.storage.conn())
+        .await?
+        .rows_affected()
+        .eq(&1)
+        .then_some(())
+        .ok_or(sqlx::Error::RowNotFound)
+    }
+    
     pub async fn get_last_l1_batch_verified(&mut self) -> sqlx::Result<L1BatchNumber> {
         let row = sqlx::query!(
             r#"
