@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE proof_offchain_verification_details\n            SET\n                status = $1,\n                verifier_submit_at = NOW(),\n                updated_at = NOW()\n            WHERE\n                l1_batch_number = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6eeeed7814334940268365658adb4a33e0f2ebc8000db0b2ace81d7234433bdd"
+}
