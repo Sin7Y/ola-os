@@ -1,5 +1,6 @@
 use std::env;
 
+use basic_witness_input_producer_dal::BasicWitnessInputProducerDal;
 use blocks_dal::BlocksDal;
 use blocks_web3_dal::BlocksWeb3Dal;
 use connection::holder::ConnectionHolder;
@@ -9,6 +10,7 @@ use fri_prover_dal::FriProverDal;
 use fri_witness_generator_dal::FriWitnessGeneratorDal;
 use proof_generation_dal::ProofGenerationDal;
 use protocol_version_dal::ProtocolVersionsDal;
+use snapshot_recovery_dal::SnapshotRecoveryDal;
 pub use sqlx::Error as SqlxError;
 use sqlx::{pool::PoolConnection, Connection, PgConnection, Postgres, Transaction};
 use storage_dal::StorageDal;
@@ -21,6 +23,7 @@ use transactions_dal::TransactionsDal;
 
 #[macro_use]
 mod macro_utils;
+pub mod basic_witness_input_producer_dal;
 pub mod blocks_dal;
 pub mod blocks_web3_dal;
 pub mod connection;
@@ -33,6 +36,7 @@ pub mod models;
 pub mod proof_generation_dal;
 pub mod proof_offchain_verification_dal;
 pub mod protocol_version_dal;
+pub mod snapshot_recovery_dal;
 pub mod storage_dal;
 pub mod storage_logs_dal;
 pub mod storage_logs_dedup_dal;
@@ -186,6 +190,14 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn fri_prover_jobs_dal(&mut self) -> FriProverDal<'_, 'a> {
         FriProverDal { storage: self }
+    }
+
+    pub fn basic_witness_input_producer_dal(&mut self) -> BasicWitnessInputProducerDal<'_, 'a> {
+        BasicWitnessInputProducerDal { storage: self }
+    }
+
+    pub fn snapshot_recovery_dal(&mut self) -> SnapshotRecoveryDal<'_, 'a> {
+        SnapshotRecoveryDal { storage: self }
     }
 
     pub fn conn(&mut self) -> &mut PgConnection {
