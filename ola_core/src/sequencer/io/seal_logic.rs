@@ -359,6 +359,8 @@ impl UpdatesManager {
             is_finished: true,
             timestamp,
             fee_account_address: block_context.context.operator_address,
+            // FIXME: use real priority_ops_onchain_data
+            priority_ops_onchain_data: vec![],
             l1_tx_count: l1_tx_count as u16,
             l2_tx_count: l2_tx_count as u16,
             used_contract_hashes: vec![],

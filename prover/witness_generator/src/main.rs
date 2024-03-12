@@ -1,12 +1,17 @@
+use std::time::Instant;
+
 use anyhow::{anyhow, Ok};
+use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use ola_config::{
     fri_witness_generator::load_fri_witness_generator_config,
     object_store::load_object_store_config,
 };
 use ola_dal::connection::{ConnectionPool, DbVariant};
 use ola_types::proofs::AggregationRound;
+use ola_utils::wait_for_tasks::wait_for_tasks;
 use olaos_logs::telemetry::{get_subscriber, init_subscriber};
 use olaos_object_store::ObjectStoreFactory;
+use olaos_queued_job_processor::JobProcessor;
 use olaos_witness_generator::basic_circuits::BasicWitnessGenerator;
 use structopt::StructOpt;
 use tokio::sync::watch;
@@ -37,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
     olaos_logs::info!("init_subscriber finished");
 
     let opt = Opt::from_args();
+    let started_at = Instant::now();
     let config =
         load_fri_witness_generator_config().expect("failed to load fri witness generator config");
     let connection_pool = ConnectionPool::builder(DbVariant::Master).build().await;
@@ -127,7 +133,7 @@ async fn main() -> anyhow::Result<()> {
     let graceful_shutdown = None::<futures::future::Ready<()>>;
     let tasks_allowed_to_finish = true;
     tokio::select! {
-        _ = wait_for_tasks(tasks, None, graceful_shutdown, tasks_allowed_to_finish) => {},
+        _ = wait_for_tasks(tasks, graceful_shutdown, tasks_allowed_to_finish) => {},
         _ = stop_signal_receiver.next() => {
             olaos_logs::info!("Stop signal received, shutting down");
         }

@@ -123,8 +123,11 @@ impl ProofVerificationDal<'_, '_> {
 
         Ok(L1BatchNumber(row.number as u32))
     }
-    
-    pub async fn get_l1_batch_verification_status(&mut self, l1_batch_number: L1BatchNumber) -> sqlx::Result<ProofVerificationStatus> {
+
+    pub async fn get_l1_batch_verification_status(
+        &mut self,
+        l1_batch_number: L1BatchNumber,
+    ) -> sqlx::Result<ProofVerificationStatus> {
         let row = sqlx::query!(
             r#"
             SELECT
@@ -139,6 +142,8 @@ impl ProofVerificationDal<'_, '_> {
         .fetch_optional(self.storage.conn())
         .await?;
 
-        Ok(row.map_or(ProofVerificationStatus::NotReady, |row| ProofVerificationStatus::from_str(&row.status).unwrap()))
+        Ok(row.map_or(ProofVerificationStatus::NotReady, |row| {
+            ProofVerificationStatus::from_str(&row.status).unwrap()
+        }))
     }
 }

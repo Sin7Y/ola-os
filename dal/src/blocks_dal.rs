@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use anyhow::Context;
 use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
-    commitment::L1BatchMetadata,
+    commitment::{L1BatchMetadata, L1BatchWithMetadata},
     protocol_version::ProtocolVersionId,
     L1BatchNumber, MiniblockNumber, H256, U256,
 };
@@ -174,6 +175,25 @@ impl BlocksDal<'_, '_> {
     //     self.get_l1_batch_with_metadata(l1_batch)
     //         .await
     //         .context("get_l1_batch_with_metadata")
+    // }
+
+    // pub async fn get_l1_batch_with_metadata(
+    //     &mut self,
+    //     storage_batch: StorageL1Batch,
+    // ) -> anyhow::Result<Option<L1BatchWithMetadata>> {
+    //     let unsorted_factory_deps = self
+    //         .get_l1_batch_factory_deps(L1BatchNumber(storage_batch.number as u32))
+    //         .await;
+    //     let header = storage_batch.clone().into();
+    //     let Ok(metadata) = storage_batch.try_into() else {
+    //         return Ok(None);
+    //     };
+
+    //     Ok(Some(L1BatchWithMetadata::new(
+    //         header,
+    //         metadata,
+    //         unsorted_factory_deps,
+    //     )))
     // }
 
     // pub async fn get_storage_l1_batch(

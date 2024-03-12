@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::block::L1BatchHeader;
 
 use super::storage::writes::{InitialStorageWrite, RepeatedStorageWrite};
@@ -26,6 +28,45 @@ pub struct L1BatchWithMetadata {
     pub factory_deps: Vec<Vec<u8>>,
 }
 
+impl L1BatchWithMetadata {
+    pub fn new(
+        header: L1BatchHeader,
+        metadata: L1BatchMetadata,
+        unsorted_factory_deps: HashMap<H256, Vec<u8>>,
+    ) -> Self {
+        Self {
+            // TODO:
+            // factory_deps: Self::factory_deps_in_appearance_order(&header, &unsorted_factory_deps)
+            //     .map(<[u8]>::to_vec)
+            //     .collect(),
+            // FIXME:
+            factory_deps: vec![],
+            header,
+            metadata,
+        }
+    }
+
+    // pub fn factory_deps_in_appearance_order<'a>(
+    //     header: &'a L1BatchHeader,
+    //     unsorted_factory_deps: &'a HashMap<H256, Vec<u8>>,
+    // ) -> impl Iterator<Item = &'a [u8]> + 'a {
+    //     // header.l2_to_l1_logs.iter().filter_map(move |log| {
+    //     //     let inner = &log.0;
+    //     //     if inner.sender == KNOWN_CODES_STORAGE_ADDRESS {
+    //     //         let bytecode = unsorted_factory_deps.get(&inner.key).unwrap_or_else(|| {
+    //     //             panic!(
+    //     //                 "Failed to get bytecode that was marked as known: bytecode_hash {:?}, \
+    //     //                      L1 batch number {:?}",
+    //     //                 inner.key, header.number
+    //     //             );
+    //     //         });
+    //     //         Some(bytecode.as_slice())
+    //     //     } else {
+    //     //         None
+    //     //     }
+    //     // })
+    // }
+}
 pub trait SerializeCommitment {
     /// Size of the structure in bytes.
     const SERIALIZED_SIZE: usize;
