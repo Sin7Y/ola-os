@@ -17,7 +17,7 @@ use ola_config::{
         load_mempool_config, load_operation_manager_config, MempoolConfig, OperationsManagerConfig,
     },
     contracts::{load_contracts_config, ContractsConfig},
-    database::{load_db_config, DBConfig},
+    database::{load_db_config, DBConfig, MerkleTreeMode},
     eth_sender::ETHSenderConfig,
     object_store::load_object_store_config,
     offchain_verifier::load_offchain_verifier_config,
@@ -35,7 +35,7 @@ use ola_types::{
     system_contracts::get_system_smart_contracts, tx::primitives::PackedEthSignature, L2ChainId,
 };
 use olaos_health_check::{CheckHealth, ReactiveHealthCheck};
-use olaos_object_store::ObjectStoreFactory;
+use olaos_object_store::{ObjectStore, ObjectStoreFactory};
 use olaos_queued_job_processor::JobProcessor;
 use sequencer::{
     create_sequencer, io::MiniblockSealer, mempool_actor::MempoolFetcher, types::MempoolGuard,
@@ -171,6 +171,10 @@ pub async fn initialize_components(
         olaos_logs::info!("initialized Sequencer in {:?}", started_at.elapsed());
     }
 
+    let object_store_config =
+        load_object_store_config().expect("failed to load object store config");
+    let store_factory = ObjectStoreFactory::new(object_store_config);
+
     if components.contains(&Component::Tree) {
         let started_at = Instant::now();
         olaos_logs::info!("initializing Merkle Tree");
@@ -178,15 +182,12 @@ pub async fn initialize_components(
             &mut task_futures,
             &mut healthchecks,
             &components,
+            &store_factory,
             stop_receiver.clone(),
         )
         .await;
         olaos_logs::info!("initialized Merkle Tree in {:?}", started_at.elapsed());
     }
-
-    let object_store_config =
-        load_object_store_config().expect("failed to load object store config");
-    let store_factory = ObjectStoreFactory::new(object_store_config);
 
     if components.contains(&Component::WitnessInputProducer) {
         let started_at = Instant::now();
@@ -416,12 +417,18 @@ async fn add_trees_to_task_futures(
     task_futures: &mut Vec<JoinHandle<anyhow::Result<()>>>,
     healthchecks: &mut Vec<Box<dyn CheckHealth>>,
     _components: &[Component],
+    store_factory: &ObjectStoreFactory,
     stop_receiver: watch::Receiver<bool>,
 ) {
     let db_config = DBConfig::from_env();
     let operation_config =
         load_operation_manager_config().expect("failed to load operation config");
-    let (future, tree_health_check) = run_tree(&db_config, &operation_config, stop_receiver).await;
+    let object_store = match db_config.merkle_tree.mode {
+        MerkleTreeMode::Lightweight => None,
+        MerkleTreeMode::Full => Some(store_factory.create_store().await),
+    };
+    let (future, tree_health_check) =
+        run_tree(&db_config, &operation_config, object_store, stop_receiver).await;
     task_futures.push(future);
     healthchecks.push(Box::new(tree_health_check));
 }
@@ -429,16 +436,19 @@ async fn add_trees_to_task_futures(
 async fn run_tree(
     config: &DBConfig,
     operation_manager: &OperationsManagerConfig,
+    object_store: Option<Arc<dyn ObjectStore>>,
     stop_receiver: watch::Receiver<bool>,
 ) -> (JoinHandle<anyhow::Result<()>>, ReactiveHealthCheck) {
     let started_at = Instant::now();
-    let config =
-        metadata_calculator::MetadataCalculatorConfig::for_main_node(config, operation_manager);
-    let metadata_calculator = metadata_calculator::MetadataCalculator::new(&config).await;
+    let config = metadata_calculator::MetadataCalculatorConfig::for_main_node(
+        &config.merkle_tree,
+        operation_manager,
+    );
+    let metadata_calculator =
+        metadata_calculator::MetadataCalculator::new(config, object_store).await;
     let tree_health_check = metadata_calculator.tree_health_check();
     let pool = ConnectionPool::singleton(DbVariant::Master).build().await;
-    let prover_pool = ConnectionPool::singleton(DbVariant::Prover).build().await;
-    let future = tokio::spawn(metadata_calculator.run(pool, prover_pool, stop_receiver));
+    let future = tokio::spawn(metadata_calculator.run(pool, stop_receiver));
     olaos_logs::info!("Initialized merkle tree in {:?}", started_at.elapsed());
     (future, tree_health_check)
 }

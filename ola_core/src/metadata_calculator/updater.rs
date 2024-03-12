@@ -1,91 +1,173 @@
-use super::{
-    helpers::{get_logs_for_l1_batch, AsyncTree, Delayer, TreeHealthCheckDetails},
-    MetadataCalculator, MetadataCalculatorConfig,
-};
-use futures::{future::ready as future_ready, stream::StreamExt, FutureExt};
+//! Tree updater trait and its implementations.
 
+use std::{ops, sync::Arc, time::Instant};
+
+use anyhow::Context as _;
+use futures::{future, FutureExt};
+use ola_config::database::MerkleTreeMode;
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use ola_types::{block::WitnessBlockWithLogs, L1BatchNumber};
+use ola_types::{block::L1BatchHeader, writes::InitialStorageWrite, L1BatchNumber, H256, U256};
 use olaos_health_check::HealthUpdater;
-use olavm_core::types::merkle_tree::tree_key_to_h256;
+use olaos_merkle_tree::domain::TreeMetadata;
+use olaos_object_store::ObjectStore;
 use tokio::sync::watch;
+
+use super::{
+    helpers::{AsyncTree, Delayer, L1BatchWithLogs},
+    MetadataCalculator,
+};
+use crate::utils::wait_for_l1_batch;
 
 #[derive(Debug)]
 pub(super) struct TreeUpdater {
     tree: AsyncTree,
     max_l1_batches_per_iter: usize,
+    object_store: Option<Arc<dyn ObjectStore>>,
 }
 
 impl TreeUpdater {
-    pub async fn new(config: &MetadataCalculatorConfig<'_>) -> Self {
-        assert!(
-            config.max_l1_batches_per_iter > 0,
-            "Maximum L1 batches per iteration is misconfigured to be 0; please update it to positive value"
-        );
-
-        let db_path = config.db_path.into();
-        let tree = AsyncTree::new(
-            db_path,
-            config.multi_get_chunk_size,
-            config.block_cache_capacity,
-        )
-        .await;
+    pub fn new(
+        tree: AsyncTree,
+        max_l1_batches_per_iter: usize,
+        object_store: Option<Arc<dyn ObjectStore>>,
+    ) -> Self {
         Self {
             tree,
-            max_l1_batches_per_iter: config.max_l1_batches_per_iter,
+            max_l1_batches_per_iter,
+            object_store,
         }
     }
 
-    #[olaos_logs::instrument(skip_all)]
-    async fn process_multiple_blocks(
+    async fn process_l1_batch(
+        &mut self,
+        l1_batch: L1BatchWithLogs,
+    ) -> (L1BatchHeader, TreeMetadata, Option<String>) {
+        let mut metadata = self.tree.process_l1_batch(l1_batch.storage_logs).await;
+
+        let witness_input = metadata.witness.take();
+        let l1_batch_number = l1_batch.header.number;
+        let object_key = if let Some(object_store) = &self.object_store {
+            let witness_input =
+                witness_input.expect("No witness input provided by tree; this is a bug");
+            let object_key = object_store
+                .put(l1_batch_number, &witness_input)
+                .await
+                .unwrap();
+
+            olaos_logs::info!(
+                "Saved witnesses for L1 batch #{l1_batch_number} to object storage at `{object_key}`"
+            );
+            Some(object_key)
+        } else {
+            None
+        };
+
+        (l1_batch.header, metadata, object_key)
+    }
+
+    /// Processes a range of L1 batches with a single flushing of the tree updates to RocksDB at the end.
+    /// This allows to save on RocksDB I/O ops.
+    ///
+    /// Returns the number of the next L1 batch to be processed by the tree.
+    ///
+    /// # Implementation details
+    ///
+    /// We load L1 batch data from Postgres in parallel with updating the tree. (Naturally, we need to load
+    /// the first L1 batch data beforehand.) This allows saving some time if we actually process
+    /// multiple L1 batches at once (e.g., during the initial tree syncing), and if loading data from Postgres
+    /// is slow for whatever reason.
+    async fn process_multiple_batches(
         &mut self,
         storage: &mut StorageProcessor<'_>,
-        blocks: Vec<WitnessBlockWithLogs>,
-    ) {
-        let storage_logs = blocks.iter().map(|block| block.storage_logs.as_slice());
+        l1_batch_numbers: ops::RangeInclusive<u32>,
+    ) -> L1BatchNumber {
+        let start = Instant::now();
+        olaos_logs::info!("Processing L1 batches #{l1_batch_numbers:?}");
+        let first_l1_batch_number = L1BatchNumber(*l1_batch_numbers.start());
+        let last_l1_batch_number = L1BatchNumber(*l1_batch_numbers.end());
+        let mut l1_batch_data = L1BatchWithLogs::new(storage, first_l1_batch_number).await;
 
         let mut previous_root_hash = self.tree.root_hash();
-        let metadata = self.tree.process_blocks(storage_logs).await;
+        let mut updated_headers = vec![];
+        for l1_batch_number in l1_batch_numbers {
+            let l1_batch_number = L1BatchNumber(l1_batch_number);
+            let Some(current_l1_batch_data) = l1_batch_data else {
+                return l1_batch_number;
+            };
 
-        for (metadata_at_block, block) in metadata.into_iter().zip(blocks) {
-            let next_root_hash = tree_key_to_h256(&metadata_at_block.root_hash);
-            let metadata =
-                MetadataCalculator::build_block_metadata(metadata_at_block, &block.header);
+            let process_l1_batch_task = self.process_l1_batch(current_l1_batch_data);
+            let load_next_l1_batch_task = async {
+                if l1_batch_number < last_l1_batch_number {
+                    L1BatchWithLogs::new(storage, l1_batch_number + 1).await
+                } else {
+                    None // Don't need to load the next L1 batch after the last one we're processing.
+                }
+            };
+            let ((header, metadata, object_key), next_l1_batch_data) =
+                future::join(process_l1_batch_task, load_next_l1_batch_task).await;
 
+            Self::check_initial_writes_consistency(
+                storage,
+                header.number,
+                &metadata.initial_writes,
+            )
+            .await;
+
+            let metadata = MetadataCalculator::build_l1_batch_metadata(metadata, &header);
+
+            // TODO: gas
+            // MetadataCalculator::reestimate_l1_batch_commit_gas(storage, &header, &metadata).await;
             storage
                 .blocks_dal()
-                .save_l1_batch_metadata(block.header.number, metadata, previous_root_hash)
-                .await;
+                .save_l1_batch_metadata(l1_batch_number, &metadata, previous_root_hash)
+                .await
+                .unwrap();
+            // ^ Note that `save_l1_batch_metadata()` will not blindly overwrite changes if L1 batch
+            // metadata already exists; instead, it'll check that the old and new metadata match.
+            // That is, if we run multiple tree instances, we'll get metadata correspondence
+            // right away without having to implement dedicated code.
 
-            previous_root_hash = next_root_hash;
+            if let Some(object_key) = &object_key {
+                storage
+                    .basic_witness_input_producer_dal()
+                    .create_basic_witness_input_producer_job(l1_batch_number)
+                    .await
+                    .expect("failed to create basic_witness_input_producer job");
+                storage
+                    .proof_generation_dal()
+                    .insert_proof_generation_details(l1_batch_number, object_key)
+                    .await;
+            }
+            olaos_logs::info!("Updated metadata for L1 batch #{l1_batch_number} in Postgres");
+
+            previous_root_hash = metadata.merkle_root_hash;
+            updated_headers.push(header);
+            l1_batch_data = next_l1_batch_data;
         }
 
         self.tree.save().await;
+
+        last_l1_batch_number + 1
     }
 
-    pub async fn step(
+    async fn step(
         &mut self,
         mut storage: StorageProcessor<'_>,
-        next_block_to_seal: &mut L1BatchNumber,
+        next_l1_batch_to_seal: &mut L1BatchNumber,
     ) {
-        let mut new_blocks = vec![];
         let last_sealed_l1_batch = storage.blocks_dal().get_sealed_l1_batch_number().await;
-        let mut index = 0;
-        for block_number in next_block_to_seal.0..=last_sealed_l1_batch.0 {
-            if index >= self.max_l1_batches_per_iter {
-                break;
-            }
-
-            let logs = get_logs_for_l1_batch(&mut storage, L1BatchNumber(block_number))
-                .await
-                .unwrap();
-            new_blocks.push(logs);
-            index += 1;
-        }
-
-        for block in new_blocks {
-            *next_block_to_seal = block.header.number + 1;
-            self.process_multiple_blocks(&mut storage, vec![block])
+        let last_requested_l1_batch =
+            next_l1_batch_to_seal.0 + self.max_l1_batches_per_iter as u32 - 1;
+        let last_requested_l1_batch = last_requested_l1_batch.min(last_sealed_l1_batch.0);
+        let l1_batch_numbers = next_l1_batch_to_seal.0..=last_requested_l1_batch;
+        if l1_batch_numbers.is_empty() {
+            olaos_logs::trace!(
+                "No L1 batches to seal: batch numbers range to be loaded {l1_batch_numbers:?} is empty"
+            );
+        } else {
+            olaos_logs::info!("Updating Merkle tree with L1 batches #{l1_batch_numbers:?}");
+            *next_l1_batch_to_seal = self
+                .process_multiple_batches(&mut storage, l1_batch_numbers)
                 .await;
         }
     }
@@ -95,49 +177,71 @@ impl TreeUpdater {
         mut self,
         delayer: Delayer,
         pool: &ConnectionPool,
-        _prover_pool: &ConnectionPool,
         mut stop_receiver: watch::Receiver<bool>,
         health_updater: HealthUpdater,
-    ) {
+    ) -> anyhow::Result<()> {
+        let Some(earliest_l1_batch) =
+            wait_for_l1_batch(pool, delayer.delay_interval(), &mut stop_receiver).await?
+        else {
+            return Ok(()); // Stop signal received
+        };
         let mut storage = pool.access_storage_tagged("metadata_calculator").await;
 
         // Ensure genesis creation
         let tree = &mut self.tree;
         if tree.is_empty() {
-            let Some(logs) =
-                crate::metadata_calculator::get_logs_for_l1_batch(&mut storage, L1BatchNumber(0))
-                    .await
-            else {
-                panic!("Missing storage logs for the genesis block");
-            };
-            tree.process_block(&logs.storage_logs).await;
+            assert_eq!(
+                earliest_l1_batch,
+                L1BatchNumber(0),
+                "Non-zero earliest L1 batch is not supported without previous tree recovery"
+            );
+            let logs = L1BatchWithLogs::new(&mut storage, earliest_l1_batch)
+                .await
+                .context("Missing storage logs for the genesis L1 batch")?;
+            tree.process_l1_batch(logs.storage_logs).await;
             tree.save().await;
         }
-        let mut next_l1_batch_to_seal = L1BatchNumber(tree.block_number());
+        let mut next_l1_batch_to_seal = tree.next_l1_batch_number();
 
-        let current_db_batch = storage.blocks_dal().get_sealed_l1_batch_number().await + 1;
+        let current_db_batch = storage.blocks_dal().get_sealed_l1_batch_number().await;
         let last_l1_batch_with_metadata = storage
             .blocks_dal()
             .get_last_l1_batch_number_with_metadata()
-            .await
-            + 1;
+            .await;
         drop(storage);
 
         olaos_logs::info!(
-            "Initialized metadata calculator with merkle tree implementation. \
-             Current RocksDB block: {}. Current Postgres block: {}",
-            next_l1_batch_to_seal,
-            current_db_batch
+            "Initialized metadata calculator with {max_batches_per_iter} max L1 batches per iteration. \
+             Next L1 batch for Merkle tree: {next_l1_batch_to_seal}, current Postgres L1 batch: {current_db_batch:?}, \
+             last L1 batch with metadata: {last_l1_batch_with_metadata:?}",
+            max_batches_per_iter = self.max_l1_batches_per_iter
         );
-        let backup_lag = last_l1_batch_with_metadata
-            .0
-            .saturating_sub(next_l1_batch_to_seal.0);
-        metrics::gauge!("server.metadata_calculator.backup_lag", backup_lag as f64);
+        let tree_info = tree.reader().info().await;
+        health_updater.update(tree_info.into());
 
-        let health = TreeHealthCheckDetails {
-            next_l1_batch_to_seal,
-        };
-        health_updater.update(health.into());
+        // It may be the case that we don't have any L1 batches with metadata in Postgres, e.g. after
+        // recovering from a snapshot. We cannot wait for such a batch to appear (*this* is the component
+        // responsible for their appearance!), but fortunately most of the updater doesn't depend on it.
+        if next_l1_batch_to_seal > last_l1_batch_with_metadata + 1 {
+            // Check stop signal before proceeding with a potentially time-consuming operation.
+            if *stop_receiver.borrow_and_update() {
+                olaos_logs::info!("Stop signal received, metadata_calculator is shutting down");
+                return Ok(());
+            }
+
+            olaos_logs::warn!(
+                "Next L1 batch of the tree ({next_l1_batch_to_seal}) is greater than last L1 batch with metadata in Postgres \
+                    ({last_l1_batch_with_metadata}); this may be a result of restoring Postgres from a snapshot. \
+                    Truncating Merkle tree versions so that this mismatch is fixed..."
+            );
+            tree.revert_logs(last_l1_batch_with_metadata);
+            tree.save().await;
+            next_l1_batch_to_seal = tree.next_l1_batch_number();
+            olaos_logs::info!("Truncated Merkle tree to L1 batch #{next_l1_batch_to_seal}");
+
+            let tree_info = tree.reader().info().await;
+            health_updater.update(tree_info.into());
+        }
 
         loop {
             if *stop_receiver.borrow_and_update() {
@@ -146,21 +250,22 @@ impl TreeUpdater {
             }
             let storage = pool.access_storage_tagged("metadata_calculator").await;
 
-            let next_block_snapshot = *next_l1_batch_to_seal;
+            let snapshot = *next_l1_batch_to_seal;
             self.step(storage, &mut next_l1_batch_to_seal).await;
-            let delay = if next_block_snapshot == *next_l1_batch_to_seal {
-                // We didn't make any progress.
+            let delay = if snapshot == *next_l1_batch_to_seal {
+                olaos_logs::trace!(
+                    "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) \
+                     didn't make any progress; delaying it using {delayer:?}"
+                );
                 delayer.wait(&self.tree).left_future()
             } else {
-                let health = TreeHealthCheckDetails {
-                    next_l1_batch_to_seal,
-                };
-                health_updater.update(health.into());
+                let tree_info = self.tree.reader().info().await;
+                health_updater.update(tree_info.into());
 
-                olaos_logs::info!(
-                    "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) made progress from #{next_block_snapshot}"
+                olaos_logs::trace!(
+                    "Metadata calculator (next L1 batch: #{next_l1_batch_to_seal}) made progress from #{snapshot}"
                 );
-                future_ready(()).right_future()
+                future::ready(()).right_future()
             };
 
             // The delays we're operating with are reasonably small, but selecting between the delay
@@ -174,5 +279,34 @@ impl TreeUpdater {
             }
         }
         drop(health_updater); // Explicitly mark where the updater should be dropped
+        Ok(())
+    }
+
+    async fn check_initial_writes_consistency(
+        connection: &mut StorageProcessor<'_>,
+        l1_batch_number: L1BatchNumber,
+        tree_initial_writes: &[InitialStorageWrite],
+    ) {
+        let pg_initial_writes = connection
+            .storage_logs_dedup_dal()
+            .initial_writes_for_batch(l1_batch_number)
+            .await;
+
+        let pg_initial_writes: Vec<_> = pg_initial_writes
+            .into_iter()
+            .map(|(key, index)| {
+                let key = U256::from_little_endian(key.as_bytes());
+                (key, index.map_or(0, |n| n as u64))
+            })
+            .collect();
+
+        let tree_initial_writes: Vec<_> = tree_initial_writes
+            .iter()
+            .map(|write| (write.key, write.index))
+            .collect();
+        assert_eq!(
+            pg_initial_writes, tree_initial_writes,
+            "Leaf indices are not consistent for L1 batch {l1_batch_number}"
+        );
     }
 }

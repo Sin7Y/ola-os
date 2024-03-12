@@ -26,6 +26,7 @@ pub mod proofs;
 pub mod protocol_version;
 pub mod prover_server_api;
 pub mod request;
+pub mod snapshots;
 pub mod storage;
 pub mod storage_writes_deduplicator;
 pub mod system_contracts;

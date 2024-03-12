@@ -20,3 +20,31 @@ where
         poseidon_hash_bytes(self.as_ref())
     }
 }
+
+pub trait Hasher {
+    type Hash: AsRef<[u8]>;
+
+    // Gets the hash of the byte sequence.
+    fn hash_bytes(&self, value: &[u8]) -> Self::Hash;
+
+    // Merges two hashes into one.
+    fn compress(&self, lhs: &Self::Hash, rhs: &Self::Hash) -> Self::Hash;
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct PoseidonHasher;
+
+impl Hasher for PoseidonHasher {
+    type Hash = H256;
+
+    fn hash_bytes(&self, value: &[u8]) -> H256 {
+        hash_bytes(value)
+    }
+
+    fn compress(&self, lhs: &H256, rhs: &H256) -> H256 {
+        let mut value = vec![];
+        value.extend_from_slice(lhs.as_bytes());
+        value.extend_from_slice(rhs.as_bytes());
+        hash_bytes(&value)
+    }
+}
