@@ -5,7 +5,10 @@ pub use ola_basic_types::{
 use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
 
-use crate::{protocol_version::ProtocolVersionId, Transaction};
+use crate::{
+    priority_op_onchain_data::PriorityOpOnchainData, protocol_version::ProtocolVersionId,
+    Transaction,
+};
 
 // use olavm_exe_core::merkle_tree::log::WitnessStorageLog;
 use super::storage::log::WitnessStorageLog;
@@ -59,6 +62,8 @@ pub struct L1BatchHeader {
     pub l1_tx_count: u16,
     /// Total number of processed txs that was requested offchain
     pub l2_tx_count: u16,
+    /// The data of the processed priority operations hash which must be sent to the smart contract.
+    pub priority_ops_onchain_data: Vec<PriorityOpOnchainData>,
     /// Hashes of contracts used this block
     pub used_contract_hashes: Vec<U256>,
     pub base_system_contracts_hashes: BaseSystemContractsHashes,
@@ -79,6 +84,7 @@ impl L1BatchHeader {
             is_finished: false,
             timestamp,
             fee_account_address,
+            priority_ops_onchain_data: vec![],
             l1_tx_count: 0,
             l2_tx_count: 0,
             used_contract_hashes: vec![],
