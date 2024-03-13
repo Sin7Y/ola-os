@@ -7,7 +7,7 @@ edition = "2021"
 ola_types = { path = "../types" }
 olaos_logs = { path = "../logs" }
 ola_utils = { path = "../utils" }
-ola-lang-abi = "=1.0.5"
+ola-lang-abi = "1.0.7"
 thiserror = "1.0"
 hex = "0.4"
 olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "pre-alpha" }
