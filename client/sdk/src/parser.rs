@@ -1,6 +1,6 @@
 use crate::utils::{h256_from_hex_be, OLA_FIELD_ORDER};
 use anyhow::{bail, Ok, Result};
-use ola_lang_abi::{FixedArray4, Param, Type, Value};
+use ola_lang_abi::{FixedArray4, FixedArray8, Param, Type, Value};
 use ola_utils::convert::{h256_to_u64_array, u64_array_to_h256};
 
 pub struct ToValue;
@@ -8,6 +8,7 @@ impl ToValue {
     pub fn parse_input(param: Param, input: String) -> Value {
         let parse_result = match param.type_ {
             ola_lang_abi::Type::U32 => Self::parse_u32(input),
+            ola_lang_abi::Type::U256 => Self::parse_u256(input),
             ola_lang_abi::Type::Field => Self::parse_field(input),
             ola_lang_abi::Type::Hash => Self::parse_hash(input),
             ola_lang_abi::Type::Address => Self::parse_address(input),
@@ -24,6 +25,11 @@ impl ToValue {
     fn parse_u32(input: String) -> Result<Value> {
         let value = input.parse::<u32>().expect("invalid u32 input");
         Ok(Value::U32(value as u64))
+    }
+
+    fn parse_u256(input: String) -> Result<Value> {
+        let value = FixedArray8::from(input.as_str());
+        Ok(Value::U256(value))
     }
 
     fn parse_field(input: String) -> Result<Value> {
@@ -52,6 +58,7 @@ impl ToValue {
     fn parse_fixed_array(t: Type, size: u64, input: String) -> Result<Value> {
         match t {
             Type::U32
+            | Type::U256
             | Type::Field
             | Type::Hash
             | Type::Address
@@ -75,6 +82,7 @@ impl ToValue {
                             Param {
                                 name: "tmp".to_string(),
                                 type_: t.clone(),
+                                indexed: None,
                             },
                             i.clone(),
                         )
@@ -115,6 +123,7 @@ impl ToValue {
     fn parse_array(t: Type, input: String) -> Result<Value> {
         match t {
             Type::U32
+            | Type::U256
             | Type::Field
             | Type::Hash
             | Type::Address
@@ -135,6 +144,7 @@ impl ToValue {
                             Param {
                                 name: "tmp".to_string(),
                                 type_: t.clone(),
+                                indexed: None,
                             },
                             i.clone(),
                         )
@@ -164,6 +174,7 @@ impl ToValue {
             .map(|(i, (name, t))| {
                 match t {
                     Type::U32
+                    | Type::U256
                     | Type::Field
                     | Type::Hash
                     | Type::Address
@@ -178,6 +189,7 @@ impl ToValue {
                     Param {
                         name: name.clone(),
                         type_: t.clone(),
+                        indexed: None,
                     },
                     i.clone(),
                 );
@@ -193,6 +205,7 @@ impl FromValue {
     pub fn parse_input(input: Value) -> String {
         let parse_result = match input {
             Value::U32(input) => Self::parse_u32(input),
+            Value::U256(input) => Self::parse_u256(input),
             Value::Field(input) => Self::parse_field(input),
             Value::Address(input) => Self::parse_address(input),
             Value::Hash(input) => Self::parse_hash(input),
@@ -208,6 +221,11 @@ impl FromValue {
 
     fn parse_u32(input: u64) -> Result<String> {
         Ok((input as u32).to_string())
+    }
+
+    fn parse_u256(input: FixedArray8) -> Result<String> {
+        let str = input.to_hex_string();
+        Ok(str)
     }
 
     fn parse_field(input: u64) -> Result<String> {
@@ -233,6 +251,7 @@ impl FromValue {
     fn parse_fixed_array(input: Vec<Value>, t: Type) -> Result<String> {
         match t {
             Type::U32
+            | Type::U256
             | Type::Field
             | Type::Hash
             | Type::Address
@@ -275,6 +294,7 @@ impl FromValue {
     fn parse_array(input: Vec<Value>, t: Type) -> Result<String> {
         match t {
             Type::U32
+            | Type::U256
             | Type::Field
             | Type::Hash
             | Type::Address
@@ -304,7 +324,11 @@ impl FromValue {
             Value::FixedArray(_, _) | Value::Array(_, _) | Value::Tuple(_) => {
                 panic!("Composite types in Tuple has not been supported for cli tools.")
             }
-            Value::U32(_) | Value::Field(_) | Value::Bool(_) | Value::Fields(_) => {
+            Value::U32(_)
+            | Value::Field(_)
+            | Value::Bool(_)
+            | Value::Fields(_)
+            | Value::U256(_) => {
                 let v = Self::parse_input(i.1.clone());
                 ret += format!("\"{}\": {},", i.0, v).as_str();
             }
