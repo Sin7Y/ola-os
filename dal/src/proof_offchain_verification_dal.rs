@@ -4,10 +4,12 @@ use ola_types::L1BatchNumber;
 use strum::{Display, EnumString};
 use tracing::Instrument;
 
-use crate::{SqlxError, StorageProcessor};
+use crate::{
+    models::storage_verification::StorageOffChainVerifyDetails, SqlxError, StorageProcessor,
+};
 
 #[derive(Debug, EnumString, Display)]
-enum ProofVerificationStatus {
+pub enum ProofVerificationStatus {
     #[strum(serialize = "not_ready")]
     NotReady,
     #[strum(serialize = "ready_to_be_verified")]
@@ -145,5 +147,28 @@ impl ProofVerificationDal<'_, '_> {
         Ok(row.map_or(ProofVerificationStatus::NotReady, |row| {
             ProofVerificationStatus::from_str(&row.status).unwrap()
         }))
+    }
+
+    pub async fn get_l1_batch_verification_details(
+        &mut self,
+        l1_batch_number: L1BatchNumber,
+    ) -> sqlx::Result<Option<StorageOffChainVerifyDetails>> {
+        sqlx::query_as!(
+            StorageOffChainVerifyDetails,
+            r#"
+            SELECT
+                provd.l1_batch_number,
+                provd.status,
+                provd.verifier_picked_at,
+                provd.verifier_submit_at
+            FROM
+                proof_offchain_verification_details provd
+            WHERE
+                provd.l1_batch_number = $1
+            "#,
+            l1_batch_number.0 as i64,
+        )
+        .fetch_optional(self.storage.conn())
+        .await
     }
 }
