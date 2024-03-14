@@ -4,6 +4,7 @@ use crate::block::L1BatchHeader;
 
 use super::storage::writes::{InitialStorageWrite, RepeatedStorageWrite};
 use ola_basic_types::H256;
+use ola_config::constants::contracts::KNOWN_CODES_STORAGE_ADDRESS;
 use ola_utils::hash::hash_bytes;
 use serde::{Deserialize, Serialize};
 
@@ -15,10 +16,16 @@ pub struct L1BatchMetadata {
     pub initial_writes_compressed: Vec<u8>,
     pub repeated_writes_compressed: Vec<u8>,
     pub commitment: H256,
+    pub l2_l1_messages_compressed: Vec<u8>,
+    pub l2_l1_merkle_root: H256,
     pub block_meta_params: L1BatchMetaParameters,
     pub aux_data_hash: H256,
     pub meta_parameters_hash: H256,
     pub pass_through_data_hash: H256,
+    pub state_diffs_compressed: Vec<u8>,
+    /// The commitment to the final events queue state after the batch is committed.
+    /// Practically, it is a commitment to all events that happened on L2 during the batch execution.
+    pub events_queue_commitment: Option<H256>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -35,37 +42,34 @@ impl L1BatchWithMetadata {
         unsorted_factory_deps: HashMap<H256, Vec<u8>>,
     ) -> Self {
         Self {
-            // TODO:
-            // factory_deps: Self::factory_deps_in_appearance_order(&header, &unsorted_factory_deps)
-            //     .map(<[u8]>::to_vec)
-            //     .collect(),
-            // FIXME:
-            factory_deps: vec![],
+            factory_deps: Self::factory_deps_in_appearance_order(&header, &unsorted_factory_deps)
+                .map(<[u8]>::to_vec)
+                .collect(),
             header,
             metadata,
         }
     }
 
-    // pub fn factory_deps_in_appearance_order<'a>(
-    //     header: &'a L1BatchHeader,
-    //     unsorted_factory_deps: &'a HashMap<H256, Vec<u8>>,
-    // ) -> impl Iterator<Item = &'a [u8]> + 'a {
-    //     // header.l2_to_l1_logs.iter().filter_map(move |log| {
-    //     //     let inner = &log.0;
-    //     //     if inner.sender == KNOWN_CODES_STORAGE_ADDRESS {
-    //     //         let bytecode = unsorted_factory_deps.get(&inner.key).unwrap_or_else(|| {
-    //     //             panic!(
-    //     //                 "Failed to get bytecode that was marked as known: bytecode_hash {:?}, \
-    //     //                      L1 batch number {:?}",
-    //     //                 inner.key, header.number
-    //     //             );
-    //     //         });
-    //     //         Some(bytecode.as_slice())
-    //     //     } else {
-    //     //         None
-    //     //     }
-    //     // })
-    // }
+    pub fn factory_deps_in_appearance_order<'a>(
+        header: &'a L1BatchHeader,
+        unsorted_factory_deps: &'a HashMap<H256, Vec<u8>>,
+    ) -> impl Iterator<Item = &'a [u8]> + 'a {
+        header.l2_to_l1_logs.iter().filter_map(move |log| {
+            let inner = &log.0;
+            if inner.sender == KNOWN_CODES_STORAGE_ADDRESS {
+                let bytecode = unsorted_factory_deps.get(&inner.key).unwrap_or_else(|| {
+                    panic!(
+                        "Failed to get bytecode that was marked as known: bytecode_hash {:?}, \
+                             L1 batch number {:?}",
+                        inner.key, header.number
+                    );
+                });
+                Some(bytecode.as_slice())
+            } else {
+                None
+            }
+        })
+    }
 }
 pub trait SerializeCommitment {
     /// Size of the structure in bytes.

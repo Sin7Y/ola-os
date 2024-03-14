@@ -1,9 +1,10 @@
 use itertools::Itertools;
 use ola_contracts::{BaseSystemContracts, SystemContractCode};
+use ola_utils::bytes_to_chunks;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use ola_types::{log::StorageLog, MiniblockNumber, StorageKey, StorageValue, H256};
+use ola_types::{log::StorageLog, MiniblockNumber, StorageKey, StorageValue, H256, U256};
 
 use crate::StorageProcessor;
 
@@ -131,5 +132,37 @@ impl StorageDal<'_, '_> {
         .await
         .unwrap()
         .map(|row| row.bytecode)
+    }
+
+    /// Returns bytecodes for factory deps with the specified `hashes`.
+    pub async fn get_factory_deps(
+        &mut self,
+        hashes: &HashSet<H256>,
+    ) -> HashMap<U256, Vec<[u8; 32]>> {
+        let hashes_as_bytes: Vec<_> = hashes.iter().map(H256::as_bytes).collect();
+
+        sqlx::query!(
+            r#"
+            SELECT
+                bytecode,
+                bytecode_hash
+            FROM
+                factory_deps
+            WHERE
+                bytecode_hash = ANY ($1)
+            "#,
+            &hashes_as_bytes as &[&[u8]],
+        )
+        .fetch_all(self.storage.conn())
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            (
+                U256::from_big_endian(&row.bytecode_hash),
+                bytes_to_chunks(&row.bytecode),
+            )
+        })
+        .collect()
     }
 }

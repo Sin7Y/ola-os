@@ -205,6 +205,11 @@ impl MetadataCalculator {
             aux_data_hash: commitment_hash.aux_output,
             meta_parameters_hash: commitment_hash.meta_parameters,
             pass_through_data_hash: commitment_hash.pass_through_data,
+            // TODO: use real l2_l1_messages_compressed,l2_l1_merkle_root,state_diffs_compressed,events_queue_commitment
+            l2_l1_messages_compressed: vec![],
+            l2_l1_merkle_root: H256::default(),
+            state_diffs_compressed: vec![],
+            events_queue_commitment: None,
             // state_diffs_compressed: commitment.state_diffs_compressed().to_vec(),
             // events_queue_commitment,
             // bootloader_initial_content_commitment,
