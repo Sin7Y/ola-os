@@ -1,0 +1,14 @@
+[package]
+name = "olaos_prover_fri"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+olaos_logs = { path = "../../logs" }
+olaos_object_store = { path = "../../object_store" }
+ola_dal = { path = "../../dal" }
+ola_config = { path = "../../config" }
+ola_types = { path = "../../types" }
+ola_utils = { path = "../../utils" }
+olaos_queued_job_processor = { path = "../../queued_job_processor" }
+olaos_prover_fri_types = { path = "../prover_fri_types" }

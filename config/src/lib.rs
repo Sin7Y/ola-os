@@ -10,6 +10,7 @@ pub mod contracts;
 pub mod database;
 pub mod environment;
 pub mod eth_sender;
+pub mod fri_prover;
 pub mod fri_prover_gateway;
 pub mod fri_witness_generator;
 pub mod object_store;
