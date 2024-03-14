@@ -1,0 +1,2 @@
+max_attempts: 10
+generation_timeout_in_secs: 300
