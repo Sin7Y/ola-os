@@ -21,6 +21,7 @@ pub mod commitment;
 pub mod events;
 pub mod fee;
 pub mod l2;
+pub mod l2_to_l1_log;
 pub mod priority_op_onchain_data;
 pub mod proofs;
 pub mod protocol_version;
