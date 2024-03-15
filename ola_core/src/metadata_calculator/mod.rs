@@ -205,9 +205,6 @@ impl MetadataCalculator {
             aux_data_hash: commitment_hash.aux_output,
             meta_parameters_hash: commitment_hash.meta_parameters,
             pass_through_data_hash: commitment_hash.pass_through_data,
-            // state_diffs_compressed: commitment.state_diffs_compressed().to_vec(),
-            // events_queue_commitment,
-            // bootloader_initial_content_commitment,
         };
 
         olaos_logs::trace!("L1 batch metadata: {metadata:?}");
