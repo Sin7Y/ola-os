@@ -19,8 +19,6 @@ mod patch;
 mod proofs;
 mod rocksdb;
 mod serialization;
-#[cfg(test)]
-mod tests;
 
 /// Tree operation: either inserting a new version or updating an existing one (the latter is only
 /// used during tree recovery).

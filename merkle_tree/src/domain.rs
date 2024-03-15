@@ -3,9 +3,9 @@
 use ola_types::{
     proofs::{PrepareBasicCircuitsJob, StorageLogMetadata},
     writes::{InitialStorageWrite, RepeatedStorageWrite},
-    L1BatchNumber, StorageKey, U256,
+    L1BatchNumber, StorageKey,
 };
-use ola_utils::{h256_to_u256, hash::PoseidonHasher};
+use ola_utils::hash::PoseidonHasher;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 
 use crate::{
@@ -31,9 +31,6 @@ pub struct TreeMetadata {
     pub repeated_writes: Vec<RepeatedStorageWrite>,
     /// Witness information. As with `repeated_writes`, no-op updates will be omitted from Merkle paths.
     pub witness: Option<PrepareBasicCircuitsJob>,
-    // State diffs performed in the processed L1 batch sorted by (address, key) as expected by the circuits/
-    // The information in here is an aggregation of `initial_writes` and `repeated_writes`.
-    // pub state_diffs: Vec<StateDiffRecord>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -212,6 +209,7 @@ impl OlaTree {
             self.tree.extend_with_proofs(instructions_with_hashed_keys)
         };
 
+        let mut pre_root_hash = starting_root_hash.0;
         let mut witness = PrepareBasicCircuitsJob::new(starting_leaf_count + 1);
         witness.reserve(output.logs.len());
         for (log, instruction) in output.logs.iter().zip(instructions) {
@@ -230,6 +228,7 @@ impl OlaTree {
             };
             let log = StorageLogMetadata {
                 root_hash: log.root_hash.0,
+                pre_root_hash,
                 is_write: !log.base.is_read(),
                 first_write: matches!(log.base, TreeLogEntry::Inserted),
                 merkle_paths,
@@ -255,6 +254,7 @@ impl OlaTree {
                     TreeLogEntry::Inserted | TreeLogEntry::ReadMissingKey => [0_u8; 32],
                 },
             };
+            pre_root_hash = log.root_hash;
             witness.push_merkle_path(log);
         }
 
@@ -286,21 +286,15 @@ impl OlaTree {
             initial_writes,
             repeated_writes,
             witness: Some(witness),
-            // state_diffs,
         }
     }
 
     fn extract_writes(
         logs: impl Iterator<Item = TreeLogEntry>,
         entries: impl Iterator<Item = TreeEntry<StorageKey>>,
-    ) -> (
-        Vec<InitialStorageWrite>,
-        Vec<RepeatedStorageWrite>,
-        // Vec<StateDiffRecord>,
-    ) {
+    ) -> (Vec<InitialStorageWrite>, Vec<RepeatedStorageWrite>) {
         let mut initial_writes = vec![];
         let mut repeated_writes = vec![];
-        // let mut state_diffs = vec![];
         for (log_entry, input_entry) in logs.zip(entries) {
             let key = &input_entry.key;
             match log_entry {
@@ -310,40 +304,22 @@ impl OlaTree {
                         key: key.hashed_key_u256(),
                         value: input_entry.value,
                     });
-                    // state_diffs.push(StateDiffRecord {
-                    //     address: *key.address(),
-                    //     key: h256_to_u256(*key.key()),
-                    //     derived_key: StorageKey::raw_hashed_key(key.address(), key.key()),
-                    //     enumeration_index: 0u64,
-                    //     initial_value: U256::default(),
-                    //     final_value: h256_to_u256(input_entry.value),
-                    // });
                 }
                 TreeLogEntry::Updated {
                     previous_value: prev_value_hash,
-                    leaf_index,
+                    leaf_index: _,
                 } => {
                     if prev_value_hash != input_entry.value {
                         repeated_writes.push(RepeatedStorageWrite {
                             index: input_entry.leaf_index,
                             value: input_entry.value,
                         });
-                        // state_diffs.push(StateDiffRecord {
-                        //     address: *key.address(),
-                        //     key: h256_to_u256(*key.key()),
-                        //     derived_key: StorageKey::raw_hashed_key(key.address(), key.key()),
-                        //     enumeration_index: leaf_index,
-                        //     initial_value: h256_to_u256(prev_value_hash),
-                        //     final_value: h256_to_u256(input_entry.value),
-                        // });
                     }
                     // Else we have a no-op update that must be omitted from `repeated_writes`.
                 }
                 TreeLogEntry::Read { .. } | TreeLogEntry::ReadMissingKey => {}
             }
         }
-        // state_diffs.sort_unstable_by_key(|rec| (rec.address, rec.key));
-        // (initial_writes, repeated_writes, state_diffs)
         (initial_writes, repeated_writes)
     }
 
@@ -388,7 +364,6 @@ impl OlaTree {
             initial_writes,
             repeated_writes,
             witness: None,
-            // state_diffs,
         }
     }
 

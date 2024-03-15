@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use ola_basic_types::{L1BatchNumber, H256, U256};
 use serde::{Deserialize, Serialize};
-use serde_with::{hex::Hex, serde_as, Bytes};
+use serde_with::{serde_as, Bytes};
 
 const HASH_LEN: usize = H256::len_bytes();
 
@@ -12,13 +12,13 @@ const HASH_LEN: usize = H256::len_bytes();
 pub struct StorageLogMetadata {
     #[serde_as(as = "Bytes")]
     pub root_hash: [u8; HASH_LEN],
+    pub pre_root_hash: [u8; HASH_LEN],
     pub is_write: bool,
     pub first_write: bool,
     #[serde_as(as = "Vec<Bytes>")]
     pub merkle_paths: Vec<[u8; HASH_LEN]>,
     pub leaf_hashed_key: U256,
     pub leaf_enumeration_index: u64,
-    // **NB.** For compatibility reasons, `#[serde_as(as = "Bytes")]` attributes are not added below.
     pub value_written: [u8; HASH_LEN],
     pub value_read: [u8; HASH_LEN],
 }
