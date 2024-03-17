@@ -1,4 +1,5 @@
 use ola_types::{
+    basic_fri_types::CircuitIdRoundTuple,
     proofs::{AggregationRound, FriProverJobMetadata},
     protocol_version::FriProtocolVersionId,
     L1BatchNumber,
@@ -166,91 +167,91 @@ impl FriProverDal<'_, '_> {
         Ok(attempts)
     }
 
-    // pub async fn get_next_job_for_circuit_id_round(
-    //     &mut self,
-    //     circuits_to_pick: &[CircuitIdRoundTuple],
-    //     protocol_versions: &[FriProtocolVersionId],
-    //     picked_by: &str,
-    // ) -> Option<FriProverJobMetadata> {
-    //     let circuit_ids: Vec<_> = circuits_to_pick
-    //         .iter()
-    //         .map(|tuple| tuple.circuit_id as i16)
-    //         .collect();
-    //     let protocol_versions: Vec<i32> = protocol_versions.iter().map(|&id| id as i32).collect();
-    //     let aggregation_rounds: Vec<_> = circuits_to_pick
-    //         .iter()
-    //         .map(|tuple| tuple.aggregation_round as i16)
-    //         .collect();
-    //     sqlx::query!(
-    //         r#"
-    //         UPDATE prover_jobs_fri
-    //         SET
-    //             status = 'in_progress',
-    //             attempts = attempts + 1,
-    //             processing_started_at = NOW(),
-    //             updated_at = NOW(),
-    //             picked_by = $4
-    //         WHERE
-    //             id = (
-    //                 SELECT
-    //                     pj.id
-    //                 FROM
-    //                     (
-    //                         SELECT
-    //                             *
-    //                         FROM
-    //                             UNNEST($1::SMALLINT[], $2::SMALLINT[])
-    //                     ) AS tuple (circuit_id, ROUND)
-    //                     JOIN LATERAL (
-    //                         SELECT
-    //                             *
-    //                         FROM
-    //                             prover_jobs_fri AS pj
-    //                         WHERE
-    //                             pj.status = 'queued'
-    //                             AND pj.protocol_version = ANY ($3)
-    //                             AND pj.circuit_id = tuple.circuit_id
-    //                             AND pj.aggregation_round = tuple.round
-    //                         ORDER BY
-    //                             pj.l1_batch_number ASC,
-    //                             pj.id ASC
-    //                         LIMIT
-    //                             1
-    //                     ) AS pj ON TRUE
-    //                 ORDER BY
-    //                     pj.l1_batch_number ASC,
-    //                     pj.aggregation_round DESC,
-    //                     pj.id ASC
-    //                 LIMIT
-    //                     1
-    //                 FOR UPDATE
-    //                     SKIP LOCKED
-    //             )
-    //         RETURNING
-    //             prover_jobs_fri.id,
-    //             prover_jobs_fri.l1_batch_number,
-    //             prover_jobs_fri.circuit_id,
-    //             prover_jobs_fri.aggregation_round,
-    //             prover_jobs_fri.sequence_number,
-    //             prover_jobs_fri.depth,
-    //             prover_jobs_fri.is_node_final_proof
-    //         "#,
-    //         &circuit_ids[..],
-    //         &aggregation_rounds[..],
-    //         &protocol_versions[..],
-    //         picked_by,
-    //     )
-    //     .fetch_optional(self.storage.conn())
-    //     .await
-    //     .unwrap()
-    //     .map(|row| FriProverJobMetadata {
-    //         id: row.id as u32,
-    //         block_number: L1BatchNumber(row.l1_batch_number as u32),
-    //         circuit_id: row.circuit_id as u8,
-    //         aggregation_round: AggregationRound::try_from(row.aggregation_round as i32).unwrap(),
-    //         sequence_number: row.sequence_number as usize,
-    //         depth: row.depth as u16,
-    //         is_node_final_proof: row.is_node_final_proof,
-    //     })
-    // }
+    pub async fn get_next_job_for_circuit_id_round(
+        &mut self,
+        circuits_to_pick: &[CircuitIdRoundTuple],
+        protocol_versions: &[FriProtocolVersionId],
+        picked_by: &str,
+    ) -> Option<FriProverJobMetadata> {
+        let circuit_ids: Vec<_> = circuits_to_pick
+            .iter()
+            .map(|tuple| tuple.circuit_id as i16)
+            .collect();
+        let protocol_versions: Vec<i32> = protocol_versions.iter().map(|&id| id as i32).collect();
+        let aggregation_rounds: Vec<_> = circuits_to_pick
+            .iter()
+            .map(|tuple| tuple.aggregation_round as i16)
+            .collect();
+        sqlx::query!(
+            r#"
+            UPDATE prover_jobs_fri
+            SET
+                status = 'in_progress',
+                attempts = attempts + 1,
+                processing_started_at = NOW(),
+                updated_at = NOW(),
+                picked_by = $4
+            WHERE
+                id = (
+                    SELECT
+                        pj.id
+                    FROM
+                        (
+                            SELECT
+                                *
+                            FROM
+                                UNNEST($1::SMALLINT[], $2::SMALLINT[])
+                        ) AS tuple (circuit_id, ROUND)
+                        JOIN LATERAL (
+                            SELECT
+                                *
+                            FROM
+                                prover_jobs_fri AS pj
+                            WHERE
+                                pj.status = 'queued'
+                                AND pj.protocol_version = ANY ($3)
+                                AND pj.circuit_id = tuple.circuit_id
+                                AND pj.aggregation_round = tuple.round
+                            ORDER BY
+                                pj.l1_batch_number ASC,
+                                pj.id ASC
+                            LIMIT
+                                1
+                        ) AS pj ON TRUE
+                    ORDER BY
+                        pj.l1_batch_number ASC,
+                        pj.aggregation_round DESC,
+                        pj.id ASC
+                    LIMIT
+                        1
+                    FOR UPDATE
+                        SKIP LOCKED
+                )
+            RETURNING
+                prover_jobs_fri.id,
+                prover_jobs_fri.l1_batch_number,
+                prover_jobs_fri.circuit_id,
+                prover_jobs_fri.aggregation_round,
+                prover_jobs_fri.sequence_number,
+                prover_jobs_fri.depth,
+                prover_jobs_fri.is_node_final_proof
+            "#,
+            &circuit_ids[..],
+            &aggregation_rounds[..],
+            &protocol_versions[..],
+            picked_by,
+        )
+        .fetch_optional(self.storage.conn())
+        .await
+        .unwrap()
+        .map(|row| FriProverJobMetadata {
+            id: row.id as u32,
+            block_number: L1BatchNumber(row.l1_batch_number as u32),
+            circuit_id: row.circuit_id as u8,
+            aggregation_round: AggregationRound::try_from(row.aggregation_round as i32).unwrap(),
+            sequence_number: row.sequence_number as usize,
+            depth: row.depth as u16,
+            is_node_final_proof: row.is_node_final_proof,
+        })
+    }
 }

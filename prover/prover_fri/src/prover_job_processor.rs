@@ -4,11 +4,12 @@ use anyhow::Context;
 use async_trait::async_trait;
 use ola_config::fri_prover::FriProverConfig;
 use ola_dal::connection::ConnectionPool;
-use ola_types::proofs::OlaBaseLayerProof;
+use ola_types::{basic_fri_types::CircuitIdRoundTuple, proofs::OlaBaseLayerProof};
 use olaos_object_store::ObjectStore;
 use olaos_prover_fri_types::{
     circuits::OlaBaseLayerCircuit, CircuitWrapper, FriProofWrapper, ProverJob,
 };
+use olaos_prover_fri_utils::fetch_next_circuit;
 use olaos_queued_job_processor::JobProcessor;
 use tokio::task::JoinHandle;
 
@@ -19,6 +20,9 @@ pub struct Prover {
     public_blob_store: Option<Arc<dyn ObjectStore>>,
     config: Arc<FriProverConfig>,
     prover_connection_pool: ConnectionPool,
+    // Only pick jobs for the configured circuit id and aggregation rounds.
+    // Empty means all jobs are picked.
+    circuit_ids_for_round_to_be_proven: Vec<CircuitIdRoundTuple>,
 }
 
 impl Prover {
@@ -27,12 +31,14 @@ impl Prover {
         public_blob_store: Option<Arc<dyn ObjectStore>>,
         config: FriProverConfig,
         prover_connection_pool: ConnectionPool,
+        circuit_ids_for_round_to_be_proven: Vec<CircuitIdRoundTuple>,
     ) -> Self {
         Prover {
             blob_store,
             public_blob_store,
             config: Arc::new(config),
             prover_connection_pool,
+            circuit_ids_for_round_to_be_proven,
         }
     }
 
@@ -93,18 +99,17 @@ impl JobProcessor for Prover {
 
     async fn get_next_job(&self) -> anyhow::Result<Option<(Self::JobId, Self::Job)>> {
         let mut storage = self.prover_connection_pool.access_storage().await;
-        // let Some(prover_job) = fetch_next_circuit(
-        //     &mut storage,
-        //     &*self.blob_store,
-        //     &self.circuit_ids_for_round_to_be_proven,
-        //     &self.vk_commitments,
-        // )
-        // .await
-        // else {
-        //     return Ok(None);
-        // };
-        // Ok(Some((prover_job.job_id, prover_job)))
-        Ok(None)
+        let Some(prover_job) = fetch_next_circuit(
+            &mut storage,
+            &*self.blob_store,
+            &self.circuit_ids_for_round_to_be_proven,
+            // &self.vk_commitments,
+        )
+        .await
+        else {
+            return Ok(None);
+        };
+        Ok(Some((prover_job.job_id, prover_job)))
     }
 
     async fn save_failure(&self, job_id: Self::JobId, _started_at: Instant, error: String) {

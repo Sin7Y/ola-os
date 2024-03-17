@@ -14,6 +14,7 @@ pub type Index = U64;
 #[macro_use]
 mod macros;
 
+pub mod basic_fri_types;
 pub mod bytes8;
 pub mod network;
 
