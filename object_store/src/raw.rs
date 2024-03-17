@@ -9,6 +9,7 @@ use crate::{file::FileBackedObjectStore, mock::MockStore};
 pub enum Bucket {
     WitnessInput,
     ProofsFri,
+    ProverJobsFri,
 }
 
 impl Bucket {
@@ -16,6 +17,7 @@ impl Bucket {
         match self {
             Self::WitnessInput => "witness_inputs",
             Self::ProofsFri => "proofs_fri",
+            Self::ProverJobsFri => "prover_jobs_fri",
         }
     }
 }

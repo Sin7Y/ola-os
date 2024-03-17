@@ -12,6 +12,7 @@ ola_types = { path = "../../types" }
 ola_utils = { path = "../../utils" }
 olaos_queued_job_processor = { path = "../../queued_job_processor" }
 olaos_prover_fri_types = { path = "../prover_fri_types" }
+olaos_prover_fri_utils = { path = "../prover_fri_utils" }
 tokio = { version = "1", features = ["time"] }
 async-trait = "0.1"
 anyhow = "1.0"

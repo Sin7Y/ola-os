@@ -1,4 +1,7 @@
-use ola_types::{proofs::PrepareBasicCircuitsJob, L1BatchNumber};
+use ola_types::{
+    proofs::{AggregationRound, PrepareBasicCircuitsJob},
+    L1BatchNumber,
+};
 
 use crate::{
     raw::{BoxedError, Bucket},
@@ -94,4 +97,14 @@ impl StoredObject for PrepareBasicCircuitsJob {
     }
 
     serialize_using_bincode!();
+}
+
+/// Storage key for a [`CircuitWrapper`].
+#[derive(Debug, Clone, Copy)]
+pub struct FriCircuitKey {
+    pub block_number: L1BatchNumber,
+    pub sequence_number: usize,
+    pub circuit_id: u8,
+    pub aggregation_round: AggregationRound,
+    pub depth: u16,
 }

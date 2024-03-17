@@ -1,4 +1,4 @@
 [workspace]
-members = ["prover_fri_gateway", "witness_generator", "prover_fri"]
+members = ["prover_fri_gateway", "witness_generator", "prover_fri", "prover_fri_utils"]
 
 resolver = "2"

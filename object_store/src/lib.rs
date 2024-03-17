@@ -9,4 +9,7 @@ pub mod _reexports {
     pub use crate::raw::BoxedError;
 }
 
-pub use self::raw::{ObjectStore, ObjectStoreError, ObjectStoreFactory};
+pub use self::{
+    objects::{FriCircuitKey, StoredObject},
+    raw::{Bucket, ObjectStore, ObjectStoreError, ObjectStoreFactory},
+};

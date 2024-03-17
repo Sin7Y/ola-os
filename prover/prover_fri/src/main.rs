@@ -6,6 +6,7 @@ use ola_config::{
     object_store::{load_prover_object_store_config, load_public_object_store_config},
 };
 use ola_dal::connection::{ConnectionPool, DbVariant};
+use ola_types::basic_fri_types::CircuitIdRoundTuple;
 use ola_utils::wait_for_tasks::wait_for_tasks;
 use olaos_logs::telemetry::{get_subscriber, init_subscriber};
 use olaos_object_store::{ObjectStore, ObjectStoreFactory};
@@ -47,11 +48,15 @@ async fn main() -> anyhow::Result<()> {
                 .await,
         ),
     };
-    olaos_logs::info!("Starting FRI proof generation");
+    // let circuit_ids_for_round_to_be_proven = FriProverGroupConfig::from_env()
+    //     .context("FriProverGroupConfig::from_env()")?
+    //     .get_circuit_ids_for_group_id(specialized_group_id)
+    //     .unwrap_or_default();
+    // let circuit_ids_for_round_to_be_proven =
+    //     get_all_circuit_id_round_tuples_for(circuit_ids_for_round_to_be_proven);
+    let circuit_ids_for_round_to_be_proven = vec![];
 
-    // There are 2 threads using the connection pool:
-    // 1. The prover thread, which is used to update the prover job status.
-    // 2. The socket listener thread, which is used to update the prover instance status.
+    olaos_logs::info!("Starting FRI proof generation");
 
     let pool = ConnectionPool::builder(DbVariant::Prover)
         .set_max_size(Some(2))
@@ -63,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
         object_store_factory,
         public_blob_store,
         pool,
-        // circuit_ids_for_round_to_be_proven,
+        circuit_ids_for_round_to_be_proven,
     )
     .await
     .context("get_prover_tasks()")?;
@@ -90,7 +95,7 @@ async fn get_prover_tasks(
     store_factory: ObjectStoreFactory,
     public_blob_store: Option<Arc<dyn ObjectStore>>,
     pool: ConnectionPool,
-    //     // circuit_ids_for_round_to_be_proven: Vec<CircuitIdRoundTuple>,
+    circuit_ids_for_round_to_be_proven: Vec<CircuitIdRoundTuple>,
 ) -> anyhow::Result<Vec<JoinHandle<anyhow::Result<()>>>> {
     //     // use zksync_vk_setup_data_server_fri::commitment_utils::get_cached_commitments;
 
@@ -98,10 +103,7 @@ async fn get_prover_tasks(
 
     //     // let vk_commitments = get_cached_commitments();
 
-    //     // olaos_logs::info!(
-    //     //     "Starting CPU FRI proof generation for with vk_commitments: {:?}",
-    //     //     vk_commitments
-    //     // );
+    olaos_logs::info!("Starting CPU FRI proof generation");
 
     //     // let setup_load_mode =
     //     //     load_setup_data_cache(&prover_config).context("load_setup_data_cache()")?;
@@ -111,7 +113,7 @@ async fn get_prover_tasks(
         prover_config,
         pool,
         // setup_load_mode,
-        // circuit_ids_for_round_to_be_proven,
+        circuit_ids_for_round_to_be_proven,
         // vk_commitments,
     );
     Ok(vec![tokio::spawn(prover.run(stop_receiver, None))])

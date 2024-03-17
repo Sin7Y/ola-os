@@ -21,6 +21,7 @@ members = [
     "queued_job_processor",
     "prover/prover_fri_gateway",
     "prover/witness_generator",
-    "prover/prover_fri"
+    "prover/prover_fri",
+    "prover/prover_fri_utils"
 ]
 resolver = "2"
