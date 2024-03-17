@@ -15,11 +15,11 @@ pub struct FriProverConfig {
     // pub specialized_group_id: u8,
     // pub witness_vector_generator_thread_count: Option<usize>,
     // pub queue_capacity: usize,
-    // pub witness_vector_receiver_port: u16,
+    pub witness_vector_receiver_port: u16,
     // pub zone_read_url: String,
 
-    // // whether to write to public GCS bucket for https://github.com/matter-labs/era-boojum-validator-cli
-    // pub shall_save_to_public_bucket: bool,
+    // whether to write to public GCS bucket for https://github.com/matter-labs/era-boojum-validator-cli
+    pub shall_save_to_public_bucket: bool,
 }
 
 impl FriProverConfig {
@@ -29,7 +29,7 @@ impl FriProverConfig {
 }
 
 pub fn load_prover_fri_config() -> Result<FriProverConfig, config::ConfigError> {
-    load_config("configuration/fri_prover", "OLAOS_FRI_PROVER_FRI")
+    load_config("configuration/fri_prover", "OLAOS_FRI_PROVER")
 }
 
 #[cfg(test)]
@@ -44,6 +44,8 @@ mod tests {
         FriProverConfig {
             max_attempts: 10,
             generation_timeout_in_secs: 300,
+            witness_vector_receiver_port: 13004,
+            shall_save_to_public_bucket: true,
         }
     }
 
@@ -51,8 +53,10 @@ mod tests {
     fn test_load_fri_prover_gateway_config() {
         let mut lock = MUTEX.lock();
         let config = r#"
-        OLAOS_FRI_WITNESS_GENERATION_TIMEOUT_IN_SECS=300
-        OLAOS_FRI_WITNESS_MAX_ATTEMPTS=10
+        OLAOS_FRI_PROVER_GENERATION_TIMEOUT_IN_SECS=300
+        OLAOS_FRI_PROVER_MAX_ATTEMPTS=10
+        OLAOS_FRI_PROVER_WITNESS_VECTOR_RECEIVER_PORT=13004
+        OLAOS_FRI_PROVER_SHALL_SAVE_TO_PUBLIC_BUCKET=true
         "#;
         lock.set_env(config);
 

@@ -1,2 +1,4 @@
 max_attempts: 10
 generation_timeout_in_secs: 300
+witness_vector_receiver_port: 13004
+shall_save_to_public_bucket: true

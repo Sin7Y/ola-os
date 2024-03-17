@@ -134,7 +134,9 @@ impl ConnectionPool {
     }
 
     pub fn max_size(&self) -> u32 {
-        // TODO: DATABASE_POOL_SIZE
-        50
+        match self {
+            ConnectionPool::Real(pool) => pool.options().get_max_connections(),
+            ConnectionPool::Test(pool) => pool.options().get_max_connections(),
+        }
     }
 }

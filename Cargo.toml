@@ -14,12 +14,13 @@ members = [
     "vm",
     "mempool",
     "storage",
+    "merkle_tree",
     "client/cli",
     "client/sdk",
     "object_store",
     "queued_job_processor",
     "prover/prover_fri_gateway",
     "prover/witness_generator",
-    "merkle_tree"
+    "prover/prover_fri"
 ]
 resolver = "2"

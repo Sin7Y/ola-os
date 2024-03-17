@@ -1,7 +1,7 @@
 use std::panic;
 
 use tracing::{subscriber::set_global_default, Subscriber};
-use tracing_appender::{non_blocking::WorkerGuard, rolling};
+use tracing_appender::non_blocking::WorkerGuard;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
@@ -14,6 +14,7 @@ pub fn get_subscriber(
         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(env_filter));
     let mut base_path = std::env::current_dir().expect("Failed to determine the current directory");
     base_path.push(".logs");
+    base_path.push(&name);
     let file_appender = tracing_appender::rolling::hourly(base_path, "olaos.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
     let file_layer = BunyanFormattingLayer::new(name, non_blocking);
