@@ -172,3 +172,17 @@ pub struct BasicCircuitWitnessGeneratorInput {
     // pub initial_heap_content: Vec<(usize, U256)>,
     pub merkle_paths_input: PrepareBasicCircuitsJob,
 }
+
+#[derive(Debug, Clone)]
+pub struct FriProverJobMetadata {
+    pub id: u32,
+    pub block_number: L1BatchNumber,
+    pub circuit_id: u8,
+    pub aggregation_round: AggregationRound,
+    pub sequence_number: usize,
+    pub depth: u16,
+    pub is_node_final_proof: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OlaBaseLayerProof {}

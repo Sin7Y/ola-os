@@ -12,7 +12,7 @@ use olaos_logs::telemetry::{get_subscriber, init_subscriber, set_panic_hook};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let (subscriber, _guard) = get_subscriber("olaos".into(), "info".into());
+    let (subscriber, _guard) = get_subscriber("olaos_node".into(), "info".into());
     init_subscriber(subscriber);
     set_panic_hook();
     olaos_logs::info!("init_subscriber finished");

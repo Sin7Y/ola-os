@@ -37,7 +37,7 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let (subscriber, _guard) = get_subscriber("olaos_prover_fri_gateway".into(), "info".into());
+    let (subscriber, _guard) = get_subscriber("olaos_witness_generator".into(), "info".into());
     init_subscriber(subscriber);
     olaos_logs::info!("init_subscriber finished");
 
