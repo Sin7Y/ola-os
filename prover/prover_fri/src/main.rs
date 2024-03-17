@@ -57,7 +57,6 @@ async fn main() -> anyhow::Result<()> {
         .set_max_size(Some(2))
         .build()
         .await;
-    let port = prover_config.witness_vector_receiver_port;
     let prover_tasks = get_prover_tasks(
         prover_config,
         stop_receiver.clone(),
