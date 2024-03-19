@@ -41,7 +41,7 @@ mkdir -p $OLA_BIN_DIR
 
 OLATTE_BIN_URL="https://github.com/Sin7Y/ola-os/releases/download/pre-alpha/"
 OLAC_BIN_URL="https://github.com/Sin7Y/ola-lang/releases/download/v0.1.1/"
-MINIOLA_BIN_URL="https://github.com/Sin7Y/olavm/releases/download/pre-alpha/"
+MINIOLA_BIN_URL="https://github.com/Sin7Y/olavm/releases/download/testnet-alpha/"
 
 ENV_PATH="$OLA_DIR/env"
 

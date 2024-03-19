@@ -89,6 +89,27 @@ impl FriProverDal<'_, '_> {
             .unwrap();
     }
 
+    pub async fn save_proof_error(&mut self, id: u32, error: String) {
+        {
+            sqlx::query!(
+                r#"
+                UPDATE prover_jobs_fri
+                SET
+                    status = 'failed',
+                    error = $1,
+                    updated_at = NOW()
+                WHERE
+                    id = $2
+                "#,
+                error,
+                id as i64,
+            )
+            .execute(self.storage.conn())
+            .await
+            .unwrap();
+        }
+    }
+
     pub async fn get_next_job(
         &mut self,
         protocol_versions: &[FriProtocolVersionId],

@@ -52,10 +52,10 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
 derivative = "*"
 rayon = "*"
-olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "pre-alpha"}
+olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "testnet-alpha"}
 # olavm_core = { path = "../../olavm/core", package = "core" }
 tempfile = "3.0.2"
-zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "pre-alpha"}
+zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
 # zk-vm = { path = "../../olavm/zk-vm" }
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"

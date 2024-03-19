@@ -4,16 +4,17 @@ use anyhow::Context;
 use async_trait::async_trait;
 use ola_config::fri_prover::FriProverConfig;
 use ola_dal::connection::ConnectionPool;
-use ola_types::{basic_fri_types::CircuitIdRoundTuple, proofs::OlaBaseLayerProof};
+use ola_types::basic_fri_types::CircuitIdRoundTuple;
 use olaos_object_store::ObjectStore;
 use olaos_prover_fri_types::{
-    circuits::OlaBaseLayerCircuit, CircuitWrapper, FriProofWrapper, ProverJob,
+    circuits::OlaBaseLayerCircuit, prove_with_traces, CircuitWrapper, FriProofWrapper,
+    OlaBaseLayerProof, OlaStark, ProverJob, TimingTree, C, D, F,
 };
 use olaos_prover_fri_utils::fetch_next_circuit;
 use olaos_queued_job_processor::JobProcessor;
 use tokio::task::JoinHandle;
 
-use crate::utils::ProverArtifacts;
+use crate::utils::{verify_proof, ProverArtifacts};
 
 pub struct Prover {
     blob_store: Arc<dyn ObjectStore>,
@@ -61,32 +62,22 @@ impl Prover {
         _config: Arc<FriProverConfig>,
         // artifact: Arc<GoldilocksProverSetupData>,
     ) -> FriProofWrapper {
-        // let worker = Worker::new();
-        // let circuit_id = circuit.numeric_circuit_type();
-        // let started_at = Instant::now();
-        // let proof = prove_base_layer_circuit::<NoPow>(
-        //     circuit.clone(),
-        //     &worker,
-        //     base_layer_proof_config(),
-        //     &artifact.setup_base,
-        //     &artifact.setup,
-        //     &artifact.setup_tree,
-        //     &artifact.vk,
-        //     &artifact.vars_hint,
-        //     &artifact.wits_hint,
-        //     &artifact.finalization_hint,
-        // );
+        let start = Instant::now();
+        let ola_stark = OlaStark::default();
+        // TODO: Cloning is not great, having prove_with_traces accept a reference
+        let proof = prove_with_traces::<F, C, D>(
+            &ola_stark,
+            &circuit.config,
+            circuit.witness.clone(),
+            circuit.public_values.clone(),
+            &mut TimingTree::default(),
+        )
+        .unwrap();
 
-        // let label = CircuitLabels {
-        //     circuit_type: circuit_id,
-        //     layer: Layer::Base,
-        // };
-        // METRICS.proof_generation_time[&label].observe(started_at.elapsed());
+        olaos_logs::info!("proof_generation_time {:?}", start.elapsed());
 
-        // verify_proof(&CircuitWrapper::Base(circuit), &proof, job_id);
-        // FriProofWrapper::Base(OlaBaseLayerProof::from_inner(circuit_id, proof))
-
-        FriProofWrapper::Base(OlaBaseLayerProof {})
+        verify_proof(&CircuitWrapper::Base(circuit), &proof, job_id);
+        FriProofWrapper::Base(OlaBaseLayerProof { proof })
     }
 }
 
@@ -113,13 +104,12 @@ impl JobProcessor for Prover {
     }
 
     async fn save_failure(&self, job_id: Self::JobId, _started_at: Instant, error: String) {
-        // self.prover_connection_pool
-        //     .access_storage()
-        //     .await
-        //     .unwrap()
-        //     .fri_prover_jobs_dal()
-        //     .save_proof_error(job_id, error)
-        //     .await;
+        self.prover_connection_pool
+            .access_storage()
+            .await
+            .fri_prover_jobs_dal()
+            .save_proof_error(job_id, error)
+            .await;
     }
 
     async fn process_job(
@@ -143,9 +133,9 @@ impl JobProcessor for Prover {
         started_at: Instant,
         artifacts: Self::JobArtifacts,
     ) -> anyhow::Result<()> {
-        // METRICS.cpu_total_proving_time.observe(started_at.elapsed());
+        olaos_logs::info!("cpu_total_proving_time {:?}", started_at.elapsed());
 
-        // let mut storage_processor = self.prover_connection_pool.access_storage().await.unwrap();
+        let mut storage_processor = self.prover_connection_pool.access_storage().await;
         // save_proof(
         //     job_id,
         //     started_at,
