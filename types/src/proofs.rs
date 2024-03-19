@@ -183,6 +183,3 @@ pub struct FriProverJobMetadata {
     pub depth: u16,
     pub is_node_final_proof: bool,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OlaBaseLayerProof {}

@@ -39,7 +39,7 @@ pub fn validate_bytecode(code: &[u8]) -> Result<(), InvalidBytecodeError> {
     let program: BinaryProgram = bincode::deserialize(code)
         .map_err(|_| InvalidBytecodeError::BytecodeDepParseProgramFailed)?;
     let instructions = program
-        .bytecode_u64_array()
+        .bytecode_u64s()
         .map_err(|_| InvalidBytecodeError::BytecodeParseInstructionsFailed)?;
 
     if instructions.len() > MAX_BYTECODE_LENGTH_IN_U64 {

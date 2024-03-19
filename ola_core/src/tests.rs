@@ -28,7 +28,7 @@ mod tests {
         let mut program_bytes = Vec::new();
         let _ = program_file.read_to_end(&mut program_bytes).unwrap();
         let program_hash = H256(program_bytes.hash_bytes());
-        let instructions_u64 = program.bytecode_u64_array().unwrap();
+        let instructions_u64 = program.bytecode_u64s().unwrap();
         let instructions: Vec<GoldilocksField> = instructions_u64
             .iter()
             .map(|n| GoldilocksField(*n))

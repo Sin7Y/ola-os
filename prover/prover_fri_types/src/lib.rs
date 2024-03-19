@@ -1,14 +1,12 @@
 use std::env;
 
-use circuits::OlaBaseLayerCircuit;
-use ola_types::{
-    proofs::{AggregationRound, OlaBaseLayerProof},
-    L1BatchNumber,
-};
+use ola_types::{proofs::AggregationRound, L1BatchNumber};
 use olaos_object_store::{serialize_using_bincode, Bucket, FriCircuitKey, StoredObject};
 use serde::{Deserialize, Serialize};
 
 pub mod circuits;
+
+pub use circuits::*;
 
 pub fn get_current_pod_name() -> String {
     env::var("OLAOS_POD_NAME").unwrap_or("UNKNOWN_OLAOS_POD".to_owned())
