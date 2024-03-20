@@ -1,27 +1,23 @@
 use ola_basic_types::{AccountTreeId, Address, H256, U256};
-use ola_utils::{olavm_address_to_address, olavm_address_to_u256, u256_to_h256};
+use ola_utils::{u256_to_h256, u64_array_to_h256, u64s_to_u256};
 use serde::{Deserialize, Serialize};
 
 use crate::{StorageKey, StorageValue};
-use olavm_core::{
-    merkle_tree::log::{
-        StorageLog as OlavmStorageLog, StorageLogKind as OlavmStorageLogKind,
-        StorageQuery as OlavmStorageQuery, WitnessStorageLog as OlavmWitnessStorageLog,
-    },
-    types::{
-        account::AccountTreeId as OlavmAccountTreeId,
-        merkle_tree::{
-            h256_to_tree_key, h256_to_tree_value, TreeKey as OlavmTreeKey,
-            TreeValue as OlavmTreeValue,
-        },
-        storage::StorageKey as OlavmStorageKey,
-    },
-};
+use olavm_core::vm::hardware::{StorageAccessKind, StorageAccessLog};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StorageLogQuery {
     pub log_query: LogQuery,
     pub log_type: StorageLogQueryType,
+}
+
+impl From<&StorageAccessLog> for StorageLogQuery {
+    fn from(log: &StorageAccessLog) -> Self {
+        Self {
+            log_query: LogQuery::from(log),
+            log_type: log.kind.into(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -39,18 +35,18 @@ pub struct LogQuery {
     pub is_service: bool,
 }
 
-impl From<&OlavmStorageQuery> for LogQuery {
-    fn from(query: &OlavmStorageQuery) -> Self {
+impl From<&StorageAccessLog> for LogQuery {
+    fn from(log: &StorageAccessLog) -> Self {
         Self {
-            timestamp: Timestamp(query.block_timestamp as u32),
+            timestamp: Timestamp(log.block_timestamp as u32),
             tx_number_in_block: 0,
             aux_byte: 0,
             shard_id: 0,
-            address: olavm_address_to_address(&query.contract_addr),
-            key: olavm_address_to_u256(&query.storage_key),
-            read_value: olavm_address_to_u256(&query.pre_value),
-            written_value: olavm_address_to_u256(&query.value),
-            rw_flag: query.kind != OlavmStorageLogKind::Read,
+            address: u64_array_to_h256(&log.contract_addr),
+            key: u64s_to_u256(&log.storage_key),
+            read_value: u64s_to_u256(&log.pre_value.unwrap_or_default()),
+            written_value: u64s_to_u256(&log.value.unwrap_or_default()),
+            rw_flag: log.kind != StorageAccessKind::Read,
             rollback: false,
             is_service: false,
         }
@@ -64,12 +60,12 @@ pub enum StorageLogQueryType {
     RepeatedWrite,
 }
 
-impl From<OlavmStorageLogKind> for StorageLogQueryType {
-    fn from(kind: OlavmStorageLogKind) -> Self {
+impl From<StorageAccessKind> for StorageLogQueryType {
+    fn from(kind: StorageAccessKind) -> Self {
         match kind {
-            OlavmStorageLogKind::Read => StorageLogQueryType::Read,
-            OlavmStorageLogKind::InitialWrite => StorageLogQueryType::InitialWrite,
-            OlavmStorageLogKind::RepeatedWrite => StorageLogQueryType::RepeatedWrite,
+            StorageAccessKind::Read => StorageLogQueryType::Read,
+            StorageAccessKind::InitialWrite => StorageLogQueryType::InitialWrite,
+            StorageAccessKind::RepeatedWrite => StorageLogQueryType::RepeatedWrite,
         }
     }
 }
@@ -128,21 +124,4 @@ impl StorageLog {
 pub struct WitnessStorageLog {
     pub storage_log: StorageLog,
     pub previous_value: H256,
-}
-
-impl WitnessStorageLog {
-    pub fn to_olavm_type(&self) -> OlavmWitnessStorageLog {
-        OlavmWitnessStorageLog {
-            storage_log: OlavmStorageLog {
-                kind: if self.storage_log.kind == StorageLogKind::Read {
-                    OlavmStorageLogKind::Read
-                } else {
-                    OlavmStorageLogKind::RepeatedWrite
-                },
-                key: h256_to_tree_key(&self.storage_log.key.hashed_key()),
-                value: h256_to_tree_value(&self.storage_log.value),
-            },
-            previous_value: h256_to_tree_value(&self.previous_value),
-        }
-    }
 }

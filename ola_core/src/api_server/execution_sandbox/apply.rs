@@ -1,12 +1,12 @@
 use ola_config::{database::load_db_config, sequencer::load_network_config};
 use ola_dal::{connection::ConnectionPool, SqlxError, StorageProcessor};
+use ola_executor::{tx_exe_manager::OlaTapeInitInfo, tx_pre_executor::TxPreExecutor};
 use ola_types::{
     api::{BlockId, BlockNumber},
     ExecuteTransactionCommon, L1BatchNumber, MiniblockNumber, Transaction,
 };
-use ola_utils::time::seconds_since_epoch;
-use olavm_core::state::error::StateError;
-use zk_vm::{BlockInfo, PreExecutor, TxInfo};
+use ola_utils::{bytes_to_u64s, h256_to_u64_array, time::seconds_since_epoch};
+use olavm_core::util::converts::u8_arr_to_address;
 
 use super::{BlockArgs, TxSharedArgs, VmPermit};
 
@@ -17,7 +17,7 @@ pub(super) fn apply_vm_in_sandbox(
     connection_pool: &ConnectionPool,
     tx: Transaction,
     block_args: BlockArgs,
-) -> Result<(), StateError> {
+) -> anyhow::Result<()> {
     let rt_handle = vm_permit.rt_handle();
     let mut connection = rt_handle.block_on(connection_pool.access_storage_tagged("api"));
 
@@ -36,50 +36,52 @@ pub(super) fn apply_vm_in_sandbox(
     let network = load_network_config().expect("failed to load network config");
 
     let hash = tx.hash();
-    let tx_info = match tx.common_data {
-        ExecuteTransactionCommon::L2(common_data) => {
-            let version = common_data.transaction_type as u32;
-            let caller_address = common_data.initiator_address.to_fixed_bytes();
-            let nonce = common_data.nonce.0;
-
+    let calldata = tx.execute.calldata;
+    let tx = match &tx.common_data {
+        ExecuteTransactionCommon::L2(tx) => {
             let to_u8_32 = |v: &Vec<u8>| {
                 let mut array = [0; 32];
                 array.copy_from_slice(&v[..32]);
                 array
             };
 
-            let r = common_data.signature[0..32].to_vec();
-            let s = common_data.signature[32..64].to_vec();
-
-            TxInfo {
-                version,
-                caller_address,
-                calldata: tx.execute.calldata.to_vec(),
-                nonce,
-                signature_r: to_u8_32(&r),
-                signature_s: to_u8_32(&s),
-                tx_hash: hash.to_fixed_bytes(),
+            let r = tx.signature[0..32].to_vec();
+            let s = tx.signature[32..64].to_vec();
+            let signature_r = bytes_to_u64s(to_u8_32(&r).to_vec());
+            let signature_s = bytes_to_u64s(to_u8_32(&s).to_vec());
+            OlaTapeInitInfo {
+                version: tx.transaction_type as u64,
+                origin_address: h256_to_u64_array(&tx.initiator_address),
+                calldata: bytes_to_u64s(calldata),
+                nonce: Some(tx.nonce.0 as u64),
+                signature_r: Some([
+                    signature_r.get(0).unwrap().clone(),
+                    signature_r.get(1).unwrap().clone(),
+                    signature_r.get(2).unwrap().clone(),
+                    signature_r.get(3).unwrap().clone(),
+                ]),
+                signature_s: Some([
+                    signature_s.get(0).unwrap().clone(),
+                    signature_s.get(1).unwrap().clone(),
+                    signature_s.get(2).unwrap().clone(),
+                    signature_s.get(3).unwrap().clone(),
+                ]),
+                tx_hash: Some(h256_to_u64_array(&hash)),
             }
         }
         ExecuteTransactionCommon::ProtocolUpgrade(_) => panic!("ProtocolUpgrade not supported"),
     };
 
-    let block_info = BlockInfo {
-        block_number: vm_block_number.0,
-        block_timestamp,
-        sequencer_address: shared_args.operator_account.address().to_fixed_bytes(),
-        chain_id: network.ola_network_id,
-    };
-
-    let executor = PreExecutor::new(
-        block_info,
-        db_config.merkle_tree.path,
+    let mut pre_executor = TxPreExecutor::new(
         db_config.sequencer_db_path,
-    );
+        network.ola_network_id as u64,
+        vm_block_number.0 as u64,
+        block_timestamp,
+        u8_arr_to_address(&shared_args.operator_account.address().to_fixed_bytes()),
+    )?;
 
     drop(vm_permit);
-
-    executor.execute(tx_info)
+    pre_executor.invoke(tx)
 }
 
 impl BlockArgs {
