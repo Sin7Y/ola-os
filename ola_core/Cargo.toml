@@ -59,8 +59,6 @@ rayon = "*"
 # olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "pre-alpha"}
 olavm_core = { path = "../../olavm/core", package = "core" }
 tempfile = "3.0.2"
-zk-vm = { git = "https://github.com/Sin7Y/olavm.git", branch = "pre-alpha" }
-# zk-vm = { path = "../../olavm/zk-vm" }
 ola-executor = { path = "../../olavm/executor", package = "executor" }
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"

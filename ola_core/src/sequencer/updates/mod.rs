@@ -5,7 +5,7 @@ use ola_types::{
     tx::tx_execution_info::{ExecutionMetrics, VmExecutionLogs},
     L1BatchNumber, MiniblockNumber, Transaction,
 };
-use ola_vm::{vm::VmTxExecutionResult, vm_with_bootloader::BlockContextMode};
+use ola_vm::{vm::VmTxExeResult, vm_with_bootloader::BlockContextMode};
 
 use self::{l1_batch_updates::L1BatchUpdates, miniblock_updates::MiniblockUpdates};
 
@@ -63,7 +63,7 @@ impl UpdatesManager {
     pub(crate) fn extend_from_executed_transaction(
         &mut self,
         tx: Transaction,
-        tx_execution_result: VmTxExecutionResult,
+        tx_execution_result: VmTxExeResult,
         execution_metrics: ExecutionMetrics,
     ) {
         self.storage_writes_deduplicator
