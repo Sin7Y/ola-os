@@ -8,13 +8,13 @@ use ola_types::basic_fri_types::CircuitIdRoundTuple;
 use olaos_object_store::ObjectStore;
 use olaos_prover_fri_types::{
     circuits::OlaBaseLayerCircuit, prove_with_traces, CircuitWrapper, FriProofWrapper,
-    OlaBaseLayerProof, OlaStark, ProverJob, TimingTree, C, D, F,
+    OlaBaseLayerProof, ProverJob, TimingTree, C, D, F,
 };
 use olaos_prover_fri_utils::fetch_next_circuit;
 use olaos_queued_job_processor::JobProcessor;
 use tokio::task::JoinHandle;
 
-use crate::utils::{verify_proof, ProverArtifacts};
+use crate::utils::{save_proof, verify_proof, ProverArtifacts};
 
 pub struct Prover {
     blob_store: Arc<dyn ObjectStore>,
@@ -63,10 +63,9 @@ impl Prover {
         // artifact: Arc<GoldilocksProverSetupData>,
     ) -> FriProofWrapper {
         let start = Instant::now();
-        let ola_stark = OlaStark::default();
         // TODO: Cloning is not great, having prove_with_traces accept a reference
         let proof = prove_with_traces::<F, C, D>(
-            &ola_stark,
+            &circuit.ola_stark,
             &circuit.config,
             circuit.witness.clone(),
             circuit.public_values.clone(),
@@ -76,8 +75,12 @@ impl Prover {
 
         olaos_logs::info!("proof_generation_time {:?}", start.elapsed());
 
-        verify_proof(&CircuitWrapper::Base(circuit), &proof, job_id);
-        FriProofWrapper::Base(OlaBaseLayerProof { proof })
+        verify_proof(CircuitWrapper::Base(circuit.clone()), proof.clone(), job_id);
+        FriProofWrapper::Base(OlaBaseLayerProof {
+            ola_stark: circuit.ola_stark,
+            proof,
+            config: circuit.config,
+        })
     }
 }
 
@@ -136,16 +139,16 @@ impl JobProcessor for Prover {
         olaos_logs::info!("cpu_total_proving_time {:?}", started_at.elapsed());
 
         let mut storage_processor = self.prover_connection_pool.access_storage().await;
-        // save_proof(
-        //     job_id,
-        //     started_at,
-        //     artifacts,
-        //     &*self.blob_store,
-        //     self.public_blob_store.as_deref(),
-        //     self.config.shall_save_to_public_bucket,
-        //     &mut storage_processor,
-        // )
-        // .await;
+        save_proof(
+            job_id,
+            started_at,
+            artifacts,
+            &*self.blob_store,
+            self.public_blob_store.as_deref(),
+            self.config.shall_save_to_public_bucket,
+            &mut storage_processor,
+        )
+        .await;
         Ok(())
     }
 

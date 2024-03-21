@@ -11,7 +11,7 @@ use ola_types::{
 };
 use ola_utils::{bytes_to_chunks, h256_to_u256, u256_to_h256};
 use olaos_object_store::{ObjectStore, ObjectStoreFactory};
-use olaos_prover_fri_types::get_current_pod_name;
+use olaos_prover_fri_types::{get_current_pod_name, OlaBaseLayerCircuit};
 use olaos_queued_job_processor::JobProcessor;
 use rand::Rng;
 

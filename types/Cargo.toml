@@ -27,6 +27,4 @@ olavm_plonky2 = {package = "plonky2", git = "https://github.com/Sin7Y/olavm.git"
 # olavm_plonky2 = { path = "../../olavm/plonky2/plonky2", package = "plonky2" }
 derivative = "2.2.0"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
-
-[dev-dependencies]
 hex = "0.4"

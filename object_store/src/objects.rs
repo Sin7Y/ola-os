@@ -1,5 +1,5 @@
 use ola_types::{
-    proofs::{AggregationRound, PrepareBasicCircuitsJob},
+    proofs::{AggregationRound, L1BatchProofForL1, PrepareBasicCircuitsJob},
     L1BatchNumber,
 };
 
@@ -107,4 +107,15 @@ pub struct FriCircuitKey {
     pub circuit_id: u8,
     pub aggregation_round: AggregationRound,
     pub depth: u16,
+}
+
+impl StoredObject for L1BatchProofForL1 {
+    const BUCKET: Bucket = Bucket::ProofsFri;
+    type Key<'a> = L1BatchNumber;
+
+    fn encode_key(key: Self::Key<'_>) -> String {
+        format!("l1_batch_proof_{key}.bin")
+    }
+
+    serialize_using_bincode!();
 }

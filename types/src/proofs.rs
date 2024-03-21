@@ -183,3 +183,17 @@ pub struct FriProverJobMetadata {
     pub depth: u16,
     pub is_node_final_proof: bool,
 }
+#[derive(Clone, Serialize, Deserialize)]
+pub struct L1BatchProofForL1 {
+    pub proof: Vec<u8>,
+}
+
+impl std::fmt::Debug for L1BatchProofForL1 {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let proof_encode = format!("0x{}", hex::encode(&self.proof));
+        formatter
+            .debug_struct("L1BatchProofForL1")
+            .field("proof", &proof_encode)
+            .finish_non_exhaustive()
+    }
+}

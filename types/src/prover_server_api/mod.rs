@@ -4,7 +4,7 @@ use ola_basic_types::L1BatchNumber;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    proofs::PrepareBasicCircuitsJob,
+    proofs::{L1BatchProofForL1, PrepareBasicCircuitsJob},
     protocol_version::{FriProtocolVersionId, L1VerifierConfig},
 };
 
@@ -18,7 +18,10 @@ pub enum ProofGenerationDataResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SubmitProofRequest {}
+pub enum SubmitProofRequest {
+    Proof(Box<L1BatchProofForL1>),
+    SkippedProofGeneration,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SubmitProofResponse {
