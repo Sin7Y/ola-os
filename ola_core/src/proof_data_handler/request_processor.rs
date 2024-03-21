@@ -9,7 +9,6 @@ use axum::{
 use ola_config::proof_data_handler::{ProofDataHandlerConfig, ProtocolVersionLoadingMode};
 use ola_dal::{connection::ConnectionPool, SqlxError};
 use ola_types::{
-    proofs::PrepareBasicCircuitsJob,
     protocol_version::{FriProtocolVersionId, L1VerifierConfig},
     prover_server_api::{
         ProofGenerationData, ProofGenerationDataRequest, ProofGenerationDataResponse,
@@ -128,9 +127,36 @@ impl RequestProcessor {
     pub(crate) async fn submit_proof(
         &self,
         Path(l1_batch_number): Path<u32>,
-        Json(_payload): Json<SubmitProofRequest>,
+        Json(payload): Json<SubmitProofRequest>,
     ) -> Result<Json<SubmitProofResponse>, RequestProcessorError> {
-        let _l1_batch_number = L1BatchNumber(l1_batch_number);
+        olaos_logs::info!("Received proof for block number: {:?}", l1_batch_number);
+        let l1_batch_number = L1BatchNumber(l1_batch_number);
+        match payload {
+            SubmitProofRequest::Proof(proof) => {
+                let blob_url = self
+                    .blob_store
+                    .put(l1_batch_number, &*proof)
+                    .await
+                    .map_err(RequestProcessorError::ObjectStore)?;
+
+                let mut storage = self.pool.access_storage().await;
+
+                storage
+                    .proof_generation_dal()
+                    .save_proof_artifacts_metadata(l1_batch_number, &blob_url)
+                    .await
+                    .map_err(RequestProcessorError::Sqlx)?;
+            }
+            SubmitProofRequest::SkippedProofGeneration => {
+                self.pool
+                    .access_storage()
+                    .await
+                    .proof_generation_dal()
+                    .mark_proof_generation_job_as_skipped(l1_batch_number)
+                    .await
+                    .map_err(RequestProcessorError::Sqlx)?;
+            }
+        }
         Ok(Json(SubmitProofResponse::Success))
     }
 }

@@ -53,11 +53,7 @@ pub async fn fetch_next_circuit(
         .await
         .unwrap_or_else(|err| panic!("{err:?}"));
 
-    // let label = CircuitLabels {
-    //     circuit_type: prover_job.circuit_id,
-    //     aggregation_round: prover_job.aggregation_round.into(),
-    // };
-    // PROVER_FRI_UTILS_METRICS.blob_fetch_time[&label].observe(started_at.elapsed());
+    olaos_logs::info!("blob_fetch_time {:?}", started_at.elapsed());
 
     let setup_data_key = ProverServiceDataKey {
         circuit_id: prover_job.circuit_id,

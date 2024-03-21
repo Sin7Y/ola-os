@@ -43,7 +43,7 @@ pub enum FriProofWrapper {
 
 impl StoredObject for FriProofWrapper {
     const BUCKET: Bucket = Bucket::ProofsFri;
-    type Key<'a> = u32;
+    type Key<'a> = L1BatchNumber;
 
     fn encode_key(key: Self::Key<'_>) -> String {
         format!("proof_{key}.bin")
