@@ -10,7 +10,7 @@ use ola_types::{
     Transaction, H256,
 };
 use ola_utils::bytecode::hash_bytecode;
-use ola_vm::vm::VmTxExecutionResult;
+use ola_vm::vm::VmTxExeResult;
 
 use crate::sequencer::extractors;
 
@@ -41,7 +41,7 @@ impl MiniblockUpdates {
     pub(crate) fn extend_from_executed_transaction(
         &mut self,
         tx: Transaction,
-        tx_execution_result: VmTxExecutionResult,
+        tx_execution_result: VmTxExeResult,
         execution_metrics: ExecutionMetrics,
     ) {
         // // Get bytecode hashes that were marked as known
@@ -87,7 +87,7 @@ impl MiniblockUpdates {
             transaction: tx,
             execution_info: execution_metrics,
             execution_status: tx_execution_result.status,
-            call_traces: tx_execution_result.call_traces,
+            call_traces: vec![],
             revert_reason: tx_execution_result.result.revert_reason,
         });
     }

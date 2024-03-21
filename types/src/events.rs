@@ -1,7 +1,8 @@
 use ethabi::param_type::Writer;
 use ola_basic_types::{Address, L1BatchNumber, H256};
 use ola_config::constants::contracts::{CONTRACT_DEPLOYER_ADDRESS, KNOWN_CODES_STORAGE_ADDRESS};
-use ola_utils::{h256_to_account_address, hash::hash_bytes};
+use ola_utils::{h256_to_account_address, hash::hash_bytes, u64_array_to_h256, u64s_to_bytes};
+use olavm_core::vm::types::Event;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +14,26 @@ pub struct VmEvent {
     pub address: Address,
     pub indexed_topics: Vec<H256>,
     pub value: Vec<u8>,
+}
+
+impl From<&Event> for VmEvent {
+    fn from(event: &Event) -> Self {
+        let indexed_topics = event
+            .topics
+            .iter()
+            .map(|topic| u64_array_to_h256(topic))
+            .collect();
+        let value = u64s_to_bytes(&event.data);
+        Self {
+            location: (
+                L1BatchNumber(event.batch_number as u32),
+                event.index_in_batch as u32,
+            ),
+            address: u64_array_to_h256(&event.address),
+            indexed_topics,
+            value,
+        }
+    }
 }
 
 pub fn extract_added_tokens(

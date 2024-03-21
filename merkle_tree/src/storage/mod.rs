@@ -54,8 +54,10 @@ impl TreeUpdater {
 
     fn insert_node(&mut self, nibbles: Nibbles, node: impl Into<Node>, is_new: bool) {
         let node = node.into();
-        if let Node::Internal(_) = node {
-            debug_assert!(is_new); // internal nodes are never moved
+        match &node {
+            Node::Leaf(_) if is_new => self.new_leaves += 1,
+            Node::Internal(_) => debug_assert!(is_new), // internal nodes are never moved
+            _ => {}
         }
         self.patch_set.insert(nibbles, node);
     }
