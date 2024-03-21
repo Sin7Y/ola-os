@@ -55,6 +55,10 @@ pub fn olavm_address_to_u256(addr: &OlavmAddress) -> U256 {
     h256_to_u256(tree_key_to_h256(addr))
 }
 
+pub fn u64s_to_u256(u64s: &[u64; 4]) -> U256 {
+    h256_to_u256(u64_array_to_h256(u64s))
+}
+
 pub fn h160_bytes_to_h256(data: &[u8; 20]) -> H256 {
     let mut buffer = [0u8; 32];
     buffer[12..].copy_from_slice(data);
