@@ -14,17 +14,22 @@ use ola_config::{
 };
 use ola_contracts::BaseSystemContracts;
 use ola_dal::{connection::ConnectionPool, transactions_dal::L2TxSubmissionResult};
+use ola_executor::{
+    batch_exe_manager::BlockExeInfo,
+    config::ExecuteMode,
+    ola_storage::OlaCachedStorage,
+    tx_exe_manager::{OlaTapeInitInfo, TxExeManager},
+};
 use ola_state::postgres::PostgresStorageCaches;
 use ola_types::{
     fee::TransactionExecutionMetrics, l2::L2Tx, AccountTreeId, Address, Bytes, Nonce, H256,
 };
-use ola_utils::{time::millis_since_epoch, u64s_to_bytes};
+use ola_utils::{bytes_to_u64s, time::millis_since_epoch, u64s_to_bytes};
+use olavm_core::util::converts::u8_arr_to_address;
 
 use self::{error::SubmitTxError, proxy::TxProxy};
 
 use super::execution_sandbox::{TxSharedArgs, VmConcurrencyLimiter};
-
-use zk_vm::{BlockInfo, CallInfo, VmManager as OlaVmManager};
 
 pub mod error;
 pub mod proxy;
@@ -198,28 +203,41 @@ impl TxSender {
         let db_config = load_db_config().expect("failed to load database config");
         let network = load_network_config().expect("failed to load network config");
 
-        let call_info = CallInfo {
-            version: tx.common_data.transaction_type as u32,
-            caller_address: tx.common_data.initiator_address.to_fixed_bytes(),
-            calldata: tx.execute.calldata.clone(),
-            to_address: tx.execute.contract_address.to_fixed_bytes(),
-        };
-        let block_info = BlockInfo {
-            block_number: *l1_batch_header.number + 1,
-            block_timestamp: (millis_since_epoch() / 1_000) as u64,
-            sequencer_address: self.0.sender_config.fee_account_addr.to_fixed_bytes(),
-            chain_id: network.ola_network_id,
-        };
-        let mut vm_manager = OlaVmManager::new(
-            block_info,
-            db_config.merkle_tree.path,
-            db_config.sequencer_db_path,
-        );
-
         olaos_logs::info!("Start call in vm_manager");
 
-        let call_res = vm_manager
-            .call(call_info)
+        let mut storage = OlaCachedStorage::new(
+            db_config.sequencer_db_path,
+            Some((millis_since_epoch() / 1_000) as u64),
+        )
+        .map_err(|e| SubmitTxError::TxCallTxError(e.to_string()))?;
+
+        let block_info = BlockExeInfo {
+            block_number: *l1_batch_header.number as u64 + 1,
+            block_timestamp: (millis_since_epoch() / 1_000) as u64,
+            sequencer_address: u8_arr_to_address(
+                &self.0.sender_config.fee_account_addr.to_fixed_bytes(),
+            ),
+            chain_id: network.ola_network_id as u64,
+        };
+        let tape_init_info = OlaTapeInitInfo {
+            version: tx.common_data.transaction_type as u64,
+            origin_address: u8_arr_to_address(&tx.common_data.initiator_address.to_fixed_bytes()),
+            calldata: bytes_to_u64s(tx.execute.calldata),
+            nonce: None,
+            signature_r: None,
+            signature_s: None,
+            tx_hash: None,
+        };
+        let mut tx_exe_manager: TxExeManager = TxExeManager::new(
+            ExecuteMode::Call,
+            block_info,
+            tape_init_info,
+            &mut storage,
+            u8_arr_to_address(&tx.execute.contract_address.to_fixed_bytes()),
+            0,
+        );
+        let call_res = tx_exe_manager
+            .call()
             .map_err(|e| SubmitTxError::TxCallTxError(e.to_string()))?;
         let ret = u64s_to_bytes(&call_res);
 

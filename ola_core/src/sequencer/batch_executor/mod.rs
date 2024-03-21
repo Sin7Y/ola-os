@@ -4,16 +4,20 @@ use std::{fmt, time::Instant};
 use async_trait::async_trait;
 use ola_config::sequencer::load_network_config;
 use ola_dal::connection::ConnectionPool;
+use ola_executor::batch_exe_manager::BlockExeManager;
+use ola_executor::tx_exe_manager::OlaTapeInitInfo;
 use ola_state::rocksdb::RocksdbStorage;
-use ola_types::log::{LogQuery, StorageLogQuery};
+use ola_types::events::VmEvent;
+use ola_types::log::StorageLogQuery;
 use ola_types::{ExecuteTransactionCommon, Transaction};
+use ola_utils::{bytes_to_u64s, h256_to_u64_array};
 use ola_vm::errors::VmRevertReason;
+use ola_vm::vm::VmTxExeResult;
 use ola_vm::{
     errors::TxRevertReason,
-    vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult, VmTxExecutionResult},
+    vm::{VmBlockResult, VmExecutionResult, VmPartialExecutionResult},
 };
-use olavm_core::state::error::StateError;
-use olavm_core::types::storage::field_arr_to_u8_arr;
+use olavm_core::util::converts::u8_arr_to_address;
 use tokio::{
     sync::{mpsc, oneshot},
     task::JoinHandle,
@@ -22,7 +26,6 @@ use tokio::{
 use super::{io::L1BatchParams, types::ExecutionMetricsForCriteria};
 
 use ola_types::tx::tx_execution_info::TxExecutionStatus;
-use zk_vm::{BlockInfo, TxInfo, VmManager as OlaVmManager};
 
 #[derive(Debug)]
 pub struct BatchExecutorHandle {
@@ -106,7 +109,7 @@ pub(super) enum Command {
 pub(crate) enum TxExecutionResult {
     /// Successful execution of the tx and the block tip dry run.
     Success {
-        tx_result: Box<VmTxExecutionResult>,
+        tx_result: Box<VmTxExeResult>,
         tx_metrics: ExecutionMetricsForCriteria,
         entrypoint_dry_run_metrics: ExecutionMetricsForCriteria,
         entrypoint_dry_run_result: Box<VmPartialExecutionResult>,
@@ -236,23 +239,24 @@ impl BatchExecutor {
 
         let network_config = load_network_config().expect("failed to load network config");
 
-        let block_info = BlockInfo {
-            block_number: l1_batch_params.context_mode.block_number(),
-            block_timestamp: l1_batch_params.context_mode.timestamp(),
-            sequencer_address: l1_batch_params
-                .context_mode
-                .operator_address()
-                .to_fixed_bytes(),
-            chain_id: network_config.ola_network_id,
-        };
+        let sequencer_address = l1_batch_params
+            .context_mode
+            .operator_address()
+            .to_fixed_bytes();
 
-        let mut vm_manager =
-            OlaVmManager::new(block_info, merkle_tree_path, secondary_storage_path);
+        let mut block_exe_manager = BlockExeManager::new(
+            secondary_storage_path,
+            network_config.ola_network_id as u64,
+            l1_batch_params.context_mode.block_number() as u64,
+            l1_batch_params.context_mode.timestamp(),
+            u8_arr_to_address(&sequencer_address),
+        )
+        .unwrap();
 
         while let Some(cmd) = self.commands.blocking_recv() {
             match cmd {
                 Command::ExecuteTx(tx, tx_index_in_l1_batch, resp) => {
-                    let result = self.execute_tx(&mut vm_manager, &tx, tx_index_in_l1_batch);
+                    let result = self.tx(&mut block_exe_manager, &tx, tx_index_in_l1_batch);
                     olaos_logs::info!(
                         "execute tx {:?} finished, with error {:?}",
                         tx.hash(),
@@ -261,7 +265,8 @@ impl BatchExecutor {
                     resp.send(result).unwrap();
                 }
                 Command::FinishBatch(tx_index_in_l1_batch, resp) => {
-                    let block_result = self.finish_batch(&mut vm_manager, tx_index_in_l1_batch);
+                    let block_result =
+                        self.finish_batch(&mut block_exe_manager, tx_index_in_l1_batch);
                     olaos_logs::info!(
                         "finish batch finished, tx_index_in_l1_batch {:?}, total log_queries {:?}",
                         tx_index_in_l1_batch,
@@ -277,9 +282,9 @@ impl BatchExecutor {
     }
 
     #[olaos_logs::instrument(skip_all)]
-    fn execute_tx(
+    fn tx(
         &self,
-        vm_manager: &mut OlaVmManager,
+        block_exe_manager: &mut BlockExeManager,
         tx: &Transaction,
         tx_index_in_l1_batch: u32,
     ) -> TxExecutionResult {
@@ -291,8 +296,8 @@ impl BatchExecutor {
             tx_index_in_l1_batch
         );
 
-        let calldata = &tx.execute.calldata;
-        let result = match &tx.common_data {
+        let calldata = tx.execute.calldata.clone();
+        match &tx.common_data {
             ExecuteTransactionCommon::L2(tx) => {
                 let to_u8_32 = |v: &Vec<u8>| {
                     let mut array = [0; 32];
@@ -302,30 +307,38 @@ impl BatchExecutor {
 
                 let r = tx.signature[0..32].to_vec();
                 let s = tx.signature[32..64].to_vec();
-
-                let tx_info = TxInfo {
-                    version: tx.transaction_type as u32,
-                    caller_address: tx.initiator_address.to_fixed_bytes(),
-                    calldata: calldata.to_vec(),
-                    nonce: tx.nonce.0,
-                    signature_r: to_u8_32(&r),
-                    signature_s: to_u8_32(&s),
-                    tx_hash: hash.to_fixed_bytes(),
+                let signature_r = bytes_to_u64s(to_u8_32(&r).to_vec());
+                let signature_s = bytes_to_u64s(to_u8_32(&s).to_vec());
+                let tape_init_info = OlaTapeInitInfo {
+                    version: tx.transaction_type as u64,
+                    origin_address: h256_to_u64_array(&tx.initiator_address),
+                    calldata: bytes_to_u64s(calldata),
+                    nonce: Some(tx.nonce.0 as u64),
+                    signature_r: Some([
+                        signature_r.get(0).unwrap().clone(),
+                        signature_r.get(1).unwrap().clone(),
+                        signature_r.get(2).unwrap().clone(),
+                        signature_r.get(3).unwrap().clone(),
+                    ]),
+                    signature_s: Some([
+                        signature_s.get(0).unwrap().clone(),
+                        signature_s.get(1).unwrap().clone(),
+                        signature_s.get(2).unwrap().clone(),
+                        signature_s.get(3).unwrap().clone(),
+                    ]),
+                    tx_hash: Some(h256_to_u64_array(&hash)),
                 };
-                let exec_res = vm_manager.invoke(tx_info);
-                if exec_res.is_ok() {
-                    let res = exec_res.unwrap();
-                    let ret = field_arr_to_u8_arr(&res.trace.ret);
-                    let result = TxExecutionResult::Success {
-                        tx_result: Box::new(VmTxExecutionResult {
+                let tx_result = block_exe_manager.invoke(tape_init_info);
+                match tx_result {
+                    Ok(result) => TxExecutionResult::Success {
+                        tx_result: Box::new(VmTxExeResult {
                             status: TxExecutionStatus::Success,
-                            result: VmPartialExecutionResult::new(
-                                &res.storage_queries,
+                            result: VmPartialExecutionResult::from_storage_events(
+                                &result.storage_access_logs,
+                                &result.events,
                                 tx_index_in_l1_batch,
                             ),
-                            ret,
-                            trace: res.trace,
-                            call_traces: vec![],
+                            trace: result.trace,
                             gas_refunded: 0,
                             operator_suggested_refund: 0,
                         }),
@@ -336,55 +349,45 @@ impl BatchExecutor {
                             execution_metrics: Default::default(),
                         },
                         entrypoint_dry_run_result: Box::default(),
-                    };
-                    result
-                } else {
-                    let revert_reason = VmRevertReason::General {
-                        msg: exec_res
-                            .err()
-                            .unwrap_or_else(|| {
-                                StateError::VmExecError("vm internal error".to_string())
-                            })
-                            .to_string(),
-                        data: vec![],
-                    };
-                    let result = TxExecutionResult::RejectedByVm {
-                        rejection_reason: TxRevertReason::TxReverted(revert_reason),
-                    };
-                    result
+                    },
+                    Err(e) => {
+                        let revert_reason = VmRevertReason::General {
+                            msg: e.to_string(),
+                            data: vec![],
+                        };
+                        let result = TxExecutionResult::RejectedByVm {
+                            rejection_reason: TxRevertReason::TxReverted(revert_reason),
+                        };
+                        result
+                    }
                 }
             }
             _ => panic!("not support now"),
-        };
-        result
+        }
     }
 
     #[olaos_logs::instrument(skip_all)]
     fn finish_batch(
         &self,
-        vm_manager: &mut OlaVmManager,
+        block_exe_manager: &mut BlockExeManager,
         tx_index_in_l1_batch: u32,
     ) -> VmBlockResult {
-        let res = vm_manager.finish_batch().unwrap();
-        let storage_logs: Vec<StorageLogQuery> = res
-            .storage_queries
-            .iter()
-            .map(|log| {
-                let mut log_query: LogQuery = log.into();
-                log_query.tx_number_in_block = tx_index_in_l1_batch as u16;
-                StorageLogQuery {
-                    log_query,
-                    log_type: log.kind.into(),
-                }
-            })
-            .collect();
-        // TODO: add events
+        let result = block_exe_manager.finish_batch().unwrap();
         let mut full_result = VmExecutionResult::default();
+        let storage_logs: Vec<StorageLogQuery> = result
+            .storage_access_logs
+            .iter()
+            .map(|log| log.into())
+            .collect();
+        let events: Vec<VmEvent> = result.events.iter().map(|event| event.into()).collect();
         full_result.storage_log_queries = storage_logs;
+        full_result.events = events;
+
         VmBlockResult {
-            full_result,
-            block_tip_result: VmPartialExecutionResult::new(
-                &res.block_tip_queries,
+            full_result: VmExecutionResult::default(),
+            block_tip_result: VmPartialExecutionResult::from_storage_events(
+                &result.block_tip_queries,
+                &vec![],
                 tx_index_in_l1_batch,
             ),
         }
