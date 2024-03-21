@@ -2,11 +2,12 @@ use ola_types::{
     events::VmEvent,
     log::{LogQuery, StorageLogQuery},
     tx::tx_execution_info::{TxExecutionStatus, VmExecutionLogs},
-    vm_trace::Call,
     U256,
 };
-use olavm_core::merkle_tree::log::StorageQuery;
-use olavm_core::trace::trace::Trace;
+use olavm_core::{
+    trace::exe_trace::TxExeTrace,
+    vm::{hardware::StorageAccessLog, types::Event},
+};
 
 use crate::{errors::VmRevertReasonParsingResult, Word};
 
@@ -38,9 +39,12 @@ pub struct VmPartialExecutionResult {
 }
 
 impl VmPartialExecutionResult {
-    // TODO: add events
-    pub fn new(storage_queries: &Vec<StorageQuery>, tx_index_in_l1_batch: u32) -> Self {
-        let storage_logs: Vec<StorageLogQuery> = storage_queries
+    pub fn from_storage_events(
+        storage_access_logs: &Vec<StorageAccessLog>,
+        events: &Vec<Event>,
+        tx_index_in_l1_batch: u32,
+    ) -> Self {
+        let storage_logs: Vec<StorageLogQuery> = storage_access_logs
             .iter()
             .map(|log| {
                 let mut log_query: LogQuery = log.into();
@@ -52,9 +56,10 @@ impl VmPartialExecutionResult {
             })
             .collect();
         let total_log_queries_count = storage_logs.len();
+        let vm_events: Vec<VmEvent> = events.iter().map(|e| e.into()).collect();
         let logs: VmExecutionLogs = VmExecutionLogs {
             storage_logs,
-            events: vec![],
+            events: vm_events,
             total_log_queries_count,
         };
         Self {
@@ -67,12 +72,10 @@ impl VmPartialExecutionResult {
 }
 
 #[derive(Debug, Clone)]
-pub struct VmTxExecutionResult {
+pub struct VmTxExeResult {
     pub status: TxExecutionStatus,
     pub result: VmPartialExecutionResult,
-    pub ret: Vec<u8>,
-    pub trace: Trace,
-    pub call_traces: Vec<Call>,
+    pub trace: TxExeTrace,
     // Gas refunded to the user at the end of the transaction
     pub gas_refunded: u32,
     // Gas proposed by the operator to be refunded, before the postOp call.
