@@ -65,6 +65,8 @@ zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
 ola-executor = {package = "executor", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"
+bincode = "1"
+
 [features]
 # default = ["server", "client"]
 # server = ["jsonrpsee/server"]
