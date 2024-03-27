@@ -1,7 +1,7 @@
 use std::{fmt, marker::PhantomData};
 
 use itertools::unfold;
-use ola_types::{api::Log, H256};
+use ola_types::{api::Log, L1BatchNumber, H256};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 #[allow(clippy::large_enum_variant)]
@@ -11,7 +11,13 @@ pub enum PubSubResult {
     Log(Log),
     TxHash(H256),
     Syncing(bool),
-    BlockProof(bool),
+    L1BatchProof(L1BatchProofForVerify),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct L1BatchProofForVerify {
+    pub l1_batch_number: L1BatchNumber,
+    pub prove_batches_data: Vec<u8>,
 }
 
 /// Either value or array of values.

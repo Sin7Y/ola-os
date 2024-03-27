@@ -25,6 +25,7 @@ pub mod l2_to_l1_log;
 pub mod priority_op_onchain_data;
 pub mod proofs;
 pub mod protocol_version;
+pub mod prove_batches;
 pub mod prover_server_api;
 pub mod request;
 pub mod snapshots;

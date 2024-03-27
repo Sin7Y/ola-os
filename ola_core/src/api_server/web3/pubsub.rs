@@ -5,11 +5,11 @@ use jsonrpsee::{
     types::{error::ErrorCode, ErrorObject, SubscriptionId},
     PendingSubscriptionSink, SendTimeoutError, SubscriptionSink,
 };
-use ola_dal::connection::ConnectionPool;
-use ola_types::MiniblockNumber;
+use ola_dal::{connection::ConnectionPool, StorageProcessor};
+use ola_types::{prove_batches::ProveBatches, L1BatchNumber, MiniblockNumber};
 use ola_web3_decl::{
     namespaces::eth::EthPubSubServer,
-    types::{PubSubFilter, PubSubResult},
+    types::{L1BatchProofForVerify, PubSubFilter, PubSubResult},
 };
 use tokio::{
     sync::{broadcast, mpsc, watch},
@@ -32,12 +32,21 @@ impl IdProvider for EthSubscriptionIdProvider {
     }
 }
 
+/// Events emitted by the subscription logic. Only used in WebSocket server tests so far.
+#[derive(Debug)]
+pub(super) enum PubSubEvent {
+    Subscribed(SubscriptionType),
+    NotifyIterationFinished(SubscriptionType),
+    MiniblockAdvanced(SubscriptionType, MiniblockNumber),
+    L1BatchVerifiedAdvanced(SubscriptionType, L1BatchNumber),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum SubscriptionType {
     Blocks,
     Txs,
     Logs,
-    BlockProofs,
+    L1BatchProofs,
 }
 
 /// Manager of notifications for a certain type of subscriptions.
@@ -207,7 +216,10 @@ impl PubSubNotifier {
     //         .context("events_web3_dal().get_all_logs()")
     // }
 
-    async fn notify_block_proofs(self, stop_receiver: watch::Receiver<bool>) -> anyhow::Result<()> {
+    async fn notify_l1_batch_proofs(
+        self,
+        stop_receiver: watch::Receiver<bool>,
+    ) -> anyhow::Result<()> {
         let mut timer = interval(self.polling_interval);
         loop {
             if *stop_receiver.borrow() {
@@ -216,30 +228,49 @@ impl PubSubNotifier {
             }
             timer.tick().await;
 
-            let new_proofs = self.new_block_proofs().await?;
-            let new_proofs = new_proofs
-                .into_iter()
-                .map(PubSubResult::BlockProof)
-                .collect();
-            self.send_pub_sub_results(new_proofs, SubscriptionType::BlockProofs);
-            self.emit_event(PubSubEvent::NotifyIterationFinished(
-                SubscriptionType::BlockProofs,
-            ));
+            let new_proof = self.new_l1_batch_proofs().await?;
+
+            if let Some(new_proof) = new_proof {
+                let proof_bytes = bincode::serialize(&new_proof)?;
+                let proof = L1BatchProofForVerify {
+                    l1_batch_number: new_proof.prev_l1_batch.header.number + 1,
+                    prove_batches_data: proof_bytes,
+                };
+                let proof = PubSubResult::L1BatchProof(proof);
+                let last_l1_batch_number = new_proof.l1_batches.last().unwrap().header.number;
+                self.send_pub_sub_results(vec![proof], SubscriptionType::L1BatchProofs);
+                self.emit_event(PubSubEvent::L1BatchVerifiedAdvanced(
+                    SubscriptionType::L1BatchProofs,
+                    last_l1_batch_number,
+                ));
+            }
         }
         Ok(())
     }
 
-    async fn new_block_proofs(&self) -> anyhow::Result<Vec<bool>> {
-        Ok(vec![true, false, true, false])
+    async fn new_l1_batch_proofs(&self) -> anyhow::Result<Option<ProveBatches>> {
+        let mut storage = self.connection_pool.access_storage_tagged("api").await;
+        // let blob_store = self.blob_store.clone().expect("blob_store not specified");
+        // TODO:
+        // Self::load_proof_for_offchain_verify(&mut storage, &*blob_store).await
+        Self::load_proof_for_offchain_verify_mock(&mut storage).await
     }
-}
 
-/// Events emitted by the subscription logic. Only used in WebSocket server tests so far.
-#[derive(Debug)]
-pub(super) enum PubSubEvent {
-    Subscribed(SubscriptionType),
-    NotifyIterationFinished(SubscriptionType),
-    MiniblockAdvanced(SubscriptionType, MiniblockNumber),
+    async fn load_proof_for_offchain_verify_mock(
+        storage: &mut StorageProcessor<'_>,
+        // blob_store: &dyn ObjectStore,
+    ) -> anyhow::Result<Option<ProveBatches>> {
+        olaos_logs::info!("start read mock proof bin file");
+        let zksync_home = std::env::var("ZKSYNC_HOME").unwrap_or_else(|_| ".".into());
+        let bin_path = format!(
+            "{}/ola_core/src/api_server/web3/ProveBatches.bin",
+            zksync_home
+        );
+        let prove_batches_data = std::fs::read(bin_path).unwrap();
+        olaos_logs::info!("read mock proof bin file successfully");
+        let prove_batches: ProveBatches = bincode::deserialize(&prove_batches_data).unwrap();
+        Ok(Some(prove_batches))
+    }
 }
 
 pub(super) struct EthSubscribe {
@@ -433,12 +464,12 @@ impl EthSubscribe {
                 let block_proofs_rx = self.l1_batch_proofs.subscribe();
                 tokio::spawn(Self::run_subscriber(
                     sink,
-                    SubscriptionType::BlockProofs,
+                    SubscriptionType::L1BatchProofs,
                     block_proofs_rx,
                     None,
                 ));
 
-                Some(SubscriptionType::BlockProofs)
+                Some(SubscriptionType::L1BatchProofs)
             }
             _ => {
                 Self::reject(pending_sink).await;
@@ -491,10 +522,10 @@ impl EthSubscribe {
         let notifier = PubSubNotifier {
             sender: self.l1_batch_proofs.clone(),
             connection_pool,
-            polling_interval,
+            polling_interval: Duration::from_secs(60),
             events_sender: self.events_sender.clone(),
         };
-        let notifier_task = tokio::spawn(notifier.notify_block_proofs(stop_receiver));
+        let notifier_task = tokio::spawn(notifier.notify_l1_batch_proofs(stop_receiver));
 
         notifier_tasks.push(notifier_task);
         notifier_tasks
