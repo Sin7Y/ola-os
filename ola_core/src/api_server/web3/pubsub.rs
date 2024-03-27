@@ -246,7 +246,7 @@ pub(super) struct EthSubscribe {
     blocks: broadcast::Sender<Vec<PubSubResult>>,
     transactions: broadcast::Sender<Vec<PubSubResult>>,
     logs: broadcast::Sender<Vec<PubSubResult>>,
-    block_proofs: broadcast::Sender<Vec<PubSubResult>>,
+    l1_batch_proofs: broadcast::Sender<Vec<PubSubResult>>,
     events_sender: Option<mpsc::UnboundedSender<PubSubEvent>>,
 }
 
@@ -255,13 +255,13 @@ impl EthSubscribe {
         let (blocks, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
         let (transactions, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
         let (logs, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
-        let (block_proofs, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
+        let (l1_batch_proofs, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
 
         Self {
             blocks,
             transactions,
             logs,
-            block_proofs,
+            l1_batch_proofs,
             events_sender: None,
         }
     }
@@ -426,11 +426,11 @@ impl EthSubscribe {
                 });
                 None
             }
-            "block_proofs" => {
+            "l1_batch_proofs" => {
                 let Ok(sink) = pending_sink.accept().await else {
                     return;
                 };
-                let block_proofs_rx = self.block_proofs.subscribe();
+                let block_proofs_rx = self.l1_batch_proofs.subscribe();
                 tokio::spawn(Self::run_subscriber(
                     sink,
                     SubscriptionType::BlockProofs,
@@ -489,7 +489,7 @@ impl EthSubscribe {
         // let notifier_task = tokio::spawn(notifier.notify_logs(stop_receiver));
 
         let notifier = PubSubNotifier {
-            sender: self.block_proofs.clone(),
+            sender: self.l1_batch_proofs.clone(),
             connection_pool,
             polling_interval,
             events_sender: self.events_sender.clone(),
