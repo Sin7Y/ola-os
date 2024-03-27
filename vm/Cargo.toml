@@ -10,5 +10,5 @@ ola_utils = { path = "../utils" }
 ola-lang-abi = "1.0.7"
 thiserror = "1.0"
 hex = "0.4"
-# olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "testnet-alpha" }
-olavm_core = { path = "../../olavm/core", package = "core" }
+olavm_core = { git = "https://github.com/Sin7Y/olavm", package = "core", branch = "testnet-alpha" }
+# olavm_core = { path = "../../olavm/core", package = "core" }
