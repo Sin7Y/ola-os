@@ -9,6 +9,7 @@ use std::{
 
 use jsonrpsee::core::ClientError;
 use ola_types::api::SerializationTransactionError;
+use ola_types::{L1BatchNumber, MiniblockNumber};
 use pin_project_lite::pin_project;
 use thiserror::Error;
 
@@ -16,14 +17,28 @@ use thiserror::Error;
 pub enum Web3Error {
     #[error("Block with such an ID doesn't exist yet")]
     NoBlock,
+    #[error("Block with such an ID is pruned; the first retained block is {0}")]
+    PrunedBlock(MiniblockNumber),
+    #[error("L1 batch with such an ID is pruned; the first retained L1 batch is {0}")]
+    PrunedL1Batch(L1BatchNumber),
+    #[error("{}", _0.as_ref())]
+    ProxyError(#[from] EnrichedClientError),
     #[error("{0}")]
     SubmitTransactionError(String, Vec<u8>),
     #[error("Failed to serialize transaction: {0}")]
     SerializationError(#[from] SerializationTransactionError),
-    #[error("Internal error")]
-    InternalError,
-    #[error("Invalid l2 chainId `{0}`")]
-    InvalidChainId(u16),
+    #[error("More than four topics in filter")]
+    TooManyTopics,
+    #[error("Filter not found")]
+    FilterNotFound,
+    #[error("Query returned more than {0} results. Try with this block range [{1:#x}, {2:#x}].")]
+    LogsLimitExceeded(usize, u32, u32),
+    #[error("invalid filter: if blockHash is supplied fromBlock and toBlock must not be")]
+    InvalidFilterBlockHash,
+    #[error("Not implemented")]
+    NotImplemented,
+    #[error("Tree API is not available")]
+    TreeApiUnavailable,
 }
 
 /// Client RPC error with additional details: the method name and arguments of the called method.

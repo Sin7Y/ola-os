@@ -41,7 +41,7 @@ impl OlaNamespaceServer for OlaNamespace {
     }
 
     async fn l1_chain_id(&self) -> RpcResult<U64> {
-        todo!()
+        self.l1_chain_id_impl().await.map_err(into_rpc_error)
     }
 
     async fn get_confirmed_tokens(&self, from: u32, limit: u8) -> RpcResult<Vec<Token>> {
@@ -74,18 +74,24 @@ impl OlaNamespaceServer for OlaNamespace {
     }
 
     async fn get_l1_batch_number(&self) -> RpcResult<U64> {
-        todo!()
+        self.get_l1_batch_number_impl()
+            .await
+            .map_err(into_rpc_error)
     }
 
     async fn get_miniblock_range(&self, batch: L1BatchNumber) -> RpcResult<Option<(U64, U64)>> {
-        todo!()
+        self.get_miniblock_range_impl(batch)
+            .await
+            .map_err(into_rpc_error)
     }
 
     async fn get_block_details(
         &self,
         block_number: MiniblockNumber,
     ) -> RpcResult<Option<BlockDetails>> {
-        todo!()
+        self.get_block_details_impl(block_number)
+            .await
+            .map_err(into_rpc_error)
     }
 
     async fn get_raw_block_transactions(
@@ -99,14 +105,18 @@ impl OlaNamespaceServer for OlaNamespace {
         &self,
         batch: L1BatchNumber,
     ) -> RpcResult<Option<L1BatchDetails>> {
-        todo!()
+        self.get_l1_batch_details_impl(batch)
+            .await
+            .map_err(into_rpc_error)
     }
 
     async fn get_protocol_version(
         &self,
         version_id: Option<u16>,
     ) -> RpcResult<Option<ProtocolVersion>> {
-        todo!()
+        self.get_protocol_version_impl(version_id)
+            .await
+            .map_err(into_rpc_error)
     }
 
     async fn get_l1_batch_details_with_offchain_verification(
