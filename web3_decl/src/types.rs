@@ -1,8 +1,42 @@
-use std::{fmt, marker::PhantomData};
+//! Web3 API types definitions.
+//!
+//! Most of the types are re-exported from the `web3` crate, but some of them maybe extended with
+//! new variants (enums) or optional fields (structures).
+//!
+//! These "extensions" are required to provide more zkSync-specific information while remaining Web3-compilant.
+
+use core::{
+    convert::{TryFrom, TryInto},
+    fmt,
+    marker::PhantomData,
+};
 
 use itertools::unfold;
-use ola_types::{api::Log, H256};
+pub use ola_types::api::*;
+use ola_types::{Address, H256};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+
+/// Token in the zkSync network
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Token {
+    pub l1_address: Address,
+    pub l2_address: Address,
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+}
+
+/// Helper structure used to parse deserialized `Ethereum` transaction.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TransactionCalldata {
+    pub selector: [u8; 4],
+    pub data: Vec<u8>,
+}
+
+/// Helper structure used to parse deserialized `Ethereum` transaction according to `EIP-2718`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EIP2718TransactionCallData(TransactionCalldata);
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
