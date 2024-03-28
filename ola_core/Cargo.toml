@@ -66,6 +66,7 @@ ola-executor = {package = "executor", git = "https://github.com/Sin7Y/olavm.git"
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"
 bincode = "1"
+olaos_prover_fri_types = { path = "../prover/prover_fri_types" }
 
 [features]
 # default = ["server", "client"]
