@@ -1,3 +1,4 @@
+use anyhow::Context;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -6,7 +7,7 @@ use std::{
 use ola_contracts::BaseSystemContracts;
 use ola_dal::StorageProcessor;
 use ola_state::postgres::PostgresStorageCaches;
-use ola_types::{api, AccountTreeId, MiniblockNumber};
+use ola_types::{api, AccountTreeId, L1BatchNumber, MiniblockNumber};
 use tokio::runtime::Handle;
 
 pub mod apply;
@@ -132,4 +133,62 @@ async fn get_pending_state(
         .unwrap()
         .expect("Pending block should be present");
     (block_id, resolved_block_number)
+}
+
+/// Information about first L1 batch / miniblock in the node storage.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BlockStartInfo {
+    /// Number of the first locally available miniblock.
+    pub first_miniblock: MiniblockNumber,
+    /// Number of the first locally available L1 batch.
+    pub first_l1_batch: L1BatchNumber,
+}
+
+impl BlockStartInfo {
+    pub async fn new(storage: &mut StorageProcessor<'_>) -> anyhow::Result<Self> {
+        let snapshot_recovery = storage
+            .snapshot_recovery_dal()
+            .get_applied_snapshot_status()
+            .await
+            .context("failed getting snapshot recovery status")?;
+        let snapshot_recovery = snapshot_recovery.as_ref();
+        Ok(Self {
+            first_miniblock: snapshot_recovery
+                .map_or(MiniblockNumber(0), |recovery| recovery.miniblock_number + 1),
+            first_l1_batch: snapshot_recovery
+                .map_or(L1BatchNumber(0), |recovery| recovery.l1_batch_number + 1),
+        })
+    }
+
+    /// Checks whether a block with the specified ID is pruned and returns an error if it is.
+    /// The `Err` variant wraps the first non-pruned miniblock.
+    pub fn ensure_not_pruned_block(&self, block: api::BlockId) -> Result<(), MiniblockNumber> {
+        match block {
+            api::BlockId::Number(api::BlockNumber::Number(number))
+                if number < self.first_miniblock.0.into() =>
+            {
+                Err(self.first_miniblock)
+            }
+            api::BlockId::Number(api::BlockNumber::Earliest)
+                if self.first_miniblock > MiniblockNumber(0) =>
+            {
+                Err(self.first_miniblock)
+            }
+            _ => Ok(()),
+        }
+    }
+
+    pub(super) fn ensure_not_pruned(&self, query: impl Into<PruneQuery>) -> Result<(), Web3Error> {
+        match query.into() {
+            PruneQuery::BlockId(id) => self
+                .ensure_not_pruned_block(id)
+                .map_err(Web3Error::PrunedBlock),
+            PruneQuery::L1Batch(number) => {
+                if number < self.first_l1_batch {
+                    return Err(Web3Error::PrunedL1Batch(self.first_l1_batch));
+                }
+                Ok(())
+            }
+        }
+    }
 }
