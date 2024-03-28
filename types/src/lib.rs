@@ -23,6 +23,7 @@ pub mod fee;
 pub mod l2;
 pub mod l2_to_l1_log;
 pub mod priority_op_onchain_data;
+pub mod proof_offchain_verification;
 pub mod proofs;
 pub mod protocol_version;
 pub mod prove_batches;
