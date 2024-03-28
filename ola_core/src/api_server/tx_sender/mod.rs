@@ -290,7 +290,7 @@ impl TxSender {
             .await;
 
         let latest_block_number = connection
-            .blocks_web3_dal()
+            .blocks_dal()
             .get_sealed_miniblock_number()
             .await
             .unwrap();
