@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use futures::FutureExt;
 use jsonrpsee::{
     core::{server::SubscriptionMessage, SubscriptionResult},
@@ -5,12 +7,14 @@ use jsonrpsee::{
     types::{error::ErrorCode, ErrorObject, SubscriptionId},
     PendingSubscriptionSink, SendTimeoutError, SubscriptionSink,
 };
+use ola_contracts::BaseSystemContractsHashes;
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use ola_types::{prove_batches::ProveBatches, L1BatchNumber, MiniblockNumber};
+use ola_types::{block::L1BatchHeader, commitment::{L1BatchMetaParameters, L1BatchMetadata, L1BatchWithMetadata}, proofs::L1BatchProofForL1, protocol_version::ProtocolVersionId, prove_batches::ProveBatches, Address, L1BatchNumber, MiniblockNumber, H256};
 use ola_web3_decl::{
     namespaces::eth::EthPubSubServer,
     types::{L1BatchProofForVerify, PubSubFilter, PubSubResult},
 };
+use olaos_prover_fri_types::{FriProofWrapper, OlaBaseLayerProof};
 use tokio::{
     sync::{broadcast, mpsc, watch},
     task::JoinHandle,
@@ -257,18 +261,88 @@ impl PubSubNotifier {
     }
 
     async fn load_proof_for_offchain_verify_mock(
-        storage: &mut StorageProcessor<'_>,
+    storage: &mut StorageProcessor<'_>,
         // blob_store: &dyn ObjectStore,
     ) -> anyhow::Result<Option<ProveBatches>> {
         olaos_logs::info!("start read mock proof bin file");
-        let zksync_home = std::env::var("ZKSYNC_HOME").unwrap_or_else(|_| ".".into());
+
+        let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
         let bin_path = format!(
             "{}/ola_core/src/api_server/web3/ProveBatches.bin",
-            zksync_home
+            ola_home
         );
         let prove_batches_data = std::fs::read(bin_path).unwrap();
         olaos_logs::info!("read mock proof bin file successfully");
         let prove_batches: ProveBatches = bincode::deserialize(&prove_batches_data).unwrap();
+        let proof = prove_batches.proofs.first().unwrap().to_owned();
+        // let proof: FriProofWrapper = bincode::deserialize(&proof.proof).unwrap();
+        let proof: FriProofWrapper = serde_json::from_slice(&proof.proof).unwrap();
+        match proof {
+            FriProofWrapper::Base(ola_proof) => {
+                println!("{:?}", ola_proof.ola_stark.bitwise_stark.get_compress_challenge());
+            }
+        }
+
+        // let proof_path = format!(
+        //     "{}/ola_core/src/api_server/web3/proof.bin",
+        //     ola_home
+        // );
+        // let proof_data = std::fs::read(proof_path).unwrap();
+        // // // let proof: OlaBaseLayerProof = bincode::deserialize(&proof_data).unwrap();
+        // let proof: OlaBaseLayerProof = serde_json::from_slice(&proof_data).unwrap();
+        // let proof_wrapper = FriProofWrapper::Base(proof);
+        // let data = serde_json::to_string(&proof_wrapper).unwrap();
+        // // let data = bincode::serialize(&proof_wrapper).unwrap();
+        // let l1_batch_proof = L1BatchProofForL1 { proof: data.as_bytes().to_vec() };
+
+        // let header = L1BatchHeader {
+        //     number: L1BatchNumber(0),
+        //     is_finished: true,
+        //     timestamp: 0,
+        //     fee_account_address: Address::default(),
+        //     l1_tx_count: 0,
+        //     l2_tx_count: 0,
+        //     l2_to_l1_logs: vec![],
+        //     l2_to_l1_messages: vec![],
+        //     priority_ops_onchain_data: vec![],
+        //     used_contract_hashes: vec![],
+        //     base_system_contracts_hashes: BaseSystemContractsHashes::default(),
+        //     protocol_version: Some(ProtocolVersionId::latest()),
+        // };
+        // let meta_data = L1BatchMetadata {
+        //     root_hash: H256::default(),
+        //     rollup_last_leaf_index: 0,
+        //     merkle_root_hash: H256::default(),
+        //     initial_writes_compressed: vec![],
+        //     repeated_writes_compressed: vec![],
+        //     commitment: H256::default(),
+        //     l2_l1_messages_compressed: vec![],
+        //     l2_l1_merkle_root: H256::default(),
+        //     block_meta_params: L1BatchMetaParameters {
+        //         bootloader_code_hash: H256::default(),
+        //         default_aa_code_hash: H256::default(),
+        //     },
+        //     aux_data_hash: H256::default(),
+        //     meta_parameters_hash: H256::default(),
+        //     pass_through_data_hash: H256::default(),
+        //     state_diffs_compressed: vec![],
+        //     events_queue_commitment: None,
+        // };
+        // let batch_with_meta_data = L1BatchWithMetadata {
+        //     header: header,
+        //     metadata: meta_data,
+        //     factory_deps: vec![],
+        // };
+        // let prove_batches = ProveBatches {
+        //     prev_l1_batch: batch_with_meta_data.clone(),
+        //     l1_batches: vec![batch_with_meta_data],
+        //     proofs: vec![l1_batch_proof],
+        //     should_verify: true,
+        // };
+        // let mut proof_file = std::fs::File::create("./ProveBatches.bin").unwrap();
+        // let proof_batch_data = bincode::serialize(&prove_batches).unwrap();
+        // proof_file.write_all(&proof_batch_data).unwrap();
+        // writeln!(proof_file).unwrap();
         Ok(Some(prove_batches))
     }
 }
