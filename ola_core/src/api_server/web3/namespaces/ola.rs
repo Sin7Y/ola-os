@@ -1,6 +1,8 @@
+use anyhow::Context;
 use ola_types::api::{TransactionDetails, TransactionReceipt};
-use ola_types::H256;
+use ola_types::proof_offchain_verification::OffChainVerificationResult;
 use ola_types::{l2::L2Tx, request::CallRequest, Bytes};
+use ola_types::{L1BatchNumber, H256};
 use ola_web3_decl::error::Web3Error;
 
 use crate::api_server::web3::backend::error::internal_error;
@@ -121,5 +123,26 @@ impl OlaNamespace {
             start.elapsed()
         );
         receipt
+    }
+
+    #[olaos_logs::instrument(skip(self))]
+    pub async fn post_verification_result_impl(
+        &self,
+        verify_result: OffChainVerificationResult,
+    ) -> Result<bool, Web3Error> {
+        const METHOD_NAME: &str = "post_verification_result";
+
+        let mut storage = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await;
+        let l1_batch_number = L1BatchNumber(verify_result.l1_batch_number as u32);
+        storage
+            .proof_verification_dal()
+            .mark_l1_batch_as_verified(l1_batch_number, verify_result.is_passed)
+            .await
+            .map_err(|err| internal_error(METHOD_NAME, err))?;
+        Ok(true)
     }
 }
