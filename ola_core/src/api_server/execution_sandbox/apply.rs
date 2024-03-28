@@ -106,7 +106,7 @@ impl BlockArgs {
                 .get_sealed_l1_batch_number()
                 .await?;
             let sealed_miniblock_number = connection
-                .blocks_web3_dal()
+                .blocks_dal()
                 .get_sealed_miniblock_number()
                 .await?;
             (sealed_miniblock_number, sealed_l1_batch_number + 1)

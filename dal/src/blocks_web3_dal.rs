@@ -1,4 +1,5 @@
-use ola_types::{api, L1BatchNumber, MiniblockNumber};
+use ola_types::{api, L1BatchNumber, MiniblockNumber, H256, U256, U64};
+use sqlx::types::BigDecimal;
 use sqlx::Row;
 
 use crate::{
@@ -12,16 +13,6 @@ pub struct BlocksWeb3Dal<'a, 'c> {
 }
 
 impl BlocksWeb3Dal<'_, '_> {
-    #[olaos_logs::instrument(name = "get_sealed_block_number", skip_all)]
-    pub async fn get_sealed_miniblock_number(&mut self) -> Result<MiniblockNumber, SqlxError> {
-        let number = sqlx::query!("SELECT MAX(number) as \"number\" FROM miniblocks")
-            .fetch_one(self.storage.conn())
-            .await?
-            .number
-            .expect("DAL invocation before genesis");
-        Ok(MiniblockNumber(number as u32))
-    }
-
     pub async fn resolve_block_id(
         &mut self,
         block_id: api::BlockId,
