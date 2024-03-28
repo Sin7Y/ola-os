@@ -33,7 +33,7 @@ impl InternalApiConfig {
 }
 
 #[derive(Debug)]
-pub(super) enum PruneQuery {
+pub(crate) enum PruneQuery {
     BlockId(api::BlockId),
     L1Batch(L1BatchNumber),
 }

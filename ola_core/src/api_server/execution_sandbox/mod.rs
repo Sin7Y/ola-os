@@ -4,10 +4,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::web3::state::PruneQuery;
 use ola_contracts::BaseSystemContracts;
 use ola_dal::StorageProcessor;
 use ola_state::postgres::PostgresStorageCaches;
 use ola_types::{api, AccountTreeId, L1BatchNumber, MiniblockNumber};
+use ola_web3_decl::error::Web3Error;
 use tokio::runtime::Handle;
 
 pub mod apply;

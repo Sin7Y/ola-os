@@ -1,10 +1,17 @@
-use ola_types::api::{TransactionDetails, TransactionReceipt};
-use ola_types::H256;
-use ola_types::{l2::L2Tx, request::CallRequest, Bytes};
+use ola_types::api::{
+    BlockDetails, L1BatchDetails, ProtocolVersion, TransactionDetails, TransactionReceipt,
+};
+use ola_types::{
+    l2::L2Tx, request::CallRequest, Bytes, L1BatchNumber, MiniblockNumber, Transaction,
+};
+use ola_types::{H256, U64};
 use ola_web3_decl::error::Web3Error;
 
 use crate::api_server::web3::backend::error::internal_error;
 use crate::api_server::web3::state::RpcState;
+use anyhow::Context;
+use ola_dal::StorageProcessor;
+use ola_web3_decl::types::Token;
 use std::time::Instant;
 
 #[derive(Debug)]
@@ -23,6 +30,14 @@ impl Clone for OlaNamespace {
 impl OlaNamespace {
     pub fn new(state: RpcState) -> Self {
         Self { state }
+    }
+
+    async fn access_storage(&self) -> Result<StorageProcessor<'_>, Web3Error> {
+        Ok(self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await?)
     }
 
     #[olaos_logs::instrument(skip(self, tx_bytes))]
@@ -121,5 +136,101 @@ impl OlaNamespace {
             start.elapsed()
         );
         receipt
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub fn l1_chain_id_impl(&self) -> U64 {
+        U64::from(*self.state.api_config.l1_chain_id)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_l1_batch_number_impl(&self) -> Result<U64, Web3Error> {
+        let mut storage = self.access_storage().await?;
+        let l1_batch_number = storage
+            .blocks_dal()
+            .get_sealed_l1_batch_number()
+            .await
+            .context("get_sealed_l1_batch_number")?
+            .ok_or(Web3Error::NoBlock)?;
+        Ok(l1_batch_number.0.into())
+    }
+    #[tracing::instrument(skip(self))]
+    pub async fn get_miniblock_range_impl(
+        &self,
+        batch: L1BatchNumber,
+    ) -> Result<Option<(U64, U64)>, Web3Error> {
+        self.state.start_info.ensure_not_pruned(batch)?;
+        let mut storage = self.access_storage().await?;
+        let range = storage
+            .blocks_dal()
+            .get_miniblock_range_of_l1_batch(batch)
+            .await
+            .context("get_miniblock_range_of_l1_batch")?;
+        Ok(range.map(|(min, max)| (U64::from(min.0), U64::from(max.0))))
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_block_details_impl(
+        &self,
+        block_number: MiniblockNumber,
+    ) -> Result<Option<BlockDetails>, Web3Error> {
+        self.state.start_info.ensure_not_pruned(block_number)?;
+        let mut storage = self.access_storage().await?;
+        Ok(storage
+            .blocks_web3_dal()
+            .get_block_details(block_number)
+            .await
+            .context("get_block_details")?)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_raw_block_transactions_impl(
+        &self,
+        block_number: MiniblockNumber,
+    ) -> Result<Vec<Transaction>, Web3Error> {
+        self.state.start_info.ensure_not_pruned(block_number)?;
+        let mut storage = self.access_storage().await?;
+        Ok(storage
+            .transactions_web3_dal()
+            .get_raw_miniblock_transactions(block_number)
+            .await
+            .context("get_raw_miniblock_transactions")?)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_l1_batch_details_impl(
+        &self,
+        batch_number: L1BatchNumber,
+    ) -> Result<Option<L1BatchDetails>, Web3Error> {
+        self.state.start_info.ensure_not_pruned(batch_number)?;
+        let mut storage = self.access_storage().await?;
+        Ok(storage
+            .blocks_web3_dal()
+            .get_l1_batch_details(batch_number)
+            .await
+            .context("get_l1_batch_details")?)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_protocol_version_impl(
+        &self,
+        version_id: Option<u16>,
+    ) -> Result<Option<ProtocolVersion>, Web3Error> {
+        let mut storage = self.access_storage().await?;
+        let protocol_version = match version_id {
+            Some(id) => {
+                storage
+                    .protocol_versions_dal()
+                    .get_protocol_version_by_id(id)
+                    .await
+            }
+            None => Some(
+                storage
+                    .protocol_versions_dal()
+                    .get_latest_protocol_version()
+                    .await,
+            ),
+        };
+        Ok(protocol_version)
     }
 }
