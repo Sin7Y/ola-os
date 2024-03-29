@@ -454,7 +454,7 @@ impl EthSubscribe {
             )
             .await?;
 
-            olaos_logs::info!("notify {:?} item {:?}", subscription_type, &item);
+            olaos_logs::info!("notify {:?}", subscription_type);
         }
 
         olaos_logs::info!("notify {:?} new items finished", subscription_type);
