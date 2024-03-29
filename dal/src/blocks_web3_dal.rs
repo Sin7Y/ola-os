@@ -2,6 +2,7 @@ use ola_types::{api, L1BatchNumber, MiniblockNumber, H256, U256, U64};
 use sqlx::types::BigDecimal;
 use sqlx::Row;
 
+use crate::models::storage_block::StorageL1BatchDetails;
 use crate::{
     models::storage_block::{bind_block_where_sql_params, web3_block_number_to_sql},
     SqlxError, StorageProcessor,
