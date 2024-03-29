@@ -271,17 +271,17 @@ impl PubSubNotifier {
             "{}/ola_core/src/api_server/web3/ProveBatches.bin",
             ola_home
         );
-        let prove_batches_data = std::fs::read(bin_path).unwrap();
-        olaos_logs::info!("read mock proof bin file successfully");
-        let prove_batches: ProveBatches = bincode::deserialize(&prove_batches_data).unwrap();
+        let prove_batches_data = std::fs::read(bin_path).expect("failed to read ProveBatches.bin file");
+        let prove_batches: ProveBatches = bincode::deserialize(&prove_batches_data).expect("failed to deserialize ProveBatches");
         let proof = prove_batches.proofs.first().unwrap().to_owned();
         // let proof: FriProofWrapper = bincode::deserialize(&proof.proof).unwrap();
-        let proof: FriProofWrapper = serde_json::from_slice(&proof.proof).unwrap();
+        let proof: FriProofWrapper = serde_json::from_slice(&proof.proof).expect("faile to deserialize from slice");
         match proof {
             FriProofWrapper::Base(ola_proof) => {
-                println!("{:?}", ola_proof.ola_stark.bitwise_stark.get_compress_challenge());
+                olaos_logs::info!("Mock proof bitwise challenge: {:?}", ola_proof.ola_stark.bitwise_stark.get_compress_challenge());
             }
         }
+        olaos_logs::info!("read mock proof bin file successfully");
 
         // let proof_path = format!(
         //     "{}/ola_core/src/api_server/web3/proof.bin",
