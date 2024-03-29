@@ -8,7 +8,7 @@ use ola_types::api::{
 use ola_types::{
     api::{TransactionDetails, TransactionReceipt},
     request::CallRequest,
-    Address, Bytes, L1BatchNumber, MiniblockNumber, Transaction, H256, U256, U64,
+    Address, Bytes, L1BatchNumber, MiniblockNumber, H256, U256, U64,
 };
 use ola_web3_decl::namespaces::ola::OlaNamespaceServer;
 use ola_web3_decl::types::Token;
@@ -97,8 +97,10 @@ impl OlaNamespaceServer for OlaNamespace {
     async fn get_raw_block_transactions(
         &self,
         block_number: MiniblockNumber,
-    ) -> RpcResult<Vec<Transaction>> {
-        todo!()
+    ) -> RpcResult<Vec<ola_types::Transaction>> {
+        self.get_raw_block_transactions_impl(block_number)
+            .await
+            .map_err(into_rpc_error)
     }
 
     async fn get_l1_batch_details(

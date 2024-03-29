@@ -3,12 +3,15 @@ use ola_config::constants::contracts::{
 };
 use ola_types::{
     api::{self, BlockId, BlockNumber, TransactionDetails},
-    Address, H256, U64,
+    Address, MiniblockNumber, H256, U64,
 };
 use ola_utils::h256_to_account_address;
 
 use crate::{
-    models::{storage_event::StorageWeb3Log, storage_transaction::StorageTransactionDetails},
+    models::{
+        storage_event::StorageWeb3Log,
+        storage_transaction::{StorageTransaction, StorageTransactionDetails},
+    },
     SqlxError, StorageProcessor,
 };
 
@@ -223,5 +226,31 @@ impl TransactionsWeb3Dal<'_, '_> {
 
             Ok(tx)
         }
+    }
+
+    /// Returns the server transactions (not API ones) from a certain miniblock.
+    /// Returns an empty list if the miniblock doesn't exist.
+    pub async fn get_raw_miniblock_transactions(
+        &mut self,
+        miniblock: MiniblockNumber,
+    ) -> sqlx::Result<Vec<ola_types::Transaction>> {
+        let rows = sqlx::query_as!(
+            StorageTransaction,
+            r#"
+            SELECT
+                *
+            FROM
+                transactions
+            WHERE
+                miniblock_number = $1
+            ORDER BY
+                index_in_block
+            "#,
+            miniblock.0 as i64
+        )
+        .fetch_all(self.storage.conn())
+        .await?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 }

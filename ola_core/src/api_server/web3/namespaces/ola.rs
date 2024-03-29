@@ -1,9 +1,7 @@
 use ola_types::api::{
     BlockDetails, L1BatchDetails, ProtocolVersion, TransactionDetails, TransactionReceipt,
 };
-use ola_types::{
-    l2::L2Tx, request::CallRequest, Bytes, L1BatchNumber, MiniblockNumber, Transaction,
-};
+use ola_types::{l2::L2Tx, request::CallRequest, Bytes, L1BatchNumber, MiniblockNumber};
 use ola_types::{H256, U64};
 use ola_web3_decl::error::Web3Error;
 
@@ -187,7 +185,7 @@ impl OlaNamespace {
     pub async fn get_raw_block_transactions_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> Result<Vec<Transaction>, Web3Error> {
+    ) -> Result<Vec<ola_types::Transaction>, Web3Error> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
