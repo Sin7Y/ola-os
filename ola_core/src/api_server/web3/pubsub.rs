@@ -596,7 +596,7 @@ impl EthSubscribe {
         let notifier = PubSubNotifier {
             sender: self.l1_batch_proofs.clone(),
             connection_pool,
-            polling_interval: Duration::from_secs(10),
+            polling_interval: Duration::from_secs(30 * 60),
             events_sender: self.events_sender.clone(),
         };
         let notifier_task = tokio::spawn(notifier.notify_l1_batch_proofs(stop_receiver));
