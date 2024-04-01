@@ -13,7 +13,7 @@ use core::{
 
 use itertools::unfold;
 pub use ola_types::api::*;
-use ola_types::{Address, H256};
+use ola_types::{Address, L1BatchNumber, H256};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
 /// Token in the zkSync network
@@ -45,7 +45,13 @@ pub enum PubSubResult {
     Log(Log),
     TxHash(H256),
     Syncing(bool),
-    BlockProof(bool),
+    L1BatchProof(L1BatchProofForVerify),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct L1BatchProofForVerify {
+    pub l1_batch_number: L1BatchNumber,
+    pub prove_batches_data: Vec<u8>,
 }
 
 /// Either value or array of values.
