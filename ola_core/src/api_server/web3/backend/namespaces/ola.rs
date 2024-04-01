@@ -7,6 +7,7 @@ use ola_types::api::{
 };
 use ola_types::{
     api::{TransactionDetails, TransactionReceipt},
+    proof_offchain_verification::OffChainVerificationResult,
     request::CallRequest,
     Address, Bytes, L1BatchNumber, MiniblockNumber, H256, U256, U64,
 };
@@ -36,6 +37,15 @@ impl OlaNamespaceServer for OlaNamespace {
 
     async fn get_transaction_receipt(&self, hash: H256) -> RpcResult<Option<TransactionReceipt>> {
         self.get_transaction_receipt_impl(hash)
+            .await
+            .map_err(into_rpc_error)
+    }
+
+    async fn post_verification_result(
+        &self,
+        verify_result: OffChainVerificationResult,
+    ) -> RpcResult<bool> {
+        self.post_verification_result_impl(verify_result)
             .await
             .map_err(into_rpc_error)
     }

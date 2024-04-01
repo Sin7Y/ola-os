@@ -45,6 +45,12 @@ pub trait OlaNamespace {
     #[method(name = "getTransactionReceipt")]
     async fn get_transaction_receipt(&self, hash: H256) -> RpcResult<Option<TransactionReceipt>>;
 
+    #[method(name = "postVerificationRes")]
+    async fn post_verification_result(
+        &self,
+        verify_result: OffChainVerificationResult,
+    ) -> RpcResult<bool>;
+
     #[method(name = "L1ChainId")]
     async fn l1_chain_id(&self) -> RpcResult<U64>;
 

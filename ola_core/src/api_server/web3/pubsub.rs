@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use futures::FutureExt;
 use jsonrpsee::{
     core::{server::SubscriptionMessage, SubscriptionResult},
@@ -5,12 +7,15 @@ use jsonrpsee::{
     types::{error::ErrorCode, ErrorObject, SubscriptionId},
     PendingSubscriptionSink, SendTimeoutError, SubscriptionSink,
 };
-use ola_dal::connection::ConnectionPool;
-use ola_types::MiniblockNumber;
+use ola_contracts::BaseSystemContractsHashes;
+use ola_dal::{connection::ConnectionPool, StorageProcessor};
+use ola_types::{block::L1BatchHeader, commitment::{L1BatchMetaParameters, L1BatchMetadata, L1BatchWithMetadata}, proofs::L1BatchProofForL1, protocol_version::ProtocolVersionId, prove_batches::ProveBatches, Address, L1BatchNumber, MiniblockNumber, H256};
+use ola_utils::time::seconds_since_epoch;
 use ola_web3_decl::{
     namespaces::eth::EthPubSubServer,
-    types::{PubSubFilter, PubSubResult},
+    types::{L1BatchProofForVerify, PubSubFilter, PubSubResult},
 };
+use olaos_prover_fri_types::{FriProofWrapper, OlaBaseLayerProof};
 use tokio::{
     sync::{broadcast, mpsc, watch},
     task::JoinHandle,
@@ -32,12 +37,21 @@ impl IdProvider for EthSubscriptionIdProvider {
     }
 }
 
+/// Events emitted by the subscription logic. Only used in WebSocket server tests so far.
+#[derive(Debug)]
+pub(super) enum PubSubEvent {
+    Subscribed(SubscriptionType),
+    NotifyIterationFinished(SubscriptionType),
+    MiniblockAdvanced(SubscriptionType, MiniblockNumber),
+    L1BatchVerifiedAdvanced(SubscriptionType, L1BatchNumber),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(super) enum SubscriptionType {
     Blocks,
     Txs,
     Logs,
-    BlockProofs,
+    L1BatchProofs,
 }
 
 /// Manager of notifications for a certain type of subscriptions.
@@ -207,7 +221,10 @@ impl PubSubNotifier {
     //         .context("events_web3_dal().get_all_logs()")
     // }
 
-    async fn notify_block_proofs(self, stop_receiver: watch::Receiver<bool>) -> anyhow::Result<()> {
+    async fn notify_l1_batch_proofs(
+        self,
+        stop_receiver: watch::Receiver<bool>,
+    ) -> anyhow::Result<()> {
         let mut timer = interval(self.polling_interval);
         loop {
             if *stop_receiver.borrow() {
@@ -216,37 +233,135 @@ impl PubSubNotifier {
             }
             timer.tick().await;
 
-            let new_proofs = self.new_block_proofs().await?;
-            let new_proofs = new_proofs
-                .into_iter()
-                .map(PubSubResult::BlockProof)
-                .collect();
-            self.send_pub_sub_results(new_proofs, SubscriptionType::BlockProofs);
-            self.emit_event(PubSubEvent::NotifyIterationFinished(
-                SubscriptionType::BlockProofs,
-            ));
+            let new_proof = self.new_l1_batch_proofs().await?;
+
+            if let Some(new_proof) = new_proof {
+                let timestamp = seconds_since_epoch() as u32;
+                let new_l1_batch_number = L1BatchNumber(timestamp);
+                let proof_bytes = bincode::serialize(&new_proof)?;
+                let proof = L1BatchProofForVerify {
+                    l1_batch_number: new_l1_batch_number,
+                    prove_batches_data: proof_bytes,
+                };
+                let proof = PubSubResult::L1BatchProof(proof);
+                // TODO: replace new_l1_batch_number with last_l1_batch_number
+                // let last_l1_batch_number = new_proof.l1_batches.last().unwrap().header.number;
+                // self.send_pub_sub_results(vec![proof], SubscriptionType::L1BatchProofs);
+                // self.emit_event(PubSubEvent::L1BatchVerifiedAdvanced(
+                //     SubscriptionType::L1BatchProofs,
+                //     last_l1_batch_number,
+                // ));
+                self.send_pub_sub_results(vec![proof], SubscriptionType::L1BatchProofs);
+                self.emit_event(PubSubEvent::L1BatchVerifiedAdvanced(
+                    SubscriptionType::L1BatchProofs,
+                    new_l1_batch_number,
+                ));
+                olaos_logs::info!("L1BatchVerifiedAdvanced {:?}", new_l1_batch_number);
+            }
         }
         Ok(())
     }
 
-    async fn new_block_proofs(&self) -> anyhow::Result<Vec<bool>> {
-        Ok(vec![true, false, true, false])
+    async fn new_l1_batch_proofs(&self) -> anyhow::Result<Option<ProveBatches>> {
+        let mut storage = self.connection_pool.access_storage_tagged("api").await;
+        // let blob_store = self.blob_store.clone().expect("blob_store not specified");
+        // TODO:
+        // Self::load_proof_for_offchain_verify(&mut storage, &*blob_store).await
+        Self::load_proof_for_offchain_verify_mock(&mut storage).await
     }
-}
 
-/// Events emitted by the subscription logic. Only used in WebSocket server tests so far.
-#[derive(Debug)]
-pub(super) enum PubSubEvent {
-    Subscribed(SubscriptionType),
-    NotifyIterationFinished(SubscriptionType),
-    MiniblockAdvanced(SubscriptionType, MiniblockNumber),
+    async fn load_proof_for_offchain_verify_mock(
+    storage: &mut StorageProcessor<'_>,
+        // blob_store: &dyn ObjectStore,
+    ) -> anyhow::Result<Option<ProveBatches>> {
+        olaos_logs::info!("start read mock proof bin file");
+
+        let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
+        let bin_path = format!(
+            "{}/ola_core/src/api_server/web3/ProveBatches.bin",
+            ola_home
+        );
+        let prove_batches_data = std::fs::read(bin_path).expect("failed to read ProveBatches.bin file");
+        let prove_batches: ProveBatches = bincode::deserialize(&prove_batches_data).expect("failed to deserialize ProveBatches");
+        let proof = prove_batches.proofs.first().unwrap().to_owned();
+        // let proof: FriProofWrapper = bincode::deserialize(&proof.proof).unwrap();
+        let proof: FriProofWrapper = serde_json::from_slice(&proof.proof).expect("faile to deserialize from slice");
+        match proof {
+            FriProofWrapper::Base(ola_proof) => {
+                olaos_logs::info!("Mock proof bitwise challenge: {:?}", ola_proof.ola_stark.bitwise_stark.get_compress_challenge());
+            }
+        }
+        olaos_logs::info!("read mock proof bin file successfully");
+
+        // let proof_path = format!(
+        //     "{}/ola_core/src/api_server/web3/proof.bin",
+        //     ola_home
+        // );
+        // let proof_data = std::fs::read(proof_path).unwrap();
+        // // // let proof: OlaBaseLayerProof = bincode::deserialize(&proof_data).unwrap();
+        // let proof: OlaBaseLayerProof = serde_json::from_slice(&proof_data).unwrap();
+        // let proof_wrapper = FriProofWrapper::Base(proof);
+        // let data = serde_json::to_string(&proof_wrapper).unwrap();
+        // // let data = bincode::serialize(&proof_wrapper).unwrap();
+        // let l1_batch_proof = L1BatchProofForL1 { proof: data.as_bytes().to_vec() };
+
+        // let header = L1BatchHeader {
+        //     number: L1BatchNumber(0),
+        //     is_finished: true,
+        //     timestamp: 0,
+        //     fee_account_address: Address::default(),
+        //     l1_tx_count: 0,
+        //     l2_tx_count: 0,
+        //     l2_to_l1_logs: vec![],
+        //     l2_to_l1_messages: vec![],
+        //     priority_ops_onchain_data: vec![],
+        //     used_contract_hashes: vec![],
+        //     base_system_contracts_hashes: BaseSystemContractsHashes::default(),
+        //     protocol_version: Some(ProtocolVersionId::latest()),
+        // };
+        // let meta_data = L1BatchMetadata {
+        //     root_hash: H256::default(),
+        //     rollup_last_leaf_index: 0,
+        //     merkle_root_hash: H256::default(),
+        //     initial_writes_compressed: vec![],
+        //     repeated_writes_compressed: vec![],
+        //     commitment: H256::default(),
+        //     l2_l1_messages_compressed: vec![],
+        //     l2_l1_merkle_root: H256::default(),
+        //     block_meta_params: L1BatchMetaParameters {
+        //         bootloader_code_hash: H256::default(),
+        //         default_aa_code_hash: H256::default(),
+        //     },
+        //     aux_data_hash: H256::default(),
+        //     meta_parameters_hash: H256::default(),
+        //     pass_through_data_hash: H256::default(),
+        //     state_diffs_compressed: vec![],
+        //     events_queue_commitment: None,
+        // };
+        // let batch_with_meta_data = L1BatchWithMetadata {
+        //     header: header,
+        //     metadata: meta_data,
+        //     factory_deps: vec![],
+        // };
+        // let prove_batches = ProveBatches {
+        //     prev_l1_batch: batch_with_meta_data.clone(),
+        //     l1_batches: vec![batch_with_meta_data],
+        //     proofs: vec![l1_batch_proof],
+        //     should_verify: true,
+        // };
+        // let mut proof_file = std::fs::File::create("./ProveBatches.bin").unwrap();
+        // let proof_batch_data = bincode::serialize(&prove_batches).unwrap();
+        // proof_file.write_all(&proof_batch_data).unwrap();
+        // writeln!(proof_file).unwrap();
+        Ok(Some(prove_batches))
+    }
 }
 
 pub(super) struct EthSubscribe {
     blocks: broadcast::Sender<Vec<PubSubResult>>,
     transactions: broadcast::Sender<Vec<PubSubResult>>,
     logs: broadcast::Sender<Vec<PubSubResult>>,
-    block_proofs: broadcast::Sender<Vec<PubSubResult>>,
+    l1_batch_proofs: broadcast::Sender<Vec<PubSubResult>>,
     events_sender: Option<mpsc::UnboundedSender<PubSubEvent>>,
 }
 
@@ -255,13 +370,13 @@ impl EthSubscribe {
         let (blocks, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
         let (transactions, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
         let (logs, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
-        let (block_proofs, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
+        let (l1_batch_proofs, _) = broadcast::channel(BROADCAST_CHANNEL_CAPACITY);
 
         Self {
             blocks,
             transactions,
             logs,
-            block_proofs,
+            l1_batch_proofs,
             events_sender: None,
         }
     }
@@ -349,7 +464,7 @@ impl EthSubscribe {
             )
             .await?;
 
-            olaos_logs::info!("notify {:?} item {:?}", subscription_type, &item);
+            olaos_logs::info!("notify {:?}", subscription_type);
         }
 
         olaos_logs::info!("notify {:?} new items finished", subscription_type);
@@ -426,19 +541,19 @@ impl EthSubscribe {
                 });
                 None
             }
-            "block_proofs" => {
+            "l1_batch_proofs" => {
                 let Ok(sink) = pending_sink.accept().await else {
                     return;
                 };
-                let block_proofs_rx = self.block_proofs.subscribe();
+                let block_proofs_rx = self.l1_batch_proofs.subscribe();
                 tokio::spawn(Self::run_subscriber(
                     sink,
-                    SubscriptionType::BlockProofs,
+                    SubscriptionType::L1BatchProofs,
                     block_proofs_rx,
                     None,
                 ));
 
-                Some(SubscriptionType::BlockProofs)
+                Some(SubscriptionType::L1BatchProofs)
             }
             _ => {
                 Self::reject(pending_sink).await;
@@ -489,12 +604,12 @@ impl EthSubscribe {
         // let notifier_task = tokio::spawn(notifier.notify_logs(stop_receiver));
 
         let notifier = PubSubNotifier {
-            sender: self.block_proofs.clone(),
+            sender: self.l1_batch_proofs.clone(),
             connection_pool,
-            polling_interval,
+            polling_interval: Duration::from_secs(120),
             events_sender: self.events_sender.clone(),
         };
-        let notifier_task = tokio::spawn(notifier.notify_block_proofs(stop_receiver));
+        let notifier_task = tokio::spawn(notifier.notify_l1_batch_proofs(stop_receiver));
 
         notifier_tasks.push(notifier_task);
         notifier_tasks

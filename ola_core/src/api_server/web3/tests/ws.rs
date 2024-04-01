@@ -14,7 +14,7 @@ async fn test_subscriptions() {
         .build("ws://127.0.0.1:13003")
         .await
         .unwrap();
-    let params = rpc_params!["block_proofs"];
+    let params = rpc_params!["l1_batch_proofs"];
     let mut subscription: Subscription<PubSubResult> = client
         .subscribe("ola_subscribe", params, "ola_unsubscribe")
         .await
