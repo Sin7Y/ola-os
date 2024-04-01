@@ -9,6 +9,7 @@ use fri_protocol_versions_dal::FriProtocolVersionsDal;
 use fri_prover_dal::FriProverDal;
 use fri_witness_generator_dal::FriWitnessGeneratorDal;
 use proof_generation_dal::ProofGenerationDal;
+use proof_offchain_verification_dal::ProofVerificationDal;
 use protocol_version_dal::ProtocolVersionsDal;
 use snapshot_recovery_dal::SnapshotRecoveryDal;
 pub use sqlx::Error as SqlxError;
@@ -178,6 +179,10 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn proof_generation_dal(&mut self) -> ProofGenerationDal<'_, 'a> {
         ProofGenerationDal { storage: self }
+    }
+
+    pub fn proof_verification_dal(&mut self) -> ProofVerificationDal<'_, 'a> {
+        ProofVerificationDal { storage: self }
     }
 
     pub fn fri_protocol_versions_dal(&mut self) -> FriProtocolVersionsDal<'_, 'a> {
