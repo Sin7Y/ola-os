@@ -1,8 +1,8 @@
 //! API types related to the External Node specific methods.
 
+use ola_basic_types::{Address, L1BatchNumber, MiniblockNumber, H256};
+use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
-use zksync_basic_types::{Address, L1BatchNumber, MiniblockNumber, H256};
-use zksync_contracts::BaseSystemContractsHashes;
 
 use crate::ProtocolVersionId;
 
