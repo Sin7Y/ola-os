@@ -23,3 +23,5 @@ db/
 dal/scripts/olsoa_pgdata/
 
 dump.json
+
+.idea
