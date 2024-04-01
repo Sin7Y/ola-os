@@ -1,10 +1,9 @@
 //! API types related to the External Node specific methods.
 
+use crate::protocol_version::ProtocolVersionId;
 use ola_basic_types::{Address, L1BatchNumber, MiniblockNumber, H256};
 use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
-
-use crate::ProtocolVersionId;
 
 /// Representation of the L2 block, as needed for the EN synchronization.
 /// This structure has several fields that describe *L1 batch* rather than
