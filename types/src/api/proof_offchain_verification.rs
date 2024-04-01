@@ -1,7 +1,7 @@
 use super::BlockDetailsBase;
 use chrono::{DateTime, Utc};
+use ola_basic_types::L1BatchNumber;
 use serde::{Deserialize, Serialize};
-use zksync_basic_types::L1BatchNumber;
 
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
