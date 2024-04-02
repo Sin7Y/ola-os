@@ -343,7 +343,6 @@ pub struct StorageBlockDetails {
     pub l2_tx_count: i32,
     pub bootloader_code_hash: Option<Vec<u8>>,
     pub default_aa_code_hash: Option<Vec<u8>>,
-    pub protocol_version: Option<i32>,
 }
 
 impl From<StorageBlockDetails> for api::BlockDetails {
@@ -383,9 +382,7 @@ impl From<StorageBlockDetails> for api::BlockDetails {
             number: MiniblockNumber(details.number as u32),
             l1_batch_number: L1BatchNumber(0),
             operator_address: Address::default(),
-            protocol_version: details
-                .protocol_version
-                .map(|v| (v as u16).try_into().unwrap()),
+            protocol_version: None,
         }
     }
 }
