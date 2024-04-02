@@ -289,11 +289,7 @@ impl TxSender {
             .access_storage_tagged("api")
             .await;
 
-        let latest_block_number = connection
-            .blocks_dal()
-            .get_sealed_miniblock_number()
-            .await
-            .unwrap();
+        let latest_block_number = connection.blocks_dal().get_sealed_miniblock_number().await;
         let nonce = connection
             .storage_web3_dal()
             .get_address_historical_nonce(tx.initiator_account(), latest_block_number)
