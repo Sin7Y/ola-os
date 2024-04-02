@@ -64,13 +64,6 @@ impl BlocksWeb3Dal<'_, '_> {
                 miniblocks.l1_tx_count,
                 miniblocks.l2_tx_count,
                 miniblocks.hash AS "root_hash?",
-                commit_tx.tx_hash AS "commit_tx_hash?",
-                commit_tx.confirmed_at AS "committed_at?",
-                prove_tx.tx_hash AS "prove_tx_hash?",
-                prove_tx.confirmed_at AS "proven_at?",
-                execute_tx.tx_hash AS "execute_tx_hash?",
-                execute_tx.confirmed_at AS "executed_at?",
-                miniblocks.l1_gas_price,
                 miniblocks.l2_fair_gas_price,
                 miniblocks.bootloader_code_hash,
                 miniblocks.default_aa_code_hash,
@@ -79,18 +72,6 @@ impl BlocksWeb3Dal<'_, '_> {
             FROM
                 miniblocks
                 LEFT JOIN l1_batches ON miniblocks.l1_batch_number = l1_batches.number
-                LEFT JOIN eth_txs_history AS commit_tx ON (
-                    l1_batches.eth_commit_tx_id = commit_tx.eth_tx_id
-                    AND commit_tx.confirmed_at IS NOT NULL
-                )
-                LEFT JOIN eth_txs_history AS prove_tx ON (
-                    l1_batches.eth_prove_tx_id = prove_tx.eth_tx_id
-                    AND prove_tx.confirmed_at IS NOT NULL
-                )
-                LEFT JOIN eth_txs_history AS execute_tx ON (
-                    l1_batches.eth_execute_tx_id = execute_tx.eth_tx_id
-                    AND execute_tx.confirmed_at IS NOT NULL
-                )
             WHERE
                 miniblocks.number = $1
             "#,
@@ -126,7 +107,6 @@ impl BlocksWeb3Dal<'_, '_> {
             WITH
                 mb AS (
                     SELECT
-                        l1_gas_price,
                         l2_fair_gas_price
                     FROM
                         miniblocks
@@ -136,36 +116,9 @@ impl BlocksWeb3Dal<'_, '_> {
                         1
                 )
             SELECT
-                l1_batches.number,
-                l1_batches.timestamp,
-                l1_batches.l1_tx_count,
-                l1_batches.l2_tx_count,
-                l1_batches.hash AS "root_hash?",
-                commit_tx.tx_hash AS "commit_tx_hash?",
-                commit_tx.confirmed_at AS "committed_at?",
-                prove_tx.tx_hash AS "prove_tx_hash?",
-                prove_tx.confirmed_at AS "proven_at?",
-                execute_tx.tx_hash AS "execute_tx_hash?",
-                execute_tx.confirmed_at AS "executed_at?",
-                mb.l1_gas_price,
-                mb.l2_fair_gas_price,
-                l1_batches.bootloader_code_hash,
-                l1_batches.default_aa_code_hash
+                *
             FROM
-                l1_batches
-                INNER JOIN mb ON TRUE
-                LEFT JOIN eth_txs_history AS commit_tx ON (
-                    l1_batches.eth_commit_tx_id = commit_tx.eth_tx_id
-                    AND commit_tx.confirmed_at IS NOT NULL
-                )
-                LEFT JOIN eth_txs_history AS prove_tx ON (
-                    l1_batches.eth_prove_tx_id = prove_tx.eth_tx_id
-                    AND prove_tx.confirmed_at IS NOT NULL
-                )
-                LEFT JOIN eth_txs_history AS execute_tx ON (
-                    l1_batches.eth_execute_tx_id = execute_tx.eth_tx_id
-                    AND execute_tx.confirmed_at IS NOT NULL
-                )
+                l1_batches       
             WHERE
                 l1_batches.number = $1
             "#,
