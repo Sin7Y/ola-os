@@ -2,7 +2,7 @@ use ola_types::{api, L1BatchNumber, MiniblockNumber, H256, U256, U64};
 use sqlx::types::BigDecimal;
 use sqlx::Row;
 
-use crate::models::storage_block::StorageL1BatchDetails;
+use crate::models::storage_block::{StorageBlockDetails, StorageL1BatchDetails};
 use crate::{
     models::storage_block::{bind_block_where_sql_params, web3_block_number_to_sql},
     SqlxError, StorageProcessor,
@@ -47,7 +47,7 @@ impl BlocksWeb3Dal<'_, '_> {
         block_number: MiniblockNumber,
     ) -> sqlx::Result<Option<api::BlockDetails>> {
         let res = sqlx::query_as!(
-            StorageL1BatchDetails,
+            StorageBlockDetails,
             r#"
             SELECT 
                 number,
@@ -56,7 +56,8 @@ impl BlocksWeb3Dal<'_, '_> {
                 l1_tx_count,
                 l2_tx_count,
                 bootloader_code_hash,
-                default_aa_code_hash
+                default_aa_code_hash,
+                protocol_version
             FROM 
                 miniblocks
             WHERE 
