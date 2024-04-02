@@ -1,11 +1,11 @@
 use jsonrpsee::core::{async_trait, RpcResult};
+use ola_types::api::proof_offchain_verification::OffChainVerificationResult;
 use ola_types::api::{
     proof_offchain_verification::L1BatchDetailsWithOffchainVerification, BlockDetails,
     BridgeAddresses, L1BatchDetails, L2ToL1LogProof, Proof, ProtocolVersion,
 };
 use ola_types::{
     api::{TransactionDetails, TransactionReceipt},
-    proof_offchain_verification::OffChainVerificationResult,
     request::CallRequest,
     Address, Bytes, L1BatchNumber, MiniblockNumber, H256, U256, U64,
 };

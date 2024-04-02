@@ -78,7 +78,7 @@ impl EthNamespace {
             .state
             .connection_pool
             .access_storage_tagged("api")
-            .await?;
+            .await;
         let block_number = storage
             .blocks_dal()
             .get_sealed_miniblock_number()

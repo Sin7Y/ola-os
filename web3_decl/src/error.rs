@@ -39,6 +39,10 @@ pub enum Web3Error {
     NotImplemented,
     #[error("Tree API is not available")]
     TreeApiUnavailable,
+    #[error("Internal error")]
+    InternalError,
+    #[error("Invalid l2 chainId `{0}`")]
+    InvalidChainId(u16),
 }
 
 /// Client RPC error with additional details: the method name and arguments of the called method.
