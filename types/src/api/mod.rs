@@ -656,7 +656,7 @@ pub struct BlockDetailsBase {
     pub executed_at: Option<DateTime<Utc>>,
     pub offchain_picked_at: Option<DateTime<Utc>>,
     pub offchain_verified_at: Option<DateTime<Utc>>,
-    // pub l1_gas_price: u64,
+    pub l1_gas_price: u64,
     pub l2_fair_gas_price: u64,
     pub base_system_contracts_hashes: BaseSystemContractsHashes,
 }
