@@ -612,10 +612,15 @@ impl ApiBuilder {
     }
 
     fn build_rpc_state(&self) -> RpcState {
+        let mut storage = self.updaters_pool.access_storage_tagged("api").await?;
+        let start_info = BlockStartInfo::new(&mut storage).await?;
+
+        drop(storage);
         RpcState {
             api_config: self.config.clone(),
             connection_pool: self.pool.clone(),
             tx_sender: self.tx_sender.clone(),
+            start_info,
         }
     }
 

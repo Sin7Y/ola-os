@@ -101,12 +101,9 @@ impl BlockArgs {
         connection: &mut StorageProcessor<'_>,
     ) -> Result<(MiniblockNumber, L1BatchNumber), SqlxError> {
         Ok(if self.is_pending_miniblock() {
-            let sealed_l1_batch_number =
-                connection.blocks_dal().get_sealed_l1_batch_number().await?;
-            let sealed_miniblock_number = connection
-                .blocks_dal()
-                .get_sealed_miniblock_number()
-                .await?;
+            let sealed_l1_batch_number = connection.blocks_dal().get_sealed_l1_batch_number().await;
+            let sealed_miniblock_number =
+                connection.blocks_dal().get_sealed_miniblock_number().await;
             (sealed_miniblock_number, sealed_l1_batch_number + 1)
         } else {
             let l1_batch_number = connection

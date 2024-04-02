@@ -1,7 +1,7 @@
+use ola_types::api::proof_offchain_verification::OffChainVerificationResult;
 use ola_types::api::{
     BlockDetails, L1BatchDetails, ProtocolVersion, TransactionDetails, TransactionReceipt,
 };
-use ola_types::proof_offchain_verification::OffChainVerificationResult;
 use ola_types::{l2::L2Tx, request::CallRequest, Bytes, L1BatchNumber, MiniblockNumber};
 use ola_types::{H256, U64};
 use ola_web3_decl::error::Web3Error;
@@ -36,7 +36,7 @@ impl OlaNamespace {
             .state
             .connection_pool
             .access_storage_tagged("api")
-            .await?)
+            .await)
     }
 
     #[olaos_logs::instrument(skip(self, tx_bytes))]
@@ -166,12 +166,7 @@ impl OlaNamespace {
     #[tracing::instrument(skip(self))]
     pub async fn get_l1_batch_number_impl(&self) -> Result<U64, Web3Error> {
         let mut storage = self.access_storage().await?;
-        let l1_batch_number = storage
-            .blocks_dal()
-            .get_sealed_l1_batch_number()
-            .await
-            .context("get_sealed_l1_batch_number")?
-            .ok_or(Web3Error::NoBlock)?;
+        let l1_batch_number = storage.blocks_dal().get_sealed_l1_batch_number().await?;
         Ok(l1_batch_number.0.into())
     }
     #[tracing::instrument(skip(self))]
@@ -186,7 +181,8 @@ impl OlaNamespace {
             .get_miniblock_range_of_l1_batch(batch)
             .await
             .context("get_miniblock_range_of_l1_batch")?;
-        Ok(range.map(|(min, max)| (U64::from(min.0), U64::from(max.0))))
+        let (min, max) = range;
+        Ok(Some((U64::from(min.0), U64::from(max.0))))
     }
 
     #[tracing::instrument(skip(self))]
