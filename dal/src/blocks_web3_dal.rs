@@ -48,10 +48,20 @@ impl BlocksWeb3Dal<'_, '_> {
     ) -> sqlx::Result<Option<api::BlockDetails>> {
         let res = sqlx::query_as!(
             StorageL1BatchDetails,
-            "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, \
-                        bootloader_code_hash, default_aa_code_hash, protocol_version \
-                    FROM miniblocks \
-                    WHERE number = $1",
+            r#"
+            SELECT 
+                number,
+                timestamp,
+                hash,
+                l1_tx_count,
+                l2_tx_count,
+                bootloader_code_hash,
+                default_aa_code_hash
+            FROM 
+                miniblocks
+            WHERE 
+                number = $1
+            "#,
             block_number.0 as i64,
         )
         .fetch_optional(self.storage.conn())
@@ -76,7 +86,7 @@ impl BlocksWeb3Dal<'_, '_> {
                 l2_tx_count,
                 hash,
                 bootloader_code_hash,
-                default_aa_code_hash,
+                default_aa_code_hash
             FROM 
                 l1_batches
             WHERE 
