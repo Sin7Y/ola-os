@@ -5,7 +5,7 @@ use ola_types::{
     commitment::{L1BatchMetaParameters, L1BatchMetadata},
     Address, L1BatchNumber, MiniblockNumber, H256,
 };
-use sqlx::types::chrono::{DateTime, Utc};
+use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::{postgres::PgArguments, query::Query, types::BigDecimal, Postgres};
 use std::str::FromStr;
 use thiserror::Error;
