@@ -46,115 +46,36 @@ impl BlocksWeb3Dal<'_, '_> {
         &mut self,
         block_number: MiniblockNumber,
     ) -> sqlx::Result<Option<api::BlockDetails>> {
-        //         sqlx::query_as!(
-        //             StorageMiniblockHeader,
-        //             "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, \
-        //                 bootloader_code_hash, default_aa_code_hash, protocol_version \
-        //             FROM miniblocks \
-        //             WHERE number = $1",
-        //             miniblock_number.0 as i64,
-        //         )
-        //         .fetch_optional(self.storage.conn())
-        //         .await
-        //         .unwrap()
-        //         .map(Into::into)
-        let storage_block_details = sqlx::query_as!(
-            StorageBlockDetails,
-            r#"
-            SELECT
-                miniblocks.number,
-                COALESCE(
-                    miniblocks.l1_batch_number,
-                    (
-                        SELECT
-                            (MAX(number) + 1)
-                        FROM
-                            l1_batches
-                    )
-                ) AS "l1_batch_number!",
-                miniblocks.timestamp,
-                miniblocks.l1_tx_count,
-                miniblocks.l2_tx_count,
-                miniblocks.hash AS "root_hash?",
-                miniblocks.bootloader_code_hash,
-                miniblocks.default_aa_code_hash,
-                miniblocks.protocol_version,
-                miniblocks.fee_account_address
-            FROM
-                miniblocks
-                LEFT JOIN l1_batches ON miniblocks.l1_batch_number = l1_batches.number
-            WHERE
-                miniblocks.number = $1
-            "#,
-            block_number.0 as i64
+        sqlx::query_as!(
+            StorageL1BatchDetails,
+            "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, \
+                        bootloader_code_hash, default_aa_code_hash, protocol_version \
+                    FROM miniblocks \
+                    WHERE number = $1",
+            miniblock_number.0 as i64,
         )
-        .instrument("get_block_details")
-        .with_arg("block_number", &block_number)
-        .report_latency()
-        .fetch_optional(self.storage)
-        .await?;
-
-        let Some(storage_block_details) = storage_block_details else {
-            return Ok(None);
-        };
-        let mut details = api::BlockDetails::from(storage_block_details);
-
-        // FIXME (PLA-728): remove after 2nd phase of `fee_account_address` migration
-        #[allow(deprecated)]
-        self.storage
-            .blocks_dal()
-            .maybe_load_fee_address(&mut details.operator_address, details.number)
-            .await?;
-        Ok(Some(details))
+        .fetch_optional(self.storage.conn())
+        .await
+        .unwrap()
+        .map(Into::into)
     }
 
     pub async fn get_l1_batch_details(
         &mut self,
         l1_batch_number: L1BatchNumber,
     ) -> sqlx::Result<Option<api::L1BatchDetails>> {
-        //        sqlx::query_as!(
-        //             StorageL1BatchHeader,
-        //             "SELECT number, l1_tx_count, l2_tx_count, \
-        //                 timestamp, is_finished, fee_account_address, used_contract_hashes, \
-        //                 bootloader_code_hash, default_aa_code_hash, protocol_version \
-        //             FROM l1_batches \
-        //             WHERE number = $1",
-        //             number.0 as i64
-        //         )
-        //         .fetch_optional(self.storage.conn())
-        //         .await
-        //         .unwrap()
-        //         .map(Into::into)
-
-        let l1_batch_details: Option<StorageL1BatchDetails> = sqlx::query_as!(
+        sqlx::query_as!(
             StorageL1BatchDetails,
-            r#"
-            WITH
-                mb AS (
-                    SELECT
-                        l2_fair_gas_price
-                    FROM
-                        miniblocks
-                    WHERE
-                        l1_batch_number = $1
-                    LIMIT
-                        1
-                )
-            SELECT
-                *
-            FROM
-                l1_batches       
-            WHERE
-                l1_batches.number = $1
-            "#,
-            l1_batch_number.0 as i64
+            "SELECT number, l1_tx_count, l2_tx_count, \
+                        timestamp, is_finished, fee_account_address, used_contract_hashes, \
+                        bootloader_code_hash, default_aa_code_hash, protocol_version \
+                    FROM l1_batches \
+                    WHERE number = $1",
+            number.0 as i64
         )
-        .instrument("get_l1_batch_details")
-        .with_arg("l1_batch_number", &l1_batch_number)
-        .report_latency()
-        .fetch_optional(self.storage)
-        .await?;
-
-        Ok(l1_batch_details.map(Into::into))
+        .fetch_optional(self.storage.conn())
+        .await
+        .unwrap()
+        .map(Into::into)
     }
 }
