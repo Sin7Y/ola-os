@@ -1,6 +1,7 @@
 use crate::models::storage_protocol_version::StorageProtocolVersion;
 use ola_contracts::BaseSystemContracts;
 use ola_types::api::ProtocolVersion;
+use ola_types::protocol_version::{ProtocolUpgradeTx, ProtocolVersionId};
 use ola_types::H256;
 
 use crate::StorageProcessor;

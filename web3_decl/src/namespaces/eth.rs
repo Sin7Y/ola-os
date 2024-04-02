@@ -4,10 +4,11 @@ use jsonrpsee::{
     proc_macros::rpc,
 };
 use ola_types::{
-    api::{BlockId, BlockIdVariant, BlockNumber, Transaction, TransactionVariant},
-    // transaction_request::CallRequest,
-    Address,
-    H256,
+    api::{
+        Block, BlockId, BlockIdVariant, BlockNumber, Transaction, TransactionReceipt,
+        TransactionVariant,
+    },
+    Address, Index, H256, U256, U64,
 };
 
 // use crate::types::{
