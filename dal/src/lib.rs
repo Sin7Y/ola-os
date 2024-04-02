@@ -1,5 +1,6 @@
 use std::env;
 
+use crate::protocol_versions_web3_dal::ProtocolVersionsWeb3Dal;
 use basic_witness_input_producer_dal::BasicWitnessInputProducerDal;
 use blocks_dal::BlocksDal;
 use blocks_web3_dal::BlocksWeb3Dal;
@@ -37,6 +38,7 @@ pub mod models;
 pub mod proof_generation_dal;
 pub mod proof_offchain_verification_dal;
 pub mod protocol_version_dal;
+pub mod protocol_versions_web3_dal;
 pub mod snapshot_recovery_dal;
 pub mod storage_dal;
 pub mod storage_logs_dal;
@@ -175,6 +177,10 @@ impl<'a> StorageProcessor<'a> {
 
     pub fn protocol_versions_dal(&mut self) -> ProtocolVersionsDal<'_, 'a> {
         ProtocolVersionsDal { storage: self }
+    }
+
+    pub fn protocol_versions_web3_dal(&mut self) -> ProtocolVersionsWeb3Dal<'_, 'a> {
+        ProtocolVersionsWeb3Dal { storage: self }
     }
 
     pub fn proof_generation_dal(&mut self) -> ProofGenerationDal<'_, 'a> {
