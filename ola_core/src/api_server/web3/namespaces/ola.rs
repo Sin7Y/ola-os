@@ -240,13 +240,13 @@ impl OlaNamespace {
         let protocol_version = match version_id {
             Some(id) => {
                 storage
-                    .protocol_versions_dal()
+                    .protocol_versions_web3_dal()
                     .get_protocol_version_by_id(id)
                     .await
             }
             None => Some(
                 storage
-                    .protocol_versions_dal()
+                    .protocol_versions_web3_dal()
                     .get_latest_protocol_version()
                     .await,
             ),
