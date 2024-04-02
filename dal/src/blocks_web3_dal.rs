@@ -46,36 +46,49 @@ impl BlocksWeb3Dal<'_, '_> {
         &mut self,
         block_number: MiniblockNumber,
     ) -> sqlx::Result<Option<api::BlockDetails>> {
-        sqlx::query_as!(
+        let res = sqlx::query_as!(
             StorageL1BatchDetails,
             "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, \
                         bootloader_code_hash, default_aa_code_hash, protocol_version \
                     FROM miniblocks \
                     WHERE number = $1",
-            miniblock_number.0 as i64,
+            block_number.0 as i64,
         )
         .fetch_optional(self.storage.conn())
         .await
         .unwrap()
-        .map(Into::into)
+        .map(Into::into);
+
+        Ok(res)
     }
 
     pub async fn get_l1_batch_details(
         &mut self,
         l1_batch_number: L1BatchNumber,
     ) -> sqlx::Result<Option<api::L1BatchDetails>> {
-        sqlx::query_as!(
+        let res = sqlx::query_as!(
             StorageL1BatchDetails,
-            "SELECT number, l1_tx_count, l2_tx_count, \
-                        timestamp, is_finished, fee_account_address, used_contract_hashes, \
-                        bootloader_code_hash, default_aa_code_hash, protocol_version \
-                    FROM l1_batches \
-                    WHERE number = $1",
-            number.0 as i64
+            r#"
+            SELECT
+                number,
+                timestamp,      
+                l1_tx_count,
+                l2_tx_count,
+                hash,
+                bootloader_code_hash,
+                default_aa_code_hash,
+            FROM 
+                l1_batches
+            WHERE 
+                number = $1
+            "#,
+            l1_batch_number.0 as i64
         )
         .fetch_optional(self.storage.conn())
         .await
         .unwrap()
-        .map(Into::into)
+        .map(Into::into);
+
+        Ok(res)
     }
 }
