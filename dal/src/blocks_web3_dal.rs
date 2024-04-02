@@ -56,8 +56,7 @@ impl BlocksWeb3Dal<'_, '_> {
                 l1_tx_count,
                 l2_tx_count,
                 bootloader_code_hash,
-                default_aa_code_hash,
-                protocol_version
+                default_aa_code_hash
             FROM 
                 miniblocks
             WHERE 
