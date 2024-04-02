@@ -276,26 +276,78 @@ impl TryInto<L1BatchMetadata> for StorageL1Batch {
     }
 }
 
+// TODO add more fields later.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageL1BatchDetails {
     pub number: i64,
     pub timestamp: i64,
     pub l1_tx_count: i32,
     pub l2_tx_count: i32,
-    pub root_hash: Option<Vec<u8>>,
-    pub commit_tx_hash: Option<String>,
-    pub committed_at: Option<NaiveDateTime>,
-    pub prove_tx_hash: Option<String>,
-    pub proven_at: Option<NaiveDateTime>,
-    pub execute_tx_hash: Option<String>,
-    pub executed_at: Option<NaiveDateTime>,
-    pub l2_fair_gas_price: i64,
+    pub merkle_root_hash: Option<Vec<u8>>,
+    // pub commit_tx_hash: Option<String>,
+    // pub committed_at: Option<NaiveDateTime>,
+    // pub prove_tx_hash: Option<String>,
+    // pub proven_at: Option<NaiveDateTime>,
+    // pub execute_tx_hash: Option<String>,
+    // pub executed_at: Option<NaiveDateTime>,
+    // pub l2_fair_gas_price: i64,
     pub bootloader_code_hash: Option<Vec<u8>>,
     pub default_aa_code_hash: Option<Vec<u8>>,
 }
 
 impl From<StorageL1BatchDetails> for api::L1BatchDetails {
     fn from(details: StorageL1BatchDetails) -> Self {
+        let status = if details.number == 0
+        // || details.execute_tx_hash.is_some()
+        {
+            api::BlockStatus::Verified
+        } else {
+            api::BlockStatus::Sealed
+        };
+
+        let base = api::BlockDetailsBase {
+            timestamp: details.timestamp as u64,
+            l1_tx_count: details.l1_tx_count as usize,
+            l2_tx_count: details.l2_tx_count as usize,
+            status,
+            root_hash: details.merkle_root_hash.as_deref().map(H256::from_slice),
+            commit_tx_hash: None,
+            committed_at: None,
+            prove_tx_hash: None,
+            proven_at: None,
+            execute_tx_hash: None,
+            executed_at: None,
+            offchain_picked_at: None,
+            offchain_verified_at: None,
+            l1_gas_price: 0,
+            l2_fair_gas_price: 0,
+            base_system_contracts_hashes: convert_base_system_contracts_hashes(
+                details.bootloader_code_hash,
+                details.default_aa_code_hash,
+            ),
+        };
+        api::L1BatchDetails {
+            base,
+            number: L1BatchNumber(details.number as u32),
+        }
+    }
+}
+
+// TODO add more fields later.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct StorageBlockDetails {
+    pub number: i64,
+    pub timestamp: i64,
+    pub hash: Vec<u8>,
+    pub l1_tx_count: i32,
+    pub l2_tx_count: i32,
+    pub bootloader_code_hash: Option<Vec<u8>>,
+    pub default_aa_code_hash: Option<Vec<u8>>,
+    pub protocol_version: Option<i32>,
+}
+
+impl From<StorageBlockDetails> for api::BlockDetails {
+    fn from(details: StorageBlockDetails) -> Self {
         let status = if details.number == 0 || details.execute_tx_hash.is_some() {
             api::BlockStatus::Verified
         } else {
@@ -307,41 +359,31 @@ impl From<StorageL1BatchDetails> for api::L1BatchDetails {
             l1_tx_count: details.l1_tx_count as usize,
             l2_tx_count: details.l2_tx_count as usize,
             status,
-            root_hash: details.root_hash.as_deref().map(H256::from_slice),
-            commit_tx_hash: details
-                .commit_tx_hash
-                .as_deref()
-                .map(|hash| H256::from_str(hash).expect("Incorrect commit_tx hash")),
-            committed_at: details
-                .committed_at
-                .map(|committed_at| DateTime::<Utc>::from_naive_utc_and_offset(committed_at, Utc)),
-            prove_tx_hash: details
-                .prove_tx_hash
-                .as_deref()
-                .map(|hash| H256::from_str(hash).expect("Incorrect prove_tx hash")),
-            proven_at: details
-                .proven_at
-                .map(|proven_at| DateTime::<Utc>::from_naive_utc_and_offset(proven_at, Utc)),
-            execute_tx_hash: details
-                .execute_tx_hash
-                .as_deref()
-                .map(|hash| H256::from_str(hash).expect("Incorrect execute_tx hash")),
-            executed_at: details
-                .executed_at
-                .map(|executed_at| DateTime::<Utc>::from_naive_utc_and_offset(executed_at, Utc)),
+            root_hash: details.hash.as_deref().map(H256::from_slice),
+            commit_tx_hash: None,
+            committed_at: None,
+            prove_tx_hash: None,
+            proven_at: None,
+            execute_tx_hash: None,
+            executed_at: None,
             // TODO add offchain verifiercation
             offchain_picked_at: None,
             offchain_verified_at: None,
-            // l1_gas_price: details.l1_gas_price as u64,
-            l2_fair_gas_price: details.l2_fair_gas_price as u64,
+            l1_gas_price: 0,
+            l2_fair_gas_price: 0,
             base_system_contracts_hashes: convert_base_system_contracts_hashes(
                 details.bootloader_code_hash,
                 details.default_aa_code_hash,
             ),
         };
-        api::L1BatchDetails {
+        api::BlockDetails {
             base,
-            number: L1BatchNumber(details.number as u32),
+            number: MiniblockNumber(details.number as u32),
+            l1_batch_number: L1BatchNumber(0),
+            operator_address: Address::default(),
+            protocol_version: details
+                .protocol_version
+                .map(|v| (v as u16).try_into().unwrap()),
         }
     }
 }
