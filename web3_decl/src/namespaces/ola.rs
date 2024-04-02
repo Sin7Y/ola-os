@@ -1,3 +1,4 @@
+use crate::types::Token;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 use ola_types::{
     api::{
@@ -19,6 +20,7 @@ use ola_types::{
     U256,
     U64,
 };
+use std::collections::HashMap;
 
 #[cfg_attr(
     all(feature = "client", feature = "server"),
@@ -38,9 +40,6 @@ pub trait OlaNamespace {
 
     #[method(name = "callTransaction")]
     async fn call_transaction(&self, call_request: CallRequest) -> RpcResult<Bytes>;
-
-    #[method(name = "getTransactionDetails")]
-    async fn get_transaction_details(&self, hash: H256) -> RpcResult<Option<TransactionDetails>>;
 
     #[method(name = "getTransactionReceipt")]
     async fn get_transaction_receipt(&self, hash: H256) -> RpcResult<Option<TransactionReceipt>>;
