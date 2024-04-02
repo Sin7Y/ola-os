@@ -609,12 +609,8 @@ pub struct ProtocolVersion {
     pub version_id: u16,
     /// Timestamp at which upgrade should be performed
     pub timestamp: u64,
-    /// Verifier configuration
-    pub verification_keys_hashes: L1VerifierConfig,
     /// Hashes of base system contracts (bootloader and default account)
     pub base_system_contracts: BaseSystemContractsHashes,
-    /// L2 Upgrade transaction hash
-    pub l2_system_upgrade_tx_hash: Option<H256>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -660,7 +656,7 @@ pub struct BlockDetailsBase {
     pub executed_at: Option<DateTime<Utc>>,
     pub offchain_picked_at: Option<DateTime<Utc>>,
     pub offchain_verified_at: Option<DateTime<Utc>>,
-    pub l1_gas_price: u64,
+    // pub l1_gas_price: u64,
     pub l2_fair_gas_price: u64,
     pub base_system_contracts_hashes: BaseSystemContractsHashes,
 }
