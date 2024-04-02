@@ -5,7 +5,7 @@ use ola_types::{
     block::{L1BatchHeader, MiniblockHeader},
     commitment::{L1BatchMetadata, L1BatchWithMetadata},
     protocol_version::ProtocolVersionId,
-    L1BatchNumber, MiniblockNumber, H256, U256,
+    Address, L1BatchNumber, MiniblockNumber, H256, U256,
 };
 
 use crate::{
@@ -473,5 +473,39 @@ impl BlocksDal<'_, '_> {
         .await?;
 
         Ok(row.number.map(|num| L1BatchNumber(num as u32)))
+    }
+
+    pub(crate) async fn maybe_load_fee_address(
+        &mut self,
+        fee_address: &mut Address,
+        miniblock_number: MiniblockNumber,
+    ) -> sqlx::Result<()> {
+        if *fee_address != Address::default() {
+            return Ok(());
+        }
+
+        // This clause should be triggered only for non-migrated miniblock rows. After `fee_account_address`
+        // is filled for all miniblocks, it won't be called; thus, `fee_account_address` column could be removed
+        // from `l1_batches` even with this code present.
+        let Some(row) = sqlx::query!(
+            r#"
+            SELECT
+                l1_batches.fee_account_address
+            FROM
+                l1_batches
+                INNER JOIN miniblocks ON miniblocks.l1_batch_number = l1_batches.number
+            WHERE
+                miniblocks.number = $1
+            "#,
+            miniblock_number.0 as i32
+        )
+        .fetch_optional(self.storage.conn())
+        .await?
+        else {
+            return Ok(());
+        };
+
+        *fee_address = Address::from_slice(&row.fee_account_address);
+        Ok(())
     }
 }
