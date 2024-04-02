@@ -283,7 +283,7 @@ pub struct StorageL1BatchDetails {
     pub timestamp: i64,
     pub l1_tx_count: i32,
     pub l2_tx_count: i32,
-    pub merkle_root_hash: Option<Vec<u8>>,
+    pub hash: Vec<u8>,
     // pub commit_tx_hash: Option<String>,
     // pub committed_at: Option<NaiveDateTime>,
     // pub prove_tx_hash: Option<String>,
@@ -310,7 +310,7 @@ impl From<StorageL1BatchDetails> for api::L1BatchDetails {
             l1_tx_count: details.l1_tx_count as usize,
             l2_tx_count: details.l2_tx_count as usize,
             status,
-            root_hash: details.merkle_root_hash.as_deref().map(H256::from_slice),
+            root_hash: details.hash.map(H256::from_slice),
             commit_tx_hash: None,
             committed_at: None,
             prove_tx_hash: None,
@@ -348,7 +348,9 @@ pub struct StorageBlockDetails {
 
 impl From<StorageBlockDetails> for api::BlockDetails {
     fn from(details: StorageBlockDetails) -> Self {
-        let status = if details.number == 0 || details.execute_tx_hash.is_some() {
+        let status = if details.number == 0
+        // || details.execute_tx_hash.is_some()
+        {
             api::BlockStatus::Verified
         } else {
             api::BlockStatus::Sealed
@@ -359,7 +361,7 @@ impl From<StorageBlockDetails> for api::BlockDetails {
             l1_tx_count: details.l1_tx_count as usize,
             l2_tx_count: details.l2_tx_count as usize,
             status,
-            root_hash: details.hash.as_deref().map(H256::from_slice),
+            root_hash: details.hash.map(H256::from_slice),
             commit_tx_hash: None,
             committed_at: None,
             prove_tx_hash: None,
