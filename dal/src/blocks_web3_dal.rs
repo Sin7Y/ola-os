@@ -46,6 +46,18 @@ impl BlocksWeb3Dal<'_, '_> {
         &mut self,
         block_number: MiniblockNumber,
     ) -> sqlx::Result<Option<api::BlockDetails>> {
+        //         sqlx::query_as!(
+        //             StorageMiniblockHeader,
+        //             "SELECT number, timestamp, hash, l1_tx_count, l2_tx_count, \
+        //                 bootloader_code_hash, default_aa_code_hash, protocol_version \
+        //             FROM miniblocks \
+        //             WHERE number = $1",
+        //             miniblock_number.0 as i64,
+        //         )
+        //         .fetch_optional(self.storage.conn())
+        //         .await
+        //         .unwrap()
+        //         .map(Into::into)
         let storage_block_details = sqlx::query_as!(
             StorageBlockDetails,
             r#"
@@ -64,7 +76,6 @@ impl BlocksWeb3Dal<'_, '_> {
                 miniblocks.l1_tx_count,
                 miniblocks.l2_tx_count,
                 miniblocks.hash AS "root_hash?",
-                miniblocks.l2_fair_gas_price,
                 miniblocks.bootloader_code_hash,
                 miniblocks.default_aa_code_hash,
                 miniblocks.protocol_version,
@@ -101,6 +112,20 @@ impl BlocksWeb3Dal<'_, '_> {
         &mut self,
         l1_batch_number: L1BatchNumber,
     ) -> sqlx::Result<Option<api::L1BatchDetails>> {
+        //        sqlx::query_as!(
+        //             StorageL1BatchHeader,
+        //             "SELECT number, l1_tx_count, l2_tx_count, \
+        //                 timestamp, is_finished, fee_account_address, used_contract_hashes, \
+        //                 bootloader_code_hash, default_aa_code_hash, protocol_version \
+        //             FROM l1_batches \
+        //             WHERE number = $1",
+        //             number.0 as i64
+        //         )
+        //         .fetch_optional(self.storage.conn())
+        //         .await
+        //         .unwrap()
+        //         .map(Into::into)
+
         let l1_batch_details: Option<StorageL1BatchDetails> = sqlx::query_as!(
             StorageL1BatchDetails,
             r#"
