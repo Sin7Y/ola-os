@@ -289,7 +289,6 @@ pub struct StorageL1BatchDetails {
     pub proven_at: Option<NaiveDateTime>,
     pub execute_tx_hash: Option<String>,
     pub executed_at: Option<NaiveDateTime>,
-    pub l1_gas_price: i64,
     pub l2_fair_gas_price: i64,
     pub bootloader_code_hash: Option<Vec<u8>>,
     pub default_aa_code_hash: Option<Vec<u8>>,
@@ -333,7 +332,7 @@ impl From<StorageL1BatchDetails> for api::L1BatchDetails {
             // TODO add offchain verifiercation
             offchain_picked_at: None,
             offchain_verified_at: None,
-            l1_gas_price: details.l1_gas_price as u64,
+            // l1_gas_price: details.l1_gas_price as u64,
             l2_fair_gas_price: details.l2_fair_gas_price as u64,
             base_system_contracts_hashes: convert_base_system_contracts_hashes(
                 details.bootloader_code_hash,
