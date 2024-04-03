@@ -32,7 +32,7 @@ impl OlaNamespace {
         Self { state }
     }
 
-    async fn access_storage(&self) -> Result<StorageProcessor<'_>, Web3Error> {
+    async fn access_storage(&self) -> anyhow::Result<StorageProcessor<'_>, Web3Error> {
         Ok(self
             .state
             .connection_pool
@@ -41,7 +41,10 @@ impl OlaNamespace {
     }
 
     #[olaos_logs::instrument(skip(self, tx_bytes))]
-    pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
+    pub async fn send_raw_transaction_impl(
+        &self,
+        tx_bytes: Bytes,
+    ) -> anyhow::Result<H256, Web3Error> {
         olaos_logs::info!("received a send transaction: {:?}", Instant::now());
         let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
         tx.set_input(tx_bytes.0, hash);
@@ -66,7 +69,7 @@ impl OlaNamespace {
     }
 
     #[olaos_logs::instrument(skip(self, request))]
-    pub async fn call_impl(&self, request: CallRequest) -> Result<Bytes, Web3Error> {
+    pub async fn call_impl(&self, request: CallRequest) -> anyhow::Result<Bytes, Web3Error> {
         olaos_logs::info!("received a call transaction request: {:?}", request);
 
         let tx = L2Tx::from_request(request.into(), self.state.api_config.max_tx_size)?;
@@ -93,7 +96,7 @@ impl OlaNamespace {
     pub async fn get_transaction_details_impl(
         &self,
         hash: H256,
-    ) -> Result<Option<TransactionDetails>, Web3Error> {
+    ) -> anyhow::Result<Option<TransactionDetails>, Web3Error> {
         const METHOD_NAME: &str = "get_transaction_details";
 
         olaos_logs::info!("received a get transaction details, hash: {:?}", hash);
@@ -117,7 +120,7 @@ impl OlaNamespace {
     pub async fn get_transaction_receipt_impl(
         &self,
         hash: H256,
-    ) -> Result<Option<TransactionReceipt>, Web3Error> {
+    ) -> anyhow::Result<Option<TransactionReceipt>, Web3Error> {
         const METHOD_NAME: &str = "get_transaction_receipt";
 
         let start = Instant::now();
@@ -142,7 +145,7 @@ impl OlaNamespace {
     pub async fn post_verification_result_impl(
         &self,
         verify_result: OffChainVerificationResult,
-    ) -> Result<bool, Web3Error> {
+    ) -> anyhow::Result<bool, Web3Error> {
         const METHOD_NAME: &str = "post_verification_result";
 
         let mut storage = self
@@ -165,7 +168,7 @@ impl OlaNamespace {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn get_l1_batch_number_impl(&self) -> Result<U64, Web3Error> {
+    pub async fn get_l1_batch_number_impl(&self) -> anyhow::Result<U64, Web3Error> {
         let mut storage = self.access_storage().await?;
         let l1_batch_number = storage.blocks_dal().get_sealed_l1_batch_number().await;
         Ok(l1_batch_number.0.into())
@@ -174,7 +177,7 @@ impl OlaNamespace {
     pub async fn get_miniblock_range_impl(
         &self,
         batch: L1BatchNumber,
-    ) -> Result<Option<(U64, U64)>, Web3Error> {
+    ) -> anyhow::Result<Option<(U64, U64)>, Web3Error> {
         self.state.start_info.ensure_not_pruned(batch)?;
         let mut storage = self.access_storage().await?;
         let range = storage
@@ -190,7 +193,7 @@ impl OlaNamespace {
     pub async fn get_block_details_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> Result<Option<BlockDetails>, Web3Error> {
+    ) -> anyhow::Result<Option<BlockDetails>, Web3Error> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
@@ -204,7 +207,7 @@ impl OlaNamespace {
     pub async fn get_raw_block_transactions_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> Result<Vec<ola_types::Transaction>, Web3Error> {
+    ) -> anyhow::Result<Vec<ola_types::Transaction>, Web3Error> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
@@ -218,7 +221,7 @@ impl OlaNamespace {
     pub async fn get_l1_batch_details_impl(
         &self,
         batch_number: L1BatchNumber,
-    ) -> Result<Option<L1BatchDetails>, Web3Error> {
+    ) -> anyhow::Result<Option<L1BatchDetails>, Web3Error> {
         self.state.start_info.ensure_not_pruned(batch_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
@@ -232,7 +235,7 @@ impl OlaNamespace {
     pub async fn get_protocol_version_impl(
         &self,
         version_id: Option<u16>,
-    ) -> Result<Option<ProtocolVersion>, Web3Error> {
+    ) -> anyhow::Result<Option<ProtocolVersion>, Web3Error> {
         let mut storage = self.access_storage().await?;
         let protocol_version = match version_id {
             Some(id) => {
