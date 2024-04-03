@@ -38,6 +38,7 @@ use self::{
 };
 
 use super::{execution_sandbox::VmConcurrencyBarrier, tx_sender::TxSender};
+use crate::api_server::execution_sandbox::BlockStartInfo;
 
 pub mod backend;
 pub mod namespaces;
@@ -612,8 +613,8 @@ impl ApiBuilder {
     }
 
     fn build_rpc_state(&self) -> RpcState {
-        let mut storage = self.updaters_pool.access_storage_tagged("api").await?;
-        let start_info = BlockStartInfo::new(&mut storage).await?;
+        let mut storage = self.pool.access_storage_tagged("api");
+        let start_info = BlockStartInfo::new(&mut storage);
 
         drop(storage);
         RpcState {
