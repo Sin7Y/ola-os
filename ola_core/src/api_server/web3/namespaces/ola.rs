@@ -191,49 +191,49 @@ impl OlaNamespace {
     pub async fn get_block_details_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> anyhow::Result<Option<BlockDetails>> {
+    ) -> anyhow::Result<Option<BlockDetails>, Web3Error> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
             .blocks_web3_dal()
             .get_block_details(block_number)
             .await
-            .context("get_block_details")?)
+            .map_err(|err| internal_error("get_block_details", err))?)
     }
 
     #[tracing::instrument(skip(self))]
     pub async fn get_raw_block_transactions_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> anyhow::Result<Vec<ola_types::Transaction>> {
+    ) -> anyhow::Result<Vec<ola_types::Transaction>, Web3Error> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
             .transactions_web3_dal()
             .get_raw_miniblock_transactions(block_number)
             .await
-            .context("get_raw_miniblock_transactions")?)
+            .map_err(|err| internal_error("get_raw_miniblock_transactions", err))?)
     }
 
     #[tracing::instrument(skip(self))]
     pub async fn get_l1_batch_details_impl(
         &self,
         batch_number: L1BatchNumber,
-    ) -> anyhow::Result<Option<L1BatchDetails>> {
+    ) -> anyhow::Result<Option<L1BatchDetails>, Web3Error> {
         self.state.start_info.ensure_not_pruned(batch_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
             .blocks_web3_dal()
             .get_l1_batch_details(batch_number)
             .await
-            .context("get_l1_batch_details")?)
+            .map_err(|err| internal_error("get_l1_batch_details", err))?)
     }
 
     #[tracing::instrument(skip(self))]
     pub async fn get_protocol_version_impl(
         &self,
         version_id: Option<u16>,
-    ) -> anyhow::Result<Option<ProtocolVersion>> {
+    ) -> anyhow::Result<Option<ProtocolVersion>, Web3Error> {
         let mut storage = self.access_storage().await?;
         let protocol_version = match version_id {
             Some(id) => {
