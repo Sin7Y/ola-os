@@ -49,7 +49,7 @@ impl OlaNamespaceServer for OlaNamespace {
     }
 
     async fn l1_chain_id(&self) -> RpcResult<U64> {
-        self.l1_chain_id_impl().await.map_err(into_rpc_error)
+        Ok(self.l1_chain_id_impl())
     }
 
     async fn get_confirmed_tokens(&self, from: u32, limit: u8) -> RpcResult<Vec<Token>> {
