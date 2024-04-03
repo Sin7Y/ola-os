@@ -79,12 +79,7 @@ impl EthNamespace {
             .connection_pool
             .access_storage_tagged("api")
             .await;
-        let block_number = storage
-            .blocks_dal()
-            .get_sealed_miniblock_number()
-            .await
-            .context("get_sealed_miniblock_number")?
-            .ok_or(Web3Error::NoBlock)?;
+        let block_number = storage.blocks_dal().get_sealed_miniblock_number().await;
         Ok(block_number.0.into())
     }
 

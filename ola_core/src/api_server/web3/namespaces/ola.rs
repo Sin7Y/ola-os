@@ -183,17 +183,15 @@ impl OlaNamespace {
         let range = storage
             .blocks_dal()
             .get_miniblock_range_of_l1_batch(batch)
-            .await
-            .context("get_miniblock_range_of_l1_batch")?;
-        let (min, max) = range;
-        Ok(Some((U64::from(min.0), U64::from(max.0))))
+            .await;
+        Ok(range.map(|(min, max)| (U64::from(min.0), U64::from(max.0))))
     }
 
     #[tracing::instrument(skip(self))]
     pub async fn get_block_details_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> anyhow::Result<Option<BlockDetails>, Web3Error> {
+    ) -> anyhow::Result<Option<BlockDetails>> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
@@ -207,7 +205,7 @@ impl OlaNamespace {
     pub async fn get_raw_block_transactions_impl(
         &self,
         block_number: MiniblockNumber,
-    ) -> anyhow::Result<Vec<ola_types::Transaction>, Web3Error> {
+    ) -> anyhow::Result<Vec<ola_types::Transaction>> {
         self.state.start_info.ensure_not_pruned(block_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
@@ -221,7 +219,7 @@ impl OlaNamespace {
     pub async fn get_l1_batch_details_impl(
         &self,
         batch_number: L1BatchNumber,
-    ) -> anyhow::Result<Option<L1BatchDetails>, Web3Error> {
+    ) -> anyhow::Result<Option<L1BatchDetails>> {
         self.state.start_info.ensure_not_pruned(batch_number)?;
         let mut storage = self.access_storage().await?;
         Ok(storage
@@ -235,7 +233,7 @@ impl OlaNamespace {
     pub async fn get_protocol_version_impl(
         &self,
         version_id: Option<u16>,
-    ) -> anyhow::Result<Option<ProtocolVersion>, Web3Error> {
+    ) -> anyhow::Result<Option<ProtocolVersion>> {
         let mut storage = self.access_storage().await?;
         let protocol_version = match version_id {
             Some(id) => {
