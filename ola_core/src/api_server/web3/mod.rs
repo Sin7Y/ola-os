@@ -568,7 +568,7 @@ impl ApiBuilder {
     }
 
     async fn build_rpc_module(&self) -> RpcModule<()> {
-        let rpc_app = self.build_rpc_state();
+        let rpc_app = self.build_rpc_state().await;
         let namespaces = self.namespaces.as_ref().unwrap();
         let mut rpc = RpcModule::new(());
 
@@ -593,7 +593,7 @@ impl ApiBuilder {
             .as_ref()
             .expect("namespaces not specified")
             .clone();
-        let rpc_state = self.build_rpc_state();
+        let rpc_state = self.build_rpc_state().await;
 
         let mut rpc = RpcModule::new(());
         if let Some(pub_sub) = pub_sub {

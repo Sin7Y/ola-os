@@ -65,7 +65,7 @@ pub struct RpcState {
 }
 
 impl RpcState {
-    pub fn parse_transaction_bytes(&self, bytes: &[u8]) -> Result<(L2Tx, H256), Web3Error> {
+    pub fn parse_transaction_bytes(&self, bytes: &[u8]) -> anyhow::Result<(L2Tx, H256), Web3Error> {
         let chain_id = self.api_config.l2_chain_id;
         let (tx_request, hash) = api::TransactionRequest::from_bytes(bytes, chain_id.0)?;
 
@@ -87,7 +87,7 @@ impl RpcState {
         &self,
         connection: &mut StorageProcessor<'_>,
         block: api::BlockId,
-    ) -> Result<MiniblockNumber, Web3Error> {
+    ) -> anyhow::Result<MiniblockNumber, Web3Error> {
         self.start_info.ensure_not_pruned(block)?;
         connection
             .blocks_web3_dal()
@@ -100,7 +100,7 @@ impl RpcState {
     pub async fn resolve_filter_block_number(
         &self,
         block_number: Option<api::BlockNumber>,
-    ) -> Result<MiniblockNumber, Web3Error> {
+    ) -> anyhow::Result<MiniblockNumber, Web3Error> {
         if let Some(api::BlockNumber::Number(number)) = block_number {
             return Ok(Self::u64_to_block_number(number));
         }
