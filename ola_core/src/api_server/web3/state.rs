@@ -1,5 +1,5 @@
 use crate::api_server::execution_sandbox::BlockStartInfo;
-use anyhow::Context;
+use anyhow::Context as _;
 use ola_config::contracts::ContractsConfig;
 use ola_config::{api::Web3JsonRpcConfig, sequencer::NetworkConfig};
 use ola_dal::connection::ConnectionPool;
@@ -107,7 +107,7 @@ impl RpcState {
 
         let block_number = block_number.unwrap_or(api::BlockNumber::Latest);
         let block_id = api::BlockId::Number(block_number);
-        let mut conn = self.connection_pool.access_storage_tagged("api").await?;
+        let mut conn = self.connection_pool.access_storage_tagged("api").await;
         Ok(self.resolve_block(&mut conn, block_id).await.unwrap())
         // ^ `unwrap()` is safe: `resolve_block_id(api::BlockId::Number(_))` can only return `None`
         // if called with an explicit number, and we've handled this case earlier.

@@ -1,3 +1,4 @@
+use anyhow::Context as _;
 use ola_types::api::proof_offchain_verification::OffChainVerificationResult;
 use ola_types::api::{
     BlockDetails, L1BatchDetails, ProtocolVersion, TransactionDetails, TransactionReceipt,
@@ -166,7 +167,7 @@ impl OlaNamespace {
     #[tracing::instrument(skip(self))]
     pub async fn get_l1_batch_number_impl(&self) -> Result<U64, Web3Error> {
         let mut storage = self.access_storage().await?;
-        let l1_batch_number = storage.blocks_dal().get_sealed_l1_batch_number().await?;
+        let l1_batch_number = storage.blocks_dal().get_sealed_l1_batch_number().await;
         Ok(l1_batch_number.0.into())
     }
     #[tracing::instrument(skip(self))]

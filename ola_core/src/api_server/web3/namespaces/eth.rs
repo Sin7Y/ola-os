@@ -1,4 +1,4 @@
-use ola_types::api::{Block, TransactionVariant};
+use anyhow::Context as _;
 use ola_types::{
     api::{BlockId, BlockNumber},
     Address, MiniblockNumber, H256, U256, U64,
