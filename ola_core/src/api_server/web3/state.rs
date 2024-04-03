@@ -87,14 +87,14 @@ impl RpcState {
         &self,
         connection: &mut StorageProcessor<'_>,
         block: api::BlockId,
-    ) -> anyhow::Result<MiniblockNumber, Web3Error> {
+    ) -> anyhow::Result<MiniblockNumber> {
         self.start_info.ensure_not_pruned(block)?;
         connection
             .blocks_web3_dal()
             .resolve_block_id(block)
             .await
             .context("resolve_block_id")?
-            .ok_or(Web3Error::NoBlock)
+            .ok_or(anyhow::bail!(Web3Error::NoBlock))
     }
 
     pub async fn resolve_filter_block_number(
