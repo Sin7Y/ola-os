@@ -31,7 +31,7 @@ impl EthNamespace {
         &self,
         address: Address,
         block_id: Option<BlockId>,
-    ) -> Result<u32, Web3Error> {
+    ) -> anyhow::Result<u32, Web3Error> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumber::Pending));
         let method_name = match block_id {
             BlockId::Number(BlockNumber::Pending) => "get_pending_transaction_count",
@@ -73,7 +73,7 @@ impl EthNamespace {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn get_block_number_impl(&self) -> Result<U64, Web3Error> {
+    pub async fn get_block_number_impl(&self) -> anyhow::Result<U64, Web3Error> {
         let mut storage = self
             .state
             .connection_pool
@@ -93,7 +93,7 @@ impl EthNamespace {
     //     &self,
     //     block_id: BlockId,
     //     full_transactions: bool,
-    // ) -> Result<Option<Block<TransactionVariant>>, Web3Error> {
+    // ) -> anyhow::Result<Option<Block<TransactionVariant>>, Web3Error> {
     //     self.current_method().set_block_id(block_id);
     //     self.state.start_info.ensure_not_pruned(block_id)?;
     //
@@ -121,7 +121,7 @@ impl EthNamespace {
     // pub async fn get_block_transaction_count_impl(
     //     &self,
     //     block_id: BlockId,
-    // ) -> Result<Option<U256>, Web3Error> {
+    // ) -> anyhow::Result<Option<U256>, Web3Error> {
     //     self.current_method().set_block_id(block_id);
     //     self.state.start_info.ensure_not_pruned(block_id)?;
     //
@@ -145,7 +145,7 @@ impl EthNamespace {
     // pub async fn get_block_receipts_impl(
     //     &self,
     //     block_id: BlockId,
-    // ) -> Result<Vec<TransactionReceipt>, Web3Error> {
+    // ) -> anyhow::Result<Vec<TransactionReceipt>, Web3Error> {
     //     self.current_method().set_block_id(block_id);
     //     self.state.start_info.ensure_not_pruned(block_id)?;
     //
@@ -191,7 +191,7 @@ impl EthNamespace {
     //     &self,
     //     address: web3::types::Address,
     //     block_id: Option<BlockId>,
-    // ) -> Result<Bytes, Web3Error> {
+    // ) -> anyhow::Result<Bytes, Web3Error> {
     //     let block_id = block_id.unwrap_or(BlockId::Number(BlockNumber::Pending));
     //     self.current_method().set_block_id(block_id);
     //
@@ -222,7 +222,7 @@ impl EthNamespace {
     //     address: web3::types::Address,
     //     idx: U256,
     //     block_id: Option<BlockId>,
-    // ) -> Result<H256, Web3Error> {
+    // ) -> anyhow::Result<H256, Web3Error> {
     //     let block_id = block_id.unwrap_or(BlockId::Number(BlockNumber::Pending));
     //     self.current_method().set_block_id(block_id);
     //
@@ -247,7 +247,7 @@ impl EthNamespace {
     // pub async fn get_transaction_impl(
     //     &self,
     //     id: TransactionId,
-    // ) -> Result<Option<Transaction>, Web3Error> {
+    // ) -> anyhow::Result<Option<Transaction>, Web3Error> {
     //     let mut transaction = self
     //         .state
     //         .connection_pool
@@ -268,7 +268,7 @@ impl EthNamespace {
     // pub async fn get_transaction_receipt_impl(
     //     &self,
     //     hash: H256,
-    // ) -> Result<Option<TransactionReceipt>, Web3Error> {
+    // ) -> anyhow::Result<Option<TransactionReceipt>, Web3Error> {
     //     let receipts = self
     //         .state
     //         .connection_pool
@@ -282,7 +282,7 @@ impl EthNamespace {
     // }
     //
     // #[tracing::instrument(skip(self))]
-    // pub async fn new_block_filter_impl(&self) -> Result<U256, Web3Error> {
+    // pub async fn new_block_filter_impl(&self) -> anyhow::Result<U256, Web3Error> {
     //     let installed_filters = self
     //         .state
     //         .installed_filters
@@ -309,7 +309,7 @@ impl EthNamespace {
     // }
     //
     // #[tracing::instrument(skip(self, filter))]
-    // pub async fn new_filter_impl(&self, mut filter: Filter) -> Result<U256, Web3Error> {
+    // pub async fn new_filter_impl(&self, mut filter: Filter) -> anyhow::Result<U256, Web3Error> {
     //     let installed_filters = self
     //         .state
     //         .installed_filters
@@ -330,7 +330,7 @@ impl EthNamespace {
     // }
     //
     // #[tracing::instrument(skip(self))]
-    // pub async fn new_pending_transaction_filter_impl(&self) -> Result<U256, Web3Error> {
+    // pub async fn new_pending_transaction_filter_impl(&self) -> anyhow::Result<U256, Web3Error> {
     //     let installed_filters = self
     //         .state
     //         .installed_filters
@@ -345,7 +345,7 @@ impl EthNamespace {
     // }
     //
     // #[tracing::instrument(skip(self))]
-    // pub async fn get_filter_changes_impl(&self, idx: U256) -> Result<FilterChanges, Web3Error> {
+    // pub async fn get_filter_changes_impl(&self, idx: U256) -> anyhow::Result<FilterChanges, Web3Error> {
     //     let installed_filters = self
     //         .state
     //         .installed_filters
@@ -372,7 +372,7 @@ impl EthNamespace {
     // }
     //
     // #[tracing::instrument(skip(self))]
-    // pub async fn uninstall_filter_impl(&self, idx: U256) -> Result<bool, Web3Error> {
+    // pub async fn uninstall_filter_impl(&self, idx: U256) -> anyhow::Result<bool, Web3Error> {
     //     let installed_filters = self
     //         .state
     //         .installed_filters
@@ -388,7 +388,7 @@ impl EthNamespace {
     // }
     //
     // #[tracing::instrument(skip(self, tx_bytes))]
-    // pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> Result<H256, Web3Error> {
+    // pub async fn send_raw_transaction_impl(&self, tx_bytes: Bytes) -> anyhow::Result<H256, Web3Error> {
     //     let (mut tx, hash) = self.state.parse_transaction_bytes(&tx_bytes.0)?;
     //     tx.set_input(tx_bytes.0, hash);
     //
@@ -430,7 +430,7 @@ impl EthNamespace {
     //     block_count: U64,
     //     newest_block: BlockNumber,
     //     reward_percentiles: Vec<f32>,
-    // ) -> Result<FeeHistory, Web3Error> {
+    // ) -> anyhow::Result<FeeHistory, Web3Error> {
     //     self.current_method()
     //         .set_block_id(BlockId::Number(newest_block));
     //
@@ -482,7 +482,7 @@ impl EthNamespace {
     // async fn filter_changes(
     //     &self,
     //     typed_filter: &mut TypedFilter,
-    // ) -> Result<FilterChanges, Web3Error> {
+    // ) -> anyhow::Result<FilterChanges, Web3Error> {
     //     Ok(match typed_filter {
     //         TypedFilter::Blocks(from_block) => {
     //             let mut conn = self
