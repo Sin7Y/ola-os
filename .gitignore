@@ -23,3 +23,5 @@ db/
 dal/scripts/olaos_pgdata/
 
 dump.json
+
+.idea
