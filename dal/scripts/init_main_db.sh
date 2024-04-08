@@ -32,7 +32,7 @@ then
     docker run \
         --mount type=bind,source="$(pwd)"/scripts/main_postgresql.conf,target=/etc/postgresql/postgresql.conf \
         --mount type=bind,source="$(pwd)"/scripts/main_pg_hba.conf,target=/etc/postgresql/pg_hba.conf \
-        -v ./scripts/olsoa_pgdata:/var/lib/postgresql/data \
+        -v ./scripts/olaos_pgdata:/var/lib/postgresql/data \
         -v ./scripts/archivelog:/archivelog \
         -v ./scripts/data-backup:/tmp/postgresslave \
         --net olaos-db-sync \
