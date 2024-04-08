@@ -1,0 +1,2 @@
+miniblock_commit_deadline_ms: 10000
+block_commit_deadline_ms: 60000
