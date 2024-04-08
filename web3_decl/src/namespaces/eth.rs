@@ -114,7 +114,7 @@ pub trait EthNamespace {
     async fn coinbase(&self) -> RpcResult<Address>;
 }
 
-#[rpc(server, namespace = "eth")]
+#[rpc(server, namespace = "ola")]
 pub trait EthPubSub {
     #[subscription(name = "subscribe" => "subscription", unsubscribe = "unsubscribe", item = PubSubResult)]
     async fn subscribe(&self, sub_type: String, filter: Option<PubSubFilter>)
