@@ -76,7 +76,7 @@ pub trait OlaNamespace {
         index: Option<usize>,
     ) -> RpcResult<Option<L2ToL1LogProof>>;
 
-    #[method(name = "L1BatchNumber")]
+    #[method(name = "getL1BatchNumber")]
     async fn get_l1_batch_number(&self) -> RpcResult<U64>;
 
     #[method(name = "getL1BatchBlockRange")]
