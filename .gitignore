@@ -20,7 +20,7 @@ Cargo.lock
 dal/scripts/archivelog/
 dal/scripts/data-backup/
 db/
-dal/scripts/olsoa_pgdata/
+dal/scripts/olaos_pgdata/
 
 dump.json
 
