@@ -8,6 +8,9 @@ start_node: ## start node
 	@cargo build --release
 	@sudo supervisorctl start ola_node
 
+stop_node: ## start node
+	@sudo supervisorctl stop ola_node
+
 status: ## node status
 	@sudo supervisorctl status ola_node
 
