@@ -1,7 +1,9 @@
 use bigdecimal::BigDecimal;
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use num::{bigint::ToBigInt, rational::Ratio, BigUint};
 use ola_basic_types::{Address, H256, U256};
-use olavm_core::types::{account::Address as OlavmAddress, merkle_tree::tree_key_to_h256};
+use olavm_core::types::{GoldilocksField, account::Address as OlavmAddress, merkle_tree::{tree_key_to_h256, TreeValue, TreeKey}};
+use olavm_plonky2::field::types::Field;
 
 pub fn u256_to_big_decimal(value: U256) -> BigDecimal {
     let ratio = Ratio::new_raw(u256_to_biguint(value), BigUint::from(1u8));
@@ -175,6 +177,49 @@ pub fn program_bytecode_to_bytes(bytecode: &str) -> Option<Vec<u8>> {
         }
     }
     Some(bytes)
+}
+
+pub fn serialize_block_number(block_number: u32) -> Vec<u8> {
+    let mut bytes = vec![0; 4];
+    BigEndian::write_u32(&mut bytes, block_number);
+    bytes
+}
+
+pub fn deserialize_block_number(mut bytes: &[u8]) -> u32 {
+    bytes
+        .read_u32::<BigEndian>()
+        .expect("failed to deserialize block number")
+}
+
+pub fn serialize_tree_leaf(leaf: TreeValue) -> Vec<u8> {
+    let mut bytes = vec![0; 32];
+    for (index, item) in leaf.iter().enumerate() {
+        let field_array = item.0.to_be_bytes();
+        bytes[index * 8..(index * 8 + 8)].copy_from_slice(&field_array);
+    }
+    bytes
+}
+
+pub fn serialize_leaf_index_to_key(leaf_index: u64) -> TreeKey {
+    let key = [
+        GoldilocksField::from_canonical_u64(leaf_index),
+        GoldilocksField::ZERO,
+        GoldilocksField::ZERO,
+        GoldilocksField::ZERO,
+    ];
+    key
+}
+
+pub fn serialize_leaf_index(leaf_index: u64) -> Vec<u8> {
+    let mut bytes = vec![0; 8];
+    BigEndian::write_u64(&mut bytes, leaf_index);
+    bytes
+}
+
+pub fn deserialize_leaf_index(mut bytes: &[u8]) -> u64 {
+    bytes
+        .read_u64::<BigEndian>()
+        .expect("failed to deserialize leaf index")
 }
 
 #[cfg(test)]
