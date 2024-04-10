@@ -1,4 +1,6 @@
-use olavm_core::types::merkle_tree::{constant::ROOT_TREE_DEPTH, LevelIndex};
+use ola_types::merkle_tree::LevelIndex;
+use olavm_core::types::merkle_tree::constant::ROOT_TREE_DEPTH;
+
 use web3::types::U256;
 
 /// Calculates neighbor index for given index to have complete pair.

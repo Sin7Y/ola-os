@@ -1,17 +1,19 @@
 use super::iter_ext::IteratorExt;
 use super::TreeError;
-use olavm_core::{
-    crypto::{poseidon_trace::PoseidonType, hash::Hasher},
-    trace::trace::HashTrace,
-    types::merkle_tree::{constant::ROOT_TREE_DEPTH, tree_key_to_u256, u256_to_tree_key, NodeEntry, TreeKey, TreeKeyU256, TreeValue}
-};
 use core::iter;
 use itertools::Itertools;
 use log::debug;
+use ola_types::merkle_tree::{tree_key_to_u256, u256_to_tree_key, NodeEntry, TreeKeyU256};
+use olavm_core::types::merkle_tree::{constant::ROOT_TREE_DEPTH, TreeKey, TreeValue};
+use olavm_core::{
+    crypto::{hash::Hasher, poseidon_trace::PoseidonType},
+    trace::trace::HashTrace,
+};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 
 use std::{
-    collections::HashMap, sync::{Arc, Mutex}
+    collections::HashMap,
+    sync::{Arc, Mutex},
 };
 
 #[macro_export]
@@ -171,7 +173,7 @@ impl UpdatesBatch {
 
             cur_lvl_updates_map =
                 res.into_par_iter()
-                // next_idx == cur_key' parent, since sibling's parent == cur_key's parent, we use sibling's parent, sibling = neighbor.
+                    // next_idx == cur_key' parent, since sibling's parent == cur_key's parent, we use sibling's parent, sibling = neighbor.
                     .map(|(next_idx, (left_updates, right_updates))| {
                         // (even, left_updates)
                         let left_updates = left_updates

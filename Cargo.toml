@@ -14,7 +14,7 @@ members = [
     "vm",
     "mempool",
     "storage",
-    "merkle_tree",
+    # "merkle_tree",
     "client/cli",
     "client/sdk",
     "object_store",

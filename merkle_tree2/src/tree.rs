@@ -1,24 +1,28 @@
 use crate::{
-    log::{StorageLogKind, WitnessStorageLog},
     patch::{TreePatch, Update, UpdatesBatch},
-    storage::Storage,
+    storage::{MerkleTreeColumnFamily, Storage},
     tree_config::TreeConfig,
     utils::idx_to_merkle_path,
     TreeError,
 };
 use olaos_storage::db::RocksDB;
 use olavm_core::{
-    crypto::ZkHasher,
-    trace::trace::HashTrace,
-    types::{
-        merkle_tree::{
-            constant::ROOT_TREE_DEPTH, tree_key_default, tree_key_to_u256, u256_to_tree_key,
-            u8_arr_to_tree_key, LeafIndices, LevelIndex, NodeEntry, TreeKey, TreeMetadata,
-            TreeOperation, ZkHash,
-        },
-        proof::StorageLogMetadata,
-    },
+    crypto::ZkHasher, trace::trace::HashTrace, trace::trace::StorageHashRow,
+    types::merkle_tree::TREE_VALUE_LEN,
 };
+use olavm_plonky2::field::{goldilocks_field::GoldilocksField, types::Field};
+
+use ola_types::{
+    log::{StorageLogKind, WitnessStorageLog},
+    merkle_tree::{
+        h256_to_tree_key, h256_to_tree_value, tree_key_default, tree_key_to_u256, u256_to_tree_key,
+        u8_arr_to_tree_key, LeafIndices, LevelIndex, NodeEntry, TreeMetadata, TreeOperation,
+    },
+    proofs::{PrepareBasicCircuitsJob, StorageLogMetadata},
+    storage::StorageUpdateTrace,
+};
+
+use olavm_core::types::merkle_tree::{constant::ROOT_TREE_DEPTH, TreeKey, ZkHash};
 
 use itertools::Itertools;
 use log::{debug, info};
@@ -44,6 +48,19 @@ impl AccountTree {
     /// Creates new ZkSyncTree instance
     pub fn new(path: &Path) -> Self {
         let db = RocksDB::new(path);
+        let storage = Storage::new(db);
+        let config = TreeConfig::new(ZkHasher::default()).expect("TreeConfig new failed");
+        let (root_hash, block_number) = storage.fetch_metadata();
+        let root_hash = root_hash.unwrap_or_else(|| config.default_root_hash());
+        Self {
+            storage,
+            config,
+            root_hash,
+            block_number,
+        }
+    }
+
+    pub fn new_with_db(db: RocksDB<MerkleTreeColumnFamily>) -> Self {
         let storage = Storage::new(db);
         let config = TreeConfig::new(ZkHasher::default()).expect("TreeConfig new failed");
         let (root_hash, block_number) = storage.fetch_metadata();
@@ -102,26 +119,122 @@ impl AccountTree {
         self.config.hasher()
     }
 
-    /// Processes an iterator of block logs, interpreting each nested iterator
-    /// as a block. Before going to the next block, the current block will
-    /// be sealed. Returns tree metadata for the corresponding blocks.
-    ///
-    /// - `storage_logs` - an iterator of storage logs for a given block
-    pub fn process_block<I>(&mut self, storage_logs: I) -> (Vec<HashTrace>, Option<TreeMetadata>)
-    where
-        I: IntoIterator,
-        I::Item: Borrow<WitnessStorageLog>,
-    {
-        let (hash_traces, tree_metadata) = self.process_blocks(once(storage_logs));
-        (hash_traces, tree_metadata.last().cloned())
+    fn compose_witness(
+        pre_root: ZkHash,
+        hash_traces: &[HashTrace],
+        storage_logs: &[WitnessStorageLog],
+    ) -> Result<StorageUpdateTrace, TreeError> {
+        const LEAF_LAYER: usize = 255;
+        let storage_log_len = storage_logs.len();
+        assert_eq!(
+            hash_traces.len() / ROOT_TREE_DEPTH,
+            storage_log_len,
+            "Hash trace does not match storage log"
+        );
+        let mut pre_root = pre_root;
+        let mut storage_accesses = vec![];
+        let mut storage_related_poseidon = vec![];
+
+        let mut root_hashes = Vec::new();
+        for (chunk, log) in hash_traces
+            .chunks(ROOT_TREE_DEPTH)
+            .enumerate()
+            .zip(storage_logs)
+        {
+            let is_write = GoldilocksField::from_canonical_u64(log.storage_log.kind as u64);
+            let mut root_hash = [GoldilocksField::ZERO; TREE_VALUE_LEN];
+            let hash_out: &[GoldilocksField] = &chunk
+                .1
+                .last()
+                .ok_or(TreeError::EmptyPatch(format!(
+                    "Invalid hash trace at chunk {}",
+                    chunk.0
+                )))?
+                .hash
+                .output[0..4];
+            root_hash.clone_from_slice(hash_out);
+            root_hashes.push(root_hash);
+            let mut acc = GoldilocksField::ZERO;
+            let key = log.storage_log.key.hashed_key_u256();
+            let mut hash_type = GoldilocksField::ZERO;
+            let rows: Vec<_> = chunk
+                .1
+                .iter()
+                .rev()
+                .enumerate()
+                .map(|item| {
+                    let layer_bit = ((key >> (LEAF_LAYER - item.0)) & U256::one()).as_u64();
+                    let layer = (item.0 + 1) as u64;
+
+                    if item.0 == LEAF_LAYER {
+                        hash_type = GoldilocksField::ONE;
+                    }
+
+                    acc = acc * GoldilocksField::from_canonical_u64(2)
+                        + GoldilocksField::from_canonical_u64(layer_bit);
+
+                    let mut hash = [GoldilocksField::ZERO; 4];
+                    hash.clone_from_slice(&item.1.hash.output[0..4]);
+                    let mut pre_hash = [GoldilocksField::ZERO; 4];
+                    pre_hash.clone_from_slice(&item.1.pre_hash.output[0..4]);
+                    let row = StorageHashRow {
+                        storage_access_idx: (chunk.0 + 1) as u64,
+                        pre_root,
+                        root: root_hash,
+                        is_write,
+                        hash_type,
+                        pre_hash,
+                        hash,
+                        layer,
+                        layer_bit,
+                        addr_acc: acc,
+                        addr: h256_to_tree_key(&log.storage_log.key.hashed_key()),
+                        pre_path: item.1.pre_path,
+                        path: item.1.path,
+                        sibling: item.1.sibling,
+                    };
+                    if layer % 64 == 0 {
+                        acc = GoldilocksField::ZERO;
+                    }
+                    storage_related_poseidon.push(item.1.hash);
+                    storage_related_poseidon.push(item.1.pre_hash);
+                    row
+                })
+                .collect();
+            pre_root = root_hash;
+            storage_accesses.extend(rows);
+        }
+        let program_hash_access = storage_accesses
+            .drain(storage_log_len * ROOT_TREE_DEPTH..)
+            .collect();
+        Ok(StorageUpdateTrace {
+            storage_accesses,
+            program_hash_access,
+            storage_related_poseidon,
+        })
     }
 
-    pub fn process_blocks<I>(&mut self, blocks: I) -> (Vec<HashTrace>, Vec<TreeMetadata>)
-    where
-        I: IntoIterator,
-        I::Item: IntoIterator,
-        <I::Item as IntoIterator>::Item: Borrow<WitnessStorageLog>,
-    {
+    pub fn process_block(&mut self, storage_logs: &[WitnessStorageLog]) -> TreeMetadata {
+        let pre_root = self.root_hash();
+        let (hash_traces, tree_metadata) = self.process_blocks(&[storage_logs]);
+        assert!(
+            tree_metadata.len() == 1,
+            "Storage log and tree metadata not match!"
+        );
+
+        let witness = Self::compose_witness(pre_root, &hash_traces, &storage_logs);
+        let mut tree_metadata = tree_metadata[0].clone();
+        let witness = PrepareBasicCircuitsJob {
+            storage: witness.unwrap(),
+        };
+        tree_metadata.witness = Some(witness);
+        tree_metadata
+    }
+
+    pub fn process_blocks(
+        &mut self,
+        blocks: &[&[WitnessStorageLog]],
+    ) -> (Vec<HashTrace>, Vec<TreeMetadata>) {
         // Filter out reading logs and convert writing to the key-value pairs
         let tree_operations: Vec<_> = blocks
             .into_iter()
@@ -131,17 +244,18 @@ impl AccountTree {
                     .into_iter()
                     .map(|log| {
                         let operation = match log.borrow().storage_log.kind {
-                            StorageLogKind::RepeatedWrite | StorageLogKind::InitialWrite => {
-                                TreeOperation::Write {
-                                    value: log.borrow().storage_log.value,
-                                    previous_value: log.borrow().previous_value,
-                                }
-                            }
-                            StorageLogKind::Read => {
-                                TreeOperation::Read(log.borrow().storage_log.value)
-                            }
+                            StorageLogKind::Write => TreeOperation::Write {
+                                value: h256_to_tree_value(&log.borrow().storage_log.value),
+                                previous_value: h256_to_tree_value(&log.borrow().previous_value),
+                            },
+                            StorageLogKind::Read => TreeOperation::Read(h256_to_tree_value(
+                                &log.borrow().storage_log.value,
+                            )),
                         };
-                        (log.borrow().storage_log.key, operation)
+                        (
+                            h256_to_tree_key(&log.borrow().storage_log.key.hashed_key()),
+                            operation,
+                        )
                     })
                     .collect();
 
@@ -241,14 +355,13 @@ impl AccountTree {
                         last_index,
                         initial_writes,
                         repeated_writes,
-                        previous_index,
                         ..
                     } = std::mem::take(&mut leaf_indices[block]);
 
                     let metadata: Vec<_> =
                         group.into_iter().map(|(metadata, _)| metadata).collect();
-                    let witness_input = bincode::serialize(&(metadata.clone(), previous_index))
-                        .expect("witness serialization failed");
+                    // let witness_input = bincode::serialize(&(metadata.clone(), previous_index))
+                    //     .expect("witness serialization failed");
 
                     match metadata.last() {
                         Some(meta) => {
@@ -256,9 +369,10 @@ impl AccountTree {
                             Ok(TreeMetadata {
                                 root_hash,
                                 rollup_last_leaf_index: last_index,
-                                witness_input,
+                                // witness_input,
                                 initial_writes,
                                 repeated_writes,
+                                witness: None,
                             })
                         }
                         None => Err(TreeError::EmptyPatch(String::from(

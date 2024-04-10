@@ -2,7 +2,11 @@ use bigdecimal::BigDecimal;
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use num::{bigint::ToBigInt, rational::Ratio, BigUint};
 use ola_basic_types::{Address, H256, U256};
-use olavm_core::types::{GoldilocksField, account::Address as OlavmAddress, merkle_tree::{tree_key_to_h256, TreeValue, TreeKey}};
+use olavm_core::types::{
+    account::Address as OlavmAddress,
+    merkle_tree::{tree_key_to_h256, TreeKey, TreeValue},
+    GoldilocksField,
+};
 use olavm_plonky2::field::types::Field;
 
 pub fn u256_to_big_decimal(value: U256) -> BigDecimal {

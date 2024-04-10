@@ -3,13 +3,13 @@ use olavm_core::{
         hash::Hasher,
         poseidon_trace::PoseidonType::{Branch, Leaf},
     },
-    types::merkle_tree::{
-        constant::ROOT_TREE_DEPTH, tree_key_default, NodeEntry, TreeKey, TreeValue, ZkHash,
-    },
+    types::merkle_tree::{constant::ROOT_TREE_DEPTH, TreeKey, TreeValue, ZkHash},
 };
 
-use std::{iter::once, sync::Arc};
+use ola_types::merkle_tree::{tree_key_default, NodeEntry};
+
 use super::TreeError;
+use std::{iter::once, sync::Arc};
 
 #[derive(Debug)]
 struct TreeConfigInner<H> {
