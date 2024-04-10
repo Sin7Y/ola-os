@@ -36,6 +36,13 @@ impl ProviderParams {
             http_endpoint: "https://pre-alpha-api.olavm.com:443".to_string(),
         }
     }
+
+    pub fn dev() -> Self {
+        Self {
+            chain_id: 1027,
+            http_endpoint: "https://dev-alpha-explorer.olavm.com".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

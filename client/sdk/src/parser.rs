@@ -75,6 +75,7 @@ impl ToValue {
                             Param {
                                 name: "tmp".to_string(),
                                 type_: t.clone(),
+                                indexed: None,
                             },
                             i.clone(),
                         )
@@ -135,6 +136,7 @@ impl ToValue {
                             Param {
                                 name: "tmp".to_string(),
                                 type_: t.clone(),
+                                indexed: None,
                             },
                             i.clone(),
                         )
@@ -178,6 +180,7 @@ impl ToValue {
                     Param {
                         name: name.clone(),
                         type_: t.clone(),
+                        indexed: None,
                     },
                     i.clone(),
                 );

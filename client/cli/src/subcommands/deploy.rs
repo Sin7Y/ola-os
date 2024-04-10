@@ -47,6 +47,7 @@ impl Deploy {
             match network.as_str() {
                 "local" => ProviderParams::local(),
                 "pre-alpha" => ProviderParams::pre_alpha(),
+                "dev" => ProviderParams::dev(),
                 _ => {
                     anyhow::bail!("invalid network name")
                 }
