@@ -19,8 +19,17 @@ olaos_health_check = { path = "../health_check" }
 olaos_logs = { path = "../logs" }
 olaos_object_store = { path = "../object_store" }
 olaos_queued_job_processor = { path = "../queued_job_processor" }
-olaos_merkle_tree = { path = "../merkle_tree" }
+# olaos_merkle_tree = { path = "../merkle_tree" }
+merkle_tree2 = { path = "../merkle_tree2" }
 olaos_storage = { path = "../storage" }
+# olavm_core = { git = "https://github.com/Sin7Y/olavm.git", package = "core", branch = "testnet-alpha"}
+olavm_core = { path = "../../olavm/core", package = "core" }
+# zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+zk-vm = { path = "../../olavm/zk-vm" }
+ola-executor = { path = "../../olavm/executor", package = "executor" }
+# ola-executor = {package = "executor", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+olaos_prover_fri_types = { path = "../prover/prover_fri_types" }
+
 jsonrpsee = { version = "0.21.0", default-features = false, features = [
     "macros",
     "server",
@@ -56,17 +65,10 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
 derivative = "*"
 rayon = "*"
-olavm_core = { git = "https://github.com/Sin7Y/olavm.git", package = "core", branch = "testnet-alpha"}
-# olavm_core = { path = "../../olavm/core", package = "core" }
 tempfile = "3.0.2"
-zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
-# zk-vm = { path = "../../olavm/zk-vm" }
-# ola-executor = { path = "../../olavm/executor", package = "executor" }
-ola-executor = {package = "executor", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
 rocksdb = { version = "0.21", default-features = false, features = ["snappy"] }
 env_logger = "0.6"
 bincode = "1"
-olaos_prover_fri_types = { path = "../prover/prover_fri_types" }
 
 [features]
 # default = ["server", "client"]

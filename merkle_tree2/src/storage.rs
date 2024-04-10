@@ -1,17 +1,21 @@
 use crate::TreeError;
 use itertools::Itertools;
 use log::debug;
+use ola_types::{
+    merkle_tree::{
+        tree_key_to_u256, tree_key_to_u8_arr, tree_value_to_h256, u8_arr_to_tree_key, LeafIndices,
+        LevelIndex, TreeOperation,
+    },
+    storage::writes::{InitialStorageWrite, RepeatedStorageWrite},
+};
 use ola_utils::convert::{
     deserialize_block_number, deserialize_leaf_index, serialize_block_number, serialize_leaf_index,
     serialize_tree_leaf,
 };
 use olaos_storage::{db::NamedColumnFamily, RocksDB};
-use olavm_core::types::merkle_tree::{
-    tree_key_to_u8_arr, u8_arr_to_tree_key, InitialStorageWrite, LeafIndices, LevelIndex,
-    RepeatedStorageWrite, TreeKey, TreeOperation, ZkHash,
-};
+use olavm_core::types::merkle_tree::{TreeKey, ZkHash};
 use std::{
-    collections::{HashMap, hash_map::Entry},
+    collections::{hash_map::Entry, HashMap},
     fmt::Debug,
 };
 
@@ -185,7 +189,10 @@ impl Storage {
                             // existing leaf
                             (Some(bytes), TreeOperation::Write { value, .. }) => {
                                 let index = deserialize_leaf_index(&bytes);
-                                repeated_writes.push(RepeatedStorageWrite { index, value });
+                                repeated_writes.push(RepeatedStorageWrite {
+                                    index,
+                                    value: tree_value_to_h256(&value),
+                                });
                                 index
                             }
                             (Some(bytes), TreeOperation::Read(_)) => deserialize_leaf_index(&bytes),
@@ -200,7 +207,10 @@ impl Storage {
                                 debug!("leaf:{:?}", leaf.clone());
                                 if let Some(&index) = new_writes.get(&leaf) {
                                     debug!("index:{:?}", index);
-                                    repeated_writes.push(RepeatedStorageWrite { index, value });
+                                    repeated_writes.push(RepeatedStorageWrite {
+                                        index,
+                                        value: tree_value_to_h256(&value),
+                                    });
                                     index
                                 } else {
                                     let index = current_index;
@@ -208,7 +218,11 @@ impl Storage {
                                         serialize_tree_leaf(leaf),
                                         serialize_leaf_index(index),
                                     );
-                                    initial_writes.push(InitialStorageWrite { key: leaf, value });
+                                    initial_writes.push(InitialStorageWrite {
+                                        index,
+                                        key: tree_key_to_u256(&leaf),
+                                        value: tree_value_to_h256(&value),
+                                    });
                                     new_writes.insert(leaf, index);
                                     debug!("current_index:{:?}", current_index);
 

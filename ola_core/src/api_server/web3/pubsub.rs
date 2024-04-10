@@ -9,7 +9,14 @@ use jsonrpsee::{
 };
 use ola_contracts::BaseSystemContractsHashes;
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
-use ola_types::{block::L1BatchHeader, commitment::{L1BatchMetaParameters, L1BatchMetadata, L1BatchWithMetadata}, proofs::L1BatchProofForL1, protocol_version::ProtocolVersionId, prove_batches::ProveBatches, Address, L1BatchNumber, MiniblockNumber, H256};
+use ola_types::{
+    block::L1BatchHeader,
+    commitment::{L1BatchMetaParameters, L1BatchMetadata, L1BatchWithMetadata},
+    proofs::L1BatchProofForL1,
+    protocol_version::ProtocolVersionId,
+    prove_batches::ProveBatches,
+    Address, L1BatchNumber, MiniblockNumber, H256,
+};
 use ola_web3_decl::{
     namespaces::eth::EthPubSubServer,
     types::{L1BatchProofForVerify, PubSubFilter, PubSubResult},
@@ -261,24 +268,27 @@ impl PubSubNotifier {
     }
 
     async fn load_proof_for_offchain_verify_mock(
-    storage: &mut StorageProcessor<'_>,
+        storage: &mut StorageProcessor<'_>,
         // blob_store: &dyn ObjectStore,
     ) -> anyhow::Result<Option<ProveBatches>> {
         olaos_logs::info!("start read mock proof bin file");
 
         let ola_home = std::env::var("OLAOS_HOME").unwrap_or_else(|_| ".".into());
-        let bin_path = format!(
-            "{}/ola_core/src/api_server/web3/ProveBatches.bin",
-            ola_home
-        );
-        let prove_batches_data = std::fs::read(bin_path).expect("failed to read ProveBatches.bin file");
-        let prove_batches: ProveBatches = bincode::deserialize(&prove_batches_data).expect("failed to deserialize ProveBatches");
+        let bin_path = format!("{}/ola_core/src/api_server/web3/ProveBatches.bin", ola_home);
+        let prove_batches_data =
+            std::fs::read(bin_path).expect("failed to read ProveBatches.bin file");
+        let prove_batches: ProveBatches =
+            bincode::deserialize(&prove_batches_data).expect("failed to deserialize ProveBatches");
         let proof = prove_batches.proofs.first().unwrap().to_owned();
         // let proof: FriProofWrapper = bincode::deserialize(&proof.proof).unwrap();
-        let proof: FriProofWrapper = serde_json::from_slice(&proof.proof).expect("faile to deserialize from slice");
+        let proof: FriProofWrapper =
+            serde_json::from_slice(&proof.proof).expect("faile to deserialize from slice");
         match proof {
             FriProofWrapper::Base(ola_proof) => {
-                olaos_logs::info!("Mock proof bitwise challenge: {:?}", ola_proof.ola_stark.bitwise_stark.get_compress_challenge());
+                olaos_logs::info!(
+                    "Mock proof bitwise challenge: {:?}",
+                    ola_proof.ola_stark.bitwise_stark.get_compress_challenge()
+                );
             }
         }
         olaos_logs::info!("read mock proof bin file successfully");

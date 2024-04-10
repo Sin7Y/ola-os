@@ -6,10 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-olavm_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
-# olavm_core = { path = "../../olavm/core", package = "core"}
+# olavm_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+olavm_core = { path = "../../olavm/core", package = "core"}
+# olavm_plonky2 = {package = "plonky2", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+olavm_plonky2 = { path = "../../olavm/plonky2/plonky2", package = "plonky2" }
 olaos_storage = { path = "../storage", default-features = false }
 ola_utils = { path = "../utils" }
+ola_types = { path = "../types" }
 
 thiserror = "1.0"
 web3 = "0.19.0"

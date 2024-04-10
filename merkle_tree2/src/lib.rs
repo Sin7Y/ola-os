@@ -1,5 +1,4 @@
 pub mod iter_ext;
-pub mod log;
 pub mod macros;
 pub mod patch;
 pub mod storage;
