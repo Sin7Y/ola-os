@@ -1,8 +1,6 @@
 //! Tree updater trait and its implementations.
 
-use futures::{
-    future::join as future_join, future::ready as future_ready, FutureExt,
-};
+use futures::{future::join as future_join, future::ready as future_ready, FutureExt};
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{
     block::{L1BatchHeader, WitnessBlockWithLogs},

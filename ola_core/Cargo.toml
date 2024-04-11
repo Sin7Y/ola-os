@@ -19,8 +19,7 @@ olaos_health_check = { path = "../health_check" }
 olaos_logs = { path = "../logs" }
 olaos_object_store = { path = "../object_store" }
 olaos_queued_job_processor = { path = "../queued_job_processor" }
-# olaos_merkle_tree = { path = "../merkle_tree" }
-merkle_tree2 = { path = "../merkle_tree2" }
+olaos_merkle_tree = { path = "../merkle_tree" }
 olaos_storage = { path = "../storage" }
 # olavm_core = { git = "https://github.com/Sin7Y/olavm.git", package = "core", branch = "testnet-alpha"}
 olavm_core = { path = "../../olavm/core", package = "core" }
