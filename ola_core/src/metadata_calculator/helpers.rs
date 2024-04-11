@@ -9,7 +9,7 @@ use ola_config::database::MerkleTreeMode;
 use ola_dal::StorageProcessor;
 use ola_types::{
     block::WitnessBlockWithLogs,
-    log::{StorageLog, WitnessStorageLog},
+    log::{StorageLog, WitnessStorageLog, StorageLogKind},
     merkle_tree::{tree_key_to_h256, TreeMetadata},
     L1BatchNumber, StorageKey, H256,
 };
@@ -129,6 +129,7 @@ impl AsyncTree {
     pub async fn process_l1_batch(&mut self, storage_logs: Vec<WitnessStorageLog>) -> TreeMetadata {
         let mut tree = self.inner.take().expect(Self::INCONSISTENT_MSG);
         let (tree, metadata) = tokio::task::spawn_blocking(move || {
+            let storage_logs = filter_block_logs(&storage_logs);
             let metadata = tree.process_block(&storage_logs);
             (tree, metadata)
         })
@@ -250,4 +251,12 @@ pub(crate) async fn get_logs_for_l1_batch(
         header,
         storage_logs: storage_logs.into_values().collect(),
     })
+}
+
+pub fn filter_block_logs(
+    logs: &[WitnessStorageLog],
+) -> Vec<WitnessStorageLog> {
+    logs.iter().filter(move |log| {
+        log.storage_log.kind == StorageLogKind::Write
+    }).cloned().collect()
 }
