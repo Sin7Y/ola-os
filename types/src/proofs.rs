@@ -78,8 +78,10 @@ impl TryFrom<i32> for AggregationRound {
 pub struct PrepareBasicCircuitsJob {
     // Merkle paths and some auxiliary information for each read / write operation in a block.
     // merkle_paths: Vec<StorageLogMetadata>,
-    pub storage: StorageUpdateTrace,
     // next_enumeration_index: u64,
+    pub storage: StorageUpdateTrace,
+    pub pre_root_hash: TreeValue,
+    pub root_hash: TreeValue,
 }
 
 // impl PrepareBasicCircuitsJob {

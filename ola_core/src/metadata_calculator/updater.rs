@@ -4,7 +4,7 @@ use futures::{future::join as future_join, future::ready as future_ready, Future
 use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{
     block::{L1BatchHeader, WitnessBlockWithLogs},
-    merkle_tree::TreeMetadata,
+    merkle_tree::{h256_to_tree_value, TreeMetadata},
     writes::InitialStorageWrite,
     L1BatchNumber, U256,
 };
@@ -42,13 +42,20 @@ impl TreeUpdater {
         &mut self,
         l1_batch: WitnessBlockWithLogs,
     ) -> (L1BatchHeader, TreeMetadata, Option<String>) {
+        let pre_root_hash = h256_to_tree_value(&self.tree.root_hash());
         let mut metadata = self.tree.process_l1_batch(l1_batch.storage_logs).await;
+        let root_hash = h256_to_tree_value(&self.tree.root_hash());
 
         let witness_input = metadata.witness.take();
         let l1_batch_number = l1_batch.header.number;
         let object_key = if let Some(object_store) = &self.object_store {
-            let witness_input =
+            // Set pre root_hash and post root_hash into witness.
+            let mut witness_input =
                 witness_input.expect("No witness input provided by tree; this is a bug");
+            witness_input.pre_root_hash = pre_root_hash;
+            witness_input.root_hash = root_hash;
+
+            // Save witness into object store.
             let object_key = object_store
                 .put(l1_batch_number, &witness_input)
                 .await

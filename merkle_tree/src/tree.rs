@@ -226,6 +226,8 @@ impl AccountTree {
         let mut tree_metadata = tree_metadata[0].clone();
         let witness = PrepareBasicCircuitsJob {
             storage: witness.unwrap(),
+            pre_root_hash: [GoldilocksField::ZERO; TREE_VALUE_LEN],
+            root_hash: [GoldilocksField::ZERO; TREE_VALUE_LEN],
         };
         tree_metadata.witness = Some(witness);
         tree_metadata
@@ -284,7 +286,6 @@ impl AccountTree {
         updates_batch: Vec<Vec<(TreeKey, TreeOperation)>>,
     ) -> Result<(Vec<HashTrace>, Vec<TreeMetadata>), TreeError> {
         let total_blocks = updates_batch.len();
-
         let storage_logs_with_blocks: Vec<_> = updates_batch
             .into_iter()
             .enumerate()
@@ -327,7 +328,6 @@ impl AccountTree {
             })?
             .clone()
             .into_iter()
-            // 1 update for Vec<HashTrace>
             .fold(vec![Vec::new(); group_size], |mut groups, item| {
                 groups[item.0].push(item.1);
                 groups
@@ -360,16 +360,12 @@ impl AccountTree {
 
                     let metadata: Vec<_> =
                         group.into_iter().map(|(metadata, _)| metadata).collect();
-                    // let witness_input = bincode::serialize(&(metadata.clone(), previous_index))
-                    //     .expect("witness serialization failed");
-
                     match metadata.last() {
                         Some(meta) => {
                             let root_hash = meta.root_hash.clone();
                             Ok(TreeMetadata {
                                 root_hash,
                                 rollup_last_leaf_index: last_index,
-                                // witness_input,
                                 initial_writes,
                                 repeated_writes,
                                 witness: None,
@@ -402,7 +398,6 @@ impl AccountTree {
             .map(|(op_idx, (key, op, index))| ((op_idx, key), (key, op, index)))
             .unzip();
 
-        // TODO: parents values in uncles and one leaf instruction value in changes
         let pre_map = self
             .hash_paths_to_leaves(updates.clone().into_iter(), false)
             .zip(op_idxs.clone().into_iter())
@@ -423,7 +418,6 @@ impl AccountTree {
             .map(|e| (tree_key_to_u256(e.0), e.1.clone()))
             .collect();
 
-        // TODO: neighbor values in uncles and one leaf instruction value in changes.
         let map = self
             .hash_paths_to_leaves(updates.into_iter(), true)
             .zip(op_idxs.into_iter())
