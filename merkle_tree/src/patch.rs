@@ -132,12 +132,6 @@ impl UpdatesBatch {
         let mut cur_path_map = Arc::new(Mutex::new(self.pre_updates));
 
         for depth in 0..ROOT_TREE_DEPTH {
-            // println!("depth: {}", depth);
-            // println!("cur_lvl_updates_map: updates lens {:?}, update uncles len: {}, update changes len: {}", cur_lvl_updates_map.values().last().unwrap().len(), cur_lvl_updates_map.values().last().unwrap()[0].uncles.len(), cur_lvl_updates_map.values().last().unwrap()[0].changes.len());
-            // if depth < 3 {
-            //     println!("details: {:?}", cur_lvl_updates_map);
-            // }
-
             // map(key -> Vec<value>), value is the hash of node(leaf/branch).
             let cur_changes: HashMap<_, _> = mutex_data!(cur_path_map)
                 .iter()
@@ -159,7 +153,7 @@ impl UpdatesBatch {
                 })
                 .collect::<Result<HashMap<_, _>, TreeError>>()?;
 
-            // neighbor's map(parent_key -> (left_child, right_child)), child is Vec<Update>.
+            // Neighbor's map(parent_key -> (left_child, right_child)), child is Vec<Update>.
             let res = cur_lvl_updates_map
                 .into_iter()
                 .into_grouping_map_by(|(key, _)| key >> 1)
@@ -193,19 +187,14 @@ impl UpdatesBatch {
                             right_updates.clone().collect::<Vec<_>>().len()
                         );
 
-                        // merged updates, e.g (odd/even, updates)
+                        // Merged updates, e.g (odd/even, updates)
                         let merged_ops: Vec<_> = left_updates
                             .merge_join_with_max_predecessor(
                                 right_updates,
                                 |(_, left), (_, right)| left.index.cmp(&right.index),
-                                |(_, update)| {
-                                    println!("update.changes.len(): {}", update.changes.len());
-                                    update.changes.last().map(|(_, node)| node).cloned()
-                                },
+                                |(_, update)| update.changes.last().map(|(_, node)| node).cloned(),
                             )
                             .collect();
-
-                        println!("\nmerged_ops: {:?}\n", merged_ops);
 
                         let ops_iter = merged_ops
                             // Parallel by operation index use
@@ -218,7 +207,7 @@ impl UpdatesBatch {
                                     index,
                                 } = &mut update;
 
-                                // last change is current key and hash.
+                                // Last change is current key and hash.
                                 let (cur_key, current_hash) = changes
                                     .last()
                                     .map(|(key, node)| (key, node.hash().clone()))
@@ -235,8 +224,6 @@ impl UpdatesBatch {
                                     .unwrap_or(sibling_hash);
 
                                 let cur_key = tree_key_to_u256(cur_key);
-                                println!("depth: {}, cur_key: {:?}", depth, cur_key);
-
                                 let update_index = mutex_data!(cur_path_map)
                                     .get(&cur_key)
                                     .ok_or(TreeError::EmptyPatch(format!(
@@ -352,9 +339,6 @@ impl UpdatesBatch {
                 .collect();
             cur_path_map = Arc::new(Mutex::new(cur_path_map_raw));
         }
-
-        // println!("After 256 loops!");
-        // println!("cur_lvl_updates_map: updates lens {:?}, update uncles len: {}, update changes len: {}", cur_lvl_updates_map.values().last().unwrap().len(), cur_lvl_updates_map.values().last().unwrap()[0].uncles.len(), cur_lvl_updates_map.values().last().unwrap()[0].changes.len());
 
         // Transforms map of leaf keys into an iterator of Merkle paths which produces
         // items sorted by operation index in increasing order.
