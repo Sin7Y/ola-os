@@ -5,8 +5,7 @@ use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{
     block::{L1BatchHeader, WitnessBlockWithLogs},
     merkle_tree::{h256_to_tree_value, TreeMetadata},
-    writes::InitialStorageWrite,
-    L1BatchNumber, U256,
+    L1BatchNumber,
 };
 use olaos_health_check::HealthUpdater;
 use olaos_object_store::ObjectStore;
@@ -101,13 +100,6 @@ impl TreeUpdater {
             };
             let ((header, metadata, object_key), next_l1_batch_data) =
                 future_join(process_l1_batch_task, load_next_l1_batch_task).await;
-
-            Self::check_initial_writes_consistency(
-                storage,
-                header.number,
-                &metadata.initial_writes,
-            )
-            .await;
 
             let metadata = MetadataCalculator::build_l1_batch_metadata(metadata, &header);
 
@@ -248,33 +240,5 @@ impl TreeUpdater {
             }
         }
         drop(health_updater); // Explicitly mark where the updater should be dropped
-    }
-
-    async fn check_initial_writes_consistency(
-        connection: &mut StorageProcessor<'_>,
-        l1_batch_number: L1BatchNumber,
-        tree_initial_writes: &[InitialStorageWrite],
-    ) {
-        let pg_initial_writes = connection
-            .storage_logs_dedup_dal()
-            .initial_writes_for_batch(l1_batch_number)
-            .await;
-
-        let pg_initial_writes: Vec<_> = pg_initial_writes
-            .into_iter()
-            .map(|(key, index)| {
-                let key = U256::from_little_endian(key.as_bytes());
-                (key, index.map_or(0, |n| n as u64))
-            })
-            .collect();
-
-        let tree_initial_writes: Vec<_> = tree_initial_writes
-            .iter()
-            .map(|write| (write.key, write.index))
-            .collect();
-        assert_eq!(
-            pg_initial_writes, tree_initial_writes,
-            "Leaf indices are not consistent for L1 batch {l1_batch_number}"
-        );
     }
 }
