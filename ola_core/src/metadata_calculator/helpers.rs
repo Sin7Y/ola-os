@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use merkle_tree2::{storage::MerkleTreeColumnFamily, tree::AccountTree};
 use ola_config::database::MerkleTreeMode;
 use ola_dal::StorageProcessor;
 use ola_types::{
@@ -15,6 +14,7 @@ use ola_types::{
     L1BatchNumber, StorageKey, H256,
 };
 use olaos_health_check::{Health, HealthStatus};
+use olaos_merkle_tree::{storage::MerkleTreeColumnFamily, tree::AccountTree};
 use olaos_storage::{RocksDB, RocksDBOptions, StalledWritesRetries};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -107,9 +107,7 @@ impl AsyncTree {
 
     pub fn new(db: RocksDB<MerkleTreeColumnFamily>) -> Self {
         let tree = AccountTree::new_with_db(db);
-        Self {
-            inner: Some(tree),
-        }
+        Self { inner: Some(tree) }
     }
 
     fn as_ref(&self) -> &AccountTree {

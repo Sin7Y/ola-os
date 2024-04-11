@@ -14,7 +14,7 @@ members = [
     "vm",
     "mempool",
     "storage",
-    # "merkle_tree",
+    "merkle_tree",
     "client/cli",
     "client/sdk",
     "object_store",
@@ -23,6 +23,5 @@ members = [
     "prover/witness_generator",
     "prover/prover_fri",
     "prover/prover_fri_utils",
-    "merkle_tree2"
 ]
 resolver = "2"

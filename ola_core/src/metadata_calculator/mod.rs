@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Ok;
 use ola_config::{
@@ -9,14 +6,14 @@ use ola_config::{
     database::{MerkleTreeConfig, MerkleTreeMode},
 };
 use ola_dal::connection::ConnectionPool;
+use ola_types::merkle_tree::{tree_key_to_h256, TreeMetadata};
 use ola_types::{
     block::{L1BatchHeader, WitnessBlockWithLogs},
     commitment::{L1BatchCommitment, L1BatchMetadata},
     H256,
 };
 use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
-use merkle_tree2::tree::AccountTree;
-use ola_types::merkle_tree::{tree_key_to_h256, TreeMetadata};
+use olaos_merkle_tree::tree::AccountTree;
 use olaos_object_store::ObjectStore;
 use tokio::sync::watch;
 
