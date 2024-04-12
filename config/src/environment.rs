@@ -2,6 +2,8 @@ pub enum Environment {
     Local,
     PreAlpha,
     Mainnet,
+    AlphaDev,
+    Alpha,
 }
 
 impl Environment {
@@ -10,6 +12,8 @@ impl Environment {
             Environment::Local => "local",
             Environment::PreAlpha => "pre-alpha",
             Environment::Mainnet => "mainnet",
+            Environment::AlphaDev => "alpha-dev",
+            Environment::Alpha => "alpha",
         }
     }
 }
@@ -21,6 +25,8 @@ impl TryFrom<String> for Environment {
             "local" => Ok(Self::Local),
             "pre-alpha" => Ok(Self::PreAlpha),
             "mainnet" => Ok(Self::Mainnet),
+            "alpha-dev" => Ok(Self::AlphaDev),
+            "alpha" => Ok(Self::Alpha),
             other => Err(format!(
                 "{} is not a supported environment. Use either `local`、`pre-alpha` or `mainnet`.",
                 other
