@@ -22,6 +22,7 @@ pub mod events;
 pub mod fee;
 pub mod l2;
 pub mod l2_to_l1_log;
+pub mod merkle_tree;
 pub mod priority_op_onchain_data;
 pub mod proof_offchain_verification;
 pub mod proofs;

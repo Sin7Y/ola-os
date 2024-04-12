@@ -7,6 +7,7 @@ use ola_utils::{
     convert::address_to_h256,
     hash::{hash_bytes, PoseidonBytes},
 };
+use olavm_core::trace::trace::{PoseidonRow, StorageHashRow};
 
 use olavm_plonky2::hash::utils::h256_add_offset;
 use serde::{Deserialize, Serialize};
@@ -100,4 +101,11 @@ pub fn get_system_context_init_logs(chain_id: L2ChainId) -> Vec<StorageLog> {
         get_system_context_key(SYSTEM_CONTEXT_CHAIN_ID_POSITION),
         H256::from_low_u64_be(chain_id.0 as u64),
     )]
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageUpdateTrace {
+    pub storage_accesses: Vec<StorageHashRow>,
+    pub program_hash_access: Vec<StorageHashRow>,
+    pub storage_related_poseidon: Vec<PoseidonRow>,
 }

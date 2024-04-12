@@ -1,141 +1,50 @@
-#![warn(missing_debug_implementations, bare_trait_objects)]
-#![warn(clippy::all, clippy::pedantic)]
-#![allow(
-    clippy::must_use_candidate,
-    clippy::module_name_repetitions,
-    clippy::doc_markdown // frequent false positive: RocksDB
-)]
+pub mod iter_ext;
+pub mod macros;
+pub mod patch;
+pub mod storage;
+pub mod tree;
+pub mod tree_config;
+pub mod utils;
 
-use ola_utils::hash::PoseidonHasher;
+use thiserror::Error;
+use web3::types::U256;
 
-pub use crate::{
-    errors::NoVersionError,
-    hasher::{HashTree, TreeRangeDigest},
-    pruning::{MerkleTreePruner, MerkleTreePrunerHandle},
-    storage::{
-        Database, MerkleTreeColumnFamily, PatchSet, Patched, PruneDatabase, PrunePatchSet,
-        RocksDBWrapper,
-    },
-    types::{
-        BlockOutput, BlockOutputWithProofs, Key, TreeEntry, TreeEntryWithProof, TreeInstruction,
-        TreeLogEntry, TreeLogEntryWithProof, ValueHash,
-    },
-};
-use crate::{hasher::HasherWithStats, storage::Storage, types::Root};
+// All kinds of Merkle Tree errors.
+#[derive(Error, Clone, Debug)]
+pub enum TreeError {
+    #[error("Branch entry with given level and hash was not found: {0:?} {1:?}")]
+    MissingBranch(u16, Vec<u8>),
 
-mod consistency;
-pub mod domain;
-mod errors;
-mod getters;
-mod hasher;
-mod pruning;
-pub mod recovery;
-mod storage;
-mod types;
-mod utils;
+    #[error("Leaf entry with given hash was not found: {0:?}")]
+    MissingLeaf(Vec<u8>),
 
-#[doc(hidden)]
-pub mod unstable {
-    pub use crate::{
-        errors::DeserializeError,
-        types::{Manifest, Node, NodeKey, Root},
-    };
-}
+    #[error("Key shouldn't be greater than {0:?}, received {1:?}")]
+    InvalidKey(U256, U256),
 
-#[derive(Debug)]
-pub struct MerkleTree<DB, H = PoseidonHasher> {
-    db: DB,
-    hasher: H,
-}
+    #[error("Failed to convert {0:?} to `U256`")]
+    KeyConversionFailed(String),
 
-impl<DB: Database> MerkleTree<DB> {
-    pub fn new(db: DB) -> Self {
-        Self::with_hasher(db, PoseidonHasher)
-    }
-}
+    #[error("Invalid depth for {0:?}: {1:?} != {2:?}")]
+    InvalidDepth(String, u16, u16),
 
-impl<DB: Database, H: HashTree> MerkleTree<DB, H> {
-    pub fn with_hasher(db: DB, hasher: H) -> Self {
-        let tags = db.manifest().and_then(|manifest| manifest.tags);
-        if let Some(tags) = tags {
-            tags.assert_consistency(&hasher, false);
-        }
-        Self { db, hasher }
-    }
+    #[error("Attempt to create read-only Merkle tree for the absent root")]
+    EmptyRoot,
 
-    pub fn root_hash(&self, version: u64) -> Option<ValueHash> {
-        let root = self.root(version)?;
-        let Root::Filled { node, .. } = root else {
-            return Some(self.hasher.empty_tree_hash());
-        };
-        Some(node.hash(&mut HasherWithStats::new(&self.hasher), 0))
-    }
+    #[error("Invalid root: {0:?}")]
+    InvalidRoot(Vec<u8>),
 
-    pub(crate) fn root(&self, version: u64) -> Option<Root> {
-        self.db.root(version)
-    }
+    #[error("Trees have different roots: {0:?} and {1:?} respectively")]
+    TreeRootsDiffer(Vec<u8>, Vec<u8>),
 
-    /// Returns the latest version of the tree present in the database, or `None` if
-    /// no versions are present yet.
-    pub fn latest_version(&self) -> Option<u64> {
-        self.db.manifest()?.version_count.checked_sub(1)
-    }
+    #[error("Storage access error")]
+    StorageIoError(#[from] rocksdb::Error),
 
-    /// Returns the root hash for the latest version of the tree.
-    pub fn latest_root_hash(&self) -> ValueHash {
-        let root_hash = self
-            .latest_version()
-            .and_then(|version| self.root_hash(version));
-        root_hash.unwrap_or_else(|| self.hasher.empty_tree_hash())
-    }
+    #[error("Empty patch error: {0}")]
+    EmptyPatch(String),
 
-    /// Returns the latest-versioned root node.
-    pub(crate) fn latest_root(&self) -> Root {
-        let root = self.latest_version().and_then(|version| self.root(version));
-        root.unwrap_or(Root::Empty)
-    }
+    #[error("Index not found error")]
+    LeafIndexNotFound,
 
-    /// Removes the most recent versions from the database.
-    ///
-    /// The current implementation does not actually remove node data for the removed versions
-    /// since it's likely to be reused in the future (especially upper-level internal nodes).
-    pub fn truncate_recent_versions(&mut self, retained_version_count: u64) {
-        let mut manifest = self.db.manifest().unwrap_or_default();
-        if manifest.version_count > retained_version_count {
-            manifest.version_count = retained_version_count;
-            let patch = PatchSet::from_manifest(manifest);
-            self.db.apply_patch(patch);
-        }
-    }
-
-    /// Extends this tree by creating its new version.
-    ///
-    /// # Return value
-    ///
-    /// Returns information about the update such as the final tree hash.
-    pub fn extend(&mut self, entries: Vec<TreeEntry>) -> BlockOutput {
-        let next_version = self.db.manifest().unwrap_or_default().version_count;
-        let storage = Storage::new(&self.db, &self.hasher, next_version, true);
-        let (output, patch) = storage.extend(entries);
-        self.db.apply_patch(patch);
-        output
-    }
-
-    /// Extends this tree by creating its new version, computing an authenticity Merkle proof
-    /// for each provided instruction.
-    ///
-    /// # Return value
-    ///
-    /// Returns information about the update such as the final tree hash and proofs for each input
-    /// instruction.
-    pub fn extend_with_proofs(
-        &mut self,
-        instructions: Vec<TreeInstruction>,
-    ) -> BlockOutputWithProofs {
-        let next_version = self.db.manifest().unwrap_or_default().version_count;
-        let storage = Storage::new(&self.db, &self.hasher, next_version, true);
-        let (output, patch) = storage.extend_with_proofs(instructions);
-        self.db.apply_patch(patch);
-        output
-    }
+    #[error("Lock mutex error: {0}")]
+    MutexLockError(String),
 }
