@@ -17,6 +17,7 @@ use ola_types::{
     prove_batches::ProveBatches,
     Address, L1BatchNumber, MiniblockNumber, H256,
 };
+use ola_utils::time::seconds_since_epoch;
 use ola_web3_decl::{
     namespaces::eth::EthPubSubServer,
     types::{L1BatchProofForVerify, PubSubFilter, PubSubResult},
@@ -242,18 +243,27 @@ impl PubSubNotifier {
             let new_proof = self.new_l1_batch_proofs().await?;
 
             if let Some(new_proof) = new_proof {
+                let timestamp = seconds_since_epoch() as u32;
+                let new_l1_batch_number = L1BatchNumber(timestamp);
                 let proof_bytes = bincode::serialize(&new_proof)?;
                 let proof = L1BatchProofForVerify {
-                    l1_batch_number: new_proof.prev_l1_batch.header.number + 1,
+                    l1_batch_number: new_l1_batch_number,
                     prove_batches_data: proof_bytes,
                 };
                 let proof = PubSubResult::L1BatchProof(proof);
-                let last_l1_batch_number = new_proof.l1_batches.last().unwrap().header.number;
+                // TODO: replace new_l1_batch_number with last_l1_batch_number
+                // let last_l1_batch_number = new_proof.l1_batches.last().unwrap().header.number;
+                // self.send_pub_sub_results(vec![proof], SubscriptionType::L1BatchProofs);
+                // self.emit_event(PubSubEvent::L1BatchVerifiedAdvanced(
+                //     SubscriptionType::L1BatchProofs,
+                //     last_l1_batch_number,
+                // ));
                 self.send_pub_sub_results(vec![proof], SubscriptionType::L1BatchProofs);
                 self.emit_event(PubSubEvent::L1BatchVerifiedAdvanced(
                     SubscriptionType::L1BatchProofs,
-                    last_l1_batch_number,
+                    new_l1_batch_number,
                 ));
+                olaos_logs::info!("L1BatchVerifiedAdvanced {:?}", new_l1_batch_number);
             }
         }
         Ok(())
@@ -606,7 +616,7 @@ impl EthSubscribe {
         let notifier = PubSubNotifier {
             sender: self.l1_batch_proofs.clone(),
             connection_pool,
-            polling_interval: Duration::from_secs(10),
+            polling_interval: Duration::from_secs(120),
             events_sender: self.events_sender.clone(),
         };
         let notifier_task = tokio::spawn(notifier.notify_l1_batch_proofs(stop_receiver));

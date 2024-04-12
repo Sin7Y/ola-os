@@ -46,6 +46,7 @@ pub fn load_config<P: AsRef<Path>, T: DeserializeOwned>(
         .unwrap_or_else(|_| "local".into())
         .try_into()
         .expect("Failed to parse OLAOS_APP_ENVIRONMENT.");
+    olaos_logs::info!("run app in environment: {:?}", environment.as_str());
     // Layer on the environment-specific values.
     settings.merge(
         config::File::from(configuration_directory.join(environment.as_str())).required(true),

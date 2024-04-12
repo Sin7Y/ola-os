@@ -1,0 +1,7 @@
+http_port: 13000
+http_url: http://127.0.0.1:13000
+max_tx_size: 1000000
+threads_per_server: 128
+http_threads: 128
+max_batch_request_size: 200
+max_response_body_size_mb: 10
