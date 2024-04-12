@@ -21,12 +21,12 @@ olaos_object_store = { path = "../object_store" }
 olaos_queued_job_processor = { path = "../queued_job_processor" }
 olaos_merkle_tree = { path = "../merkle_tree" }
 olaos_storage = { path = "../storage" }
-# olavm_core = { git = "https://github.com/Sin7Y/olavm.git", package = "core", branch = "testnet-alpha"}
-olavm_core = { path = "../../olavm/core", package = "core" }
-# zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
-zk-vm = { path = "../../olavm/zk-vm" }
-ola-executor = { path = "../../olavm/executor", package = "executor" }
-# ola-executor = {package = "executor", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+olavm_core = { git = "https://github.com/Sin7Y/olavm.git", package = "core", branch = "testnet-alpha"}
+# olavm_core = { path = "../../olavm/core", package = "core" }
+zk-vm = {git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+# zk-vm = { path = "../../olavm/zk-vm" }
+ola-executor = {package = "executor", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+# ola-executor = { path = "../../olavm/executor", package = "executor" }
 olaos_prover_fri_types = { path = "../prover/prover_fri_types" }
 
 jsonrpsee = { version = "0.21.0", default-features = false, features = [

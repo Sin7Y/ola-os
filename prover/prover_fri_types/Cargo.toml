@@ -8,7 +8,7 @@ edition = "2021"
 olaos_object_store = { path = "../../object_store" }
 ola_types = { path = "../../types" }
 serde = { version = "1.0", features = ["derive"] }
-# ola_circuits = { package = "circuits", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha" }
-ola_circuits = { path = "../../../olavm/circuits", package = "circuits" }
-# olavm_plonky2 = { package = "plonky2", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha" }
-olavm_plonky2 = { path = "../../../olavm/plonky2/plonky2", package = "plonky2" }
+ola_circuits = { package = "circuits", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha" }
+# ola_circuits = { path = "../../../olavm/circuits", package = "circuits" }
+olavm_plonky2 = { package = "plonky2", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha" }
+# olavm_plonky2 = { path = "../../../olavm/plonky2/plonky2", package = "plonky2" }

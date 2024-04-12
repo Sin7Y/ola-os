@@ -9,7 +9,7 @@ use ola_config::database::MerkleTreeMode;
 use ola_dal::StorageProcessor;
 use ola_types::{
     block::WitnessBlockWithLogs,
-    log::{StorageLog, WitnessStorageLog, StorageLogKind},
+    log::{StorageLog, StorageLogKind, WitnessStorageLog},
     merkle_tree::{tree_key_to_h256, TreeMetadata},
     L1BatchNumber, StorageKey, H256,
 };
@@ -253,10 +253,9 @@ pub(crate) async fn get_logs_for_l1_batch(
     })
 }
 
-pub fn filter_block_logs(
-    logs: &[WitnessStorageLog],
-) -> Vec<WitnessStorageLog> {
-    logs.iter().filter(move |log| {
-        log.storage_log.kind == StorageLogKind::Write
-    }).cloned().collect()
+pub fn filter_block_logs(logs: &[WitnessStorageLog]) -> Vec<WitnessStorageLog> {
+    logs.iter()
+        .filter(move |log| log.storage_log.kind == StorageLogKind::Write)
+        .cloned()
+        .collect()
 }
