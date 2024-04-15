@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use ola_basic_types::H256;
 use serde::Deserialize;
 
@@ -16,14 +17,10 @@ pub struct SenderConfig {
 impl SenderConfig {
     // Don't load private key, if it's not required.
     pub fn private_key(&self) -> Option<H256> {
-        std::env::var("OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY")
-            .unwrap_or(
-                "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292".to_string(),
-            )
-            .map(|pk| {
-                pk.parse()
-                    .expect("failed to load OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY")
-            })
+        let pk = std::env::var("OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY").unwrap_or(
+            "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292".to_string(),
+        );
+        Some(H256::from_str(&pk))
     }
 }
 
