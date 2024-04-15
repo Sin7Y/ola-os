@@ -17,6 +17,9 @@ impl SenderConfig {
     // Don't load private key, if it's not required.
     pub fn private_key(&self) -> Option<H256> {
         std::env::var("OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY")
+            .or_else(|e| {
+                Ok("1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292".to_string())
+            })
             .ok()
             .map(|pk| {
                 pk.parse()
