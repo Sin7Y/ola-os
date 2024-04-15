@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use ola_basic_types::H256;
 use serde::Deserialize;
+use std::str::FromStr;
 
 use crate::load_config;
 
@@ -20,7 +20,7 @@ impl SenderConfig {
         let pk = std::env::var("OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY").unwrap_or(
             "1bcb518fd7c0176670f800a107ea75bb6ff31e83edc29700cbfcff40b06a0292".to_string(),
         );
-        Some(H256::from_str(&pk))
+        Some(H256::from_str(&pk).expect("failed to load OLAOS_ETH_SENDER_OPERATOR_PRIVATE_KEY"))
     }
 }
 
