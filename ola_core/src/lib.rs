@@ -154,6 +154,10 @@ pub async fn initialize_components(
         }
     }
 
+    let object_store_config =
+        load_object_store_config().expect("failed to load object store config");
+    let store_factory = ObjectStoreFactory::new(object_store_config);
+
     if components.contains(&Component::Sequencer) {
         let started_at = Instant::now();
         olaos_logs::info!("initializing Sequencer");
@@ -165,15 +169,12 @@ pub async fn initialize_components(
             sequencer_config,
             &db_config,
             &mempool_config,
+            &store_factory,
             stop_receiver.clone(),
         )
         .await;
         olaos_logs::info!("initialized Sequencer in {:?}", started_at.elapsed());
     }
-
-    let object_store_config =
-        load_object_store_config().expect("failed to load object store config");
-    let store_factory = ObjectStoreFactory::new(object_store_config);
 
     if components.contains(&Component::Tree) {
         let started_at = Instant::now();
@@ -338,6 +339,7 @@ async fn add_sequencer_to_task_futures(
     sequencer_config: SequencerConfig,
     db_config: &DBConfig,
     mempool_config: &MempoolConfig,
+    store_factory: &ObjectStoreFactory,
     stop_receiver: watch::Receiver<bool>,
 ) {
     let pool_builder = ConnectionPool::singleton(DbVariant::Master);
@@ -357,6 +359,8 @@ async fn add_sequencer_to_task_futures(
     );
     task_futures.push(tokio::spawn(miniblock_sealer.run()));
 
+    let object_store = store_factory.create_store().await;
+
     let sequencer = create_sequencer(
         contracts_config,
         sequencer_config,
@@ -365,6 +369,7 @@ async fn add_sequencer_to_task_futures(
         sequencer_pool,
         mempool.clone(),
         miniblock_sealer_handle,
+        object_store,
         stop_receiver.clone(),
     )
     .await;

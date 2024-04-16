@@ -224,12 +224,7 @@ impl AccountTree {
 
         let witness = Self::compose_witness(pre_root, &hash_traces, &storage_logs);
         let mut tree_metadata = tree_metadata[0].clone();
-        let witness = PrepareBasicCircuitsJob {
-            storage: witness.unwrap(),
-            pre_root_hash: [GoldilocksField::ZERO; TREE_VALUE_LEN],
-            root_hash: [GoldilocksField::ZERO; TREE_VALUE_LEN],
-        };
-        tree_metadata.witness = Some(witness);
+        tree_metadata.witness = Some(witness.unwrap());
         tree_metadata
     }
 

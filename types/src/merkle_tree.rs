@@ -1,7 +1,10 @@
 // use crate::vm::vm_state::Address;
 use crate::{
     proofs::PrepareBasicCircuitsJob,
-    storage::writes::{InitialStorageWrite, RepeatedStorageWrite},
+    storage::{
+        writes::{InitialStorageWrite, RepeatedStorageWrite},
+        StorageUpdateTrace,
+    },
 };
 use itertools::Itertools;
 use olavm_plonky2::field::goldilocks_field::GoldilocksField;
@@ -125,7 +128,7 @@ pub struct TreeMetadata {
     pub rollup_last_leaf_index: u64,
     pub initial_writes: Vec<InitialStorageWrite>,
     pub repeated_writes: Vec<RepeatedStorageWrite>,
-    pub witness: Option<PrepareBasicCircuitsJob>,
+    pub witness: Option<StorageUpdateTrace>,
 }
 
 #[derive(Debug, Clone, Default)]

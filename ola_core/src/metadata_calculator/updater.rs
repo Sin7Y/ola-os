@@ -5,6 +5,7 @@ use ola_dal::{connection::ConnectionPool, StorageProcessor};
 use ola_types::{
     block::{L1BatchHeader, WitnessBlockWithLogs},
     merkle_tree::{h256_to_tree_value, TreeMetadata},
+    proofs::PrepareBasicCircuitsJob,
     L1BatchNumber,
 };
 use olaos_health_check::HealthUpdater;
@@ -49,16 +50,28 @@ impl TreeUpdater {
         let l1_batch_number = l1_batch.header.number;
         let object_key = if let Some(object_store) = &self.object_store {
             // Set pre root_hash and post root_hash into witness.
-            let mut witness_input =
-                witness_input.expect("No witness input provided by tree; this is a bug");
-            witness_input.pre_root_hash = pre_root_hash;
-            witness_input.root_hash = root_hash;
+            let storage = witness_input.expect(&format!(
+                "No storage trace found in batch {}!",
+                l1_batch_number
+            ));
+            // Obtain partial prepare_witnes by l1_batch_number from object store
+            let mut witness: PrepareBasicCircuitsJob =
+                object_store.get(l1_batch_number).await.expect(&format!(
+                    "No transaction trace found from object store in batch {}!",
+                    l1_batch_number
+                ));
+            witness.storage = Some(storage);
+            witness.pre_root_hash = Some(pre_root_hash);
+            witness.root_hash = Some(root_hash);
 
-            // Save witness into object store.
+            // Save full prepare_witness into object store.
             let object_key = object_store
-                .put(l1_batch_number, &witness_input)
+                .put(l1_batch_number, &witness)
                 .await
-                .unwrap();
+                .expect(&format!(
+                    "Failed to put full prepare_witness into object store in batch {}",
+                    l1_batch_number
+                ));
 
             olaos_logs::info!(
                 "Saved witnesses for L1 batch #{l1_batch_number} to object storage at `{object_key}`"
