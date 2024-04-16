@@ -7,9 +7,10 @@ use ola_dal::connection::ConnectionPool;
 use ola_executor::batch_exe_manager::BlockExeManager;
 use ola_executor::tx_exe_manager::OlaTapeInitInfo;
 use ola_state::rocksdb::RocksdbStorage;
-use ola_types::events::VmEvent;
-use ola_types::log::StorageLogQuery;
-use ola_types::{ExecuteTransactionCommon, Transaction};
+use ola_types::{
+    block::TxExeTraces, events::VmEvent, log::StorageLogQuery, ExecuteTransactionCommon,
+    Transaction,
+};
 use ola_utils::{bytes_to_u64s, h256_to_u64_array};
 use ola_vm::errors::VmRevertReason;
 use ola_vm::vm::VmTxExeResult;
@@ -85,7 +86,10 @@ impl BatchExecutorHandle {
     }
 
     #[olaos_logs::instrument(skip(self))]
-    pub(super) async fn finish_batch(self, tx_index_in_l1_batch: u32) -> VmBlockResult {
+    pub(super) async fn finish_batch(
+        self,
+        tx_index_in_l1_batch: u32,
+    ) -> (VmBlockResult, TxExeTraces) {
         let (response_sender, response_receiver) = oneshot::channel();
         self.commands
             .send(Command::FinishBatch(tx_index_in_l1_batch, response_sender))
@@ -102,7 +106,7 @@ impl BatchExecutorHandle {
 #[derive(Debug)]
 pub(super) enum Command {
     ExecuteTx(Box<Transaction>, u32, oneshot::Sender<TxExecutionResult>),
-    FinishBatch(u32, oneshot::Sender<VmBlockResult>),
+    FinishBatch(u32, oneshot::Sender<(VmBlockResult, TxExeTraces)>),
 }
 
 #[derive(Debug, Clone)]
@@ -270,7 +274,7 @@ impl BatchExecutor {
                     olaos_logs::info!(
                         "finish batch finished, tx_index_in_l1_batch {:?}, total log_queries {:?}",
                         tx_index_in_l1_batch,
-                        block_result.full_result.storage_log_queries.len()
+                        block_result.0.full_result.storage_log_queries.len()
                     );
                     resp.send(block_result).unwrap();
                     return;
@@ -371,7 +375,7 @@ impl BatchExecutor {
         &self,
         block_exe_manager: &mut BlockExeManager,
         tx_index_in_l1_batch: u32,
-    ) -> VmBlockResult {
+    ) -> (VmBlockResult, TxExeTraces) {
         let result = block_exe_manager.finish_batch().unwrap();
         let mut full_result = VmExecutionResult::default();
         let storage_logs: Vec<StorageLogQuery> = result
@@ -383,14 +387,17 @@ impl BatchExecutor {
         full_result.storage_log_queries = storage_logs;
         full_result.events = events;
 
-        VmBlockResult {
-            full_result: VmExecutionResult::default(),
-            block_tip_result: VmPartialExecutionResult::from_storage_events(
-                &result.block_tip_queries,
-                &vec![],
-                tx_index_in_l1_batch,
-            ),
-        }
+        (
+            VmBlockResult {
+                full_result: VmExecutionResult::default(),
+                block_tip_result: VmPartialExecutionResult::from_storage_events(
+                    &result.block_tip_queries,
+                    &vec![],
+                    tx_index_in_l1_batch,
+                ),
+            },
+            result.tx_traces,
+        )
     }
 }
 

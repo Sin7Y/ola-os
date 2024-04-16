@@ -2,7 +2,10 @@ use std::str::FromStr;
 
 use crate::storage::StorageUpdateTrace;
 use ola_basic_types::{L1BatchNumber, H256, U256};
-use olavm_core::types::merkle_tree::{TreeKey, TreeValue};
+use olavm_core::{
+    trace::exe_trace::TxExeTrace,
+    types::merkle_tree::{TreeKey, TreeValue},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -76,12 +79,14 @@ impl TryFrom<i32> for AggregationRound {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrepareBasicCircuitsJob {
-    // Merkle paths and some auxiliary information for each read / write operation in a block.
-    // merkle_paths: Vec<StorageLogMetadata>,
-    // next_enumeration_index: u64,
-    pub storage: StorageUpdateTrace,
-    pub pre_root_hash: TreeValue,
-    pub root_hash: TreeValue,
+    // We use option for reason.
+    // We construct this struct by two steps: tx_trace in finish_batch, storage in merkle_tree.
+    // First put tx_trace part in object_store, while storage is ready, obtain tx_trace
+    // from object_store, then reconstruct this struct, and save it again with storage.
+    pub tx_trace: Option<Vec<TxExeTrace>>,
+    pub storage: Option<StorageUpdateTrace>,
+    pub pre_root_hash: Option<TreeValue>,
+    pub root_hash: Option<TreeValue>,
 }
 
 // impl PrepareBasicCircuitsJob {

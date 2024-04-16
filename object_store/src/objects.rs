@@ -93,7 +93,7 @@ impl StoredObject for PrepareBasicCircuitsJob {
     type Key<'a> = L1BatchNumber;
 
     fn encode_key(key: Self::Key<'_>) -> String {
-        format!("merkel_tree_storage_{key}.bin")
+        format!("prepare_witness_{key}.bin")
     }
 
     serialize_using_bincode!();
