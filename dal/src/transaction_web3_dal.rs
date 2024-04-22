@@ -199,6 +199,108 @@ impl TransactionsWeb3Dal<'_, '_> {
         }
     }
 
+    /// Returns receipts by transactions hashes.
+    /// Hashes are expected to be unique.
+    pub async fn get_transaction_receipts(
+        &mut self,
+        hashes: &[H256],
+    ) -> Result<Vec<TransactionReceipt>, SqlxError> {
+        let mut receipts: Vec<TransactionReceipt> = sqlx::query_as!(
+            StorageTransactionReceipt,
+            r#"
+            WITH
+                sl AS (
+                    SELECT DISTINCT
+                        ON (storage_logs.tx_hash) *
+                    FROM
+                        storage_logs
+                    WHERE
+                        storage_logs.address = $1
+                        AND storage_logs.tx_hash = ANY ($3)
+                    ORDER BY
+                        storage_logs.tx_hash,
+                        storage_logs.miniblock_number DESC,
+                        storage_logs.operation_number DESC
+                )
+            SELECT
+                transactions.hash AS tx_hash,
+                transactions.index_in_block AS index_in_block,
+                transactions.l1_batch_tx_index AS l1_batch_tx_index,
+                transactions.miniblock_number AS "block_number!",
+                transactions.error AS error,
+                transactions.effective_gas_price AS effective_gas_price,
+                transactions.initiator_address AS initiator_address,
+                transactions.data -> 'to' AS "transfer_to?",
+                transactions.data -> 'contractAddress' AS "execute_contract_address?",
+                transactions.tx_format AS "tx_format?",
+                transactions.refunded_gas AS refunded_gas,
+                transactions.gas_limit AS gas_limit,
+                miniblocks.hash AS "block_hash",
+                miniblocks.l1_batch_number AS "l1_batch_number?",
+                sl.key AS "contract_address?"
+            FROM
+                transactions
+                JOIN miniblocks ON miniblocks.number = transactions.miniblock_number
+                LEFT JOIN sl ON sl.value != $2
+                AND sl.tx_hash = transactions.hash
+            WHERE
+                transactions.hash = ANY ($3)
+            "#,
+            ACCOUNT_CODE_STORAGE_ADDRESS.as_bytes(),
+            FAILED_CONTRACT_DEPLOYMENT_BYTECODE_HASH.as_bytes(),
+            &hashes
+                .iter()
+                .map(|h| h.as_bytes().to_vec())
+                .collect::<Vec<_>>()[..]
+        )
+        .fetch_all(self.storage.conn())
+        .await?
+        .into_iter()
+        .map(Into::into)
+        .collect();
+
+        let mut logs = self
+            .storage
+            .events_dal()
+            .get_logs_by_tx_hashes(hashes)
+            .await?;
+
+        let mut l2_to_l1_logs = self
+            .storage
+            .events_dal()
+            .get_l2_to_l1_logs_by_hashes(hashes)
+            .await?;
+
+        for receipt in &mut receipts {
+            let logs_for_tx = logs.remove(&receipt.transaction_hash);
+
+            if let Some(logs) = logs_for_tx {
+                receipt.logs = logs
+                    .into_iter()
+                    .map(|mut log| {
+                        log.block_hash = Some(receipt.block_hash);
+                        log.l1_batch_number = receipt.l1_batch_number;
+                        log
+                    })
+                    .collect();
+            }
+
+            let l2_to_l1_logs_for_tx = l2_to_l1_logs.remove(&receipt.transaction_hash);
+            if let Some(l2_to_l1_logs) = l2_to_l1_logs_for_tx {
+                receipt.l2_to_l1_logs = l2_to_l1_logs
+                    .into_iter()
+                    .map(|mut log| {
+                        log.block_hash = Some(receipt.block_hash);
+                        log.l1_batch_number = receipt.l1_batch_number;
+                        log
+                    })
+                    .collect();
+            }
+        }
+
+        Ok(receipts)
+    }
+
     pub async fn get_transaction_details(
         &mut self,
         hash: H256,

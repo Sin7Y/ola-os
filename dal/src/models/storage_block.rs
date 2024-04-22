@@ -106,6 +106,18 @@ pub fn web3_block_number_to_sql(block_number: api::BlockNumber) -> String {
         }
     }
 }
+pub fn web3_block_where_sql(block_id: api::BlockId, arg_index: u8) -> String {
+    match block_id {
+        api::BlockId::Hash(_) => format!("miniblocks.hash = ${arg_index}"),
+        api::BlockId::Number(api::BlockNumber::Number(_)) => {
+            format!("miniblocks.number = ${arg_index}")
+        }
+        api::BlockId::Number(number) => {
+            let block_sql = web3_block_number_to_sql(number);
+            format!("miniblocks.number = {}", block_sql)
+        }
+    }
+}
 
 pub fn bind_block_where_sql_params<'q>(
     block_id: &'q api::BlockId,

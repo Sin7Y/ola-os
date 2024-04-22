@@ -1,4 +1,5 @@
 use anyhow::Context as _;
+use ola_types::api::{Block, TransactionReceipt, TransactionVariant};
 use ola_types::{
     api::{BlockId, BlockNumber},
     Address, MiniblockNumber, H256, U256, U64,
@@ -24,6 +25,108 @@ impl Clone for EthNamespace {
 impl EthNamespace {
     pub fn new(state: RpcState) -> Self {
         Self { state }
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub fn chain_id_impl(&self) -> U64 {
+        self.state.api_config.l2_chain_id.0.into()
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_block_impl(
+        &self,
+        block_id: BlockId,
+        full_transactions: bool,
+    ) -> Result<Option<Block<TransactionVariant>>, Web3Error> {
+        self.current_method().set_block_id(block_id);
+        self.state.start_info.ensure_not_pruned(block_id)?;
+
+        let block = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await?
+            .blocks_web3_dal()
+            .get_block_by_web3_block_id(
+                block_id,
+                full_transactions,
+                self.state.api_config.l2_chain_id,
+            )
+            .await
+            .context("get_block_by_web3_block_id")?;
+        if let Some(block) = &block {
+            let block_number = MiniblockNumber(block.number.as_u32());
+            self.set_block_diff(block_number);
+        }
+        Ok(block)
+    }
+    #[tracing::instrument(skip(self))]
+    pub async fn get_block_transaction_count_impl(
+        &self,
+        block_id: BlockId,
+    ) -> Result<Option<U256>, Web3Error> {
+        self.current_method().set_block_id(block_id);
+        self.state.start_info.ensure_not_pruned(block_id)?;
+
+        let tx_count = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await?
+            .blocks_web3_dal()
+            .get_block_tx_count(block_id)
+            .await
+            .context("get_block_tx_count")?;
+
+        if let Some((block_number, _)) = &tx_count {
+            self.set_block_diff(*block_number);
+        }
+        Ok(tx_count.map(|(_, count)| count))
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_block_receipts_impl(
+        &self,
+        block_id: BlockId,
+    ) -> Result<Vec<TransactionReceipt>, Web3Error> {
+        self.current_method().set_block_id(block_id);
+        self.state.start_info.ensure_not_pruned(block_id)?;
+
+        let block = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await?
+            .blocks_web3_dal()
+            .get_block_by_web3_block_id(block_id, false, self.state.api_config.l2_chain_id)
+            .await
+            .context("get_block_by_web3_block_id")?;
+        if let Some(block) = &block {
+            self.set_block_diff(block.number.as_u32().into());
+        }
+
+        let transactions: &[TransactionVariant] =
+            block.as_ref().map_or(&[], |block| &block.transactions);
+        let hashes: Vec<_> = transactions
+            .iter()
+            .map(|tx| match tx {
+                TransactionVariant::Full(tx) => tx.hash,
+                TransactionVariant::Hash(hash) => *hash,
+            })
+            .collect();
+
+        let mut receipts = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await?
+            .transactions_web3_dal()
+            .get_transaction_receipts(&hashes)
+            .await
+            .context("get_transaction_receipts")?;
+
+        receipts.sort_unstable_by_key(|receipt| receipt.transaction_index);
+        Ok(receipts)
     }
 
     #[olaos_logs::instrument(skip(self, address, block_id))]
