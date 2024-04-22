@@ -1,12 +1,19 @@
+use ola_types::tx::primitives::PackedEthSignature;
 use ola_types::{
+    api,
     api::{TransactionDetails, TransactionStatus},
     l2::{L2TxCommonData, TransactionType},
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
-    Address, ExecuteTransactionCommon, Nonce, Transaction, EIP_1559_TX_TYPE, EIP_712_TX_TYPE, H256,
-    OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256,
+    Address, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
+    EIP_712_TX_TYPE, H160, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
 };
+use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
+use sqlx::types::BigDecimal;
+use sqlx::{FromRow, Row};
+use std::error::Error;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageTransaction {
@@ -143,4 +150,49 @@ impl From<StorageTransactionDetails> for TransactionDetails {
             eth_execute_tx_hash: None,
         }
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct StorageApiTransaction {
+    #[serde(flatten)]
+    pub inner_api_transaction: api::Transaction,
+}
+
+impl From<StorageApiTransaction> for api::Transaction {
+    fn from(tx: StorageApiTransaction) -> Self {
+        tx.inner_api_transaction
+    }
+}
+pub fn web3_transaction_select_sql() -> &'static str {
+    r#"
+         transactions.hash as tx_hash,
+         transactions.index_in_block as index_in_block,
+         transactions.miniblock_number as block_number,
+         transactions.nonce as nonce,
+         transactions.signature as signature,
+         transactions.initiator_address as initiator_address,
+         transactions.tx_format as tx_format,
+         transactions.value as value,
+         transactions.gas_limit as gas_limit,
+         transactions.max_fee_per_gas as max_fee_per_gas,
+         transactions.max_priority_fee_per_gas as max_priority_fee_per_gas,
+         transactions.effective_gas_price as effective_gas_price,
+         transactions.l1_batch_number as l1_batch_number_tx,
+         transactions.l1_batch_tx_index as l1_batch_tx_index,
+         transactions.data->'contractAddress' as "execute_contract_address",
+         transactions.data->'calldata' as "calldata",
+         miniblocks.hash as "block_hash"
+    "#
+}
+
+pub fn extract_web3_transaction(db_row: PgRow, chain_id: L2ChainId) -> api::Transaction {
+    let mut storage_api_tx = StorageApiTransaction::from_row(&db_row).unwrap();
+    storage_api_tx.inner_api_transaction.chain_id = U256::from(chain_id.as_u64());
+    if storage_api_tx.inner_api_transaction.transaction_type == Some(U64::from(0)) {
+        storage_api_tx.inner_api_transaction.v = storage_api_tx
+            .inner_api_transaction
+            .v
+            .map(|v| v + 35 + chain_id.as_u64() * 2);
+    }
+    storage_api_tx.into()
 }
