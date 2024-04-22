@@ -1,3 +1,4 @@
+use bigdecimal::Zero;
 use ola_types::tx::primitives::PackedEthSignature;
 use ola_types::{
     api,
@@ -8,6 +9,7 @@ use ola_types::{
     Address, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
     EIP_712_TX_TYPE, H160, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
 };
+use ola_utils::bigdecimal_to_u256;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
@@ -163,6 +165,76 @@ impl From<StorageApiTransaction> for api::Transaction {
         tx.inner_api_transaction
     }
 }
+impl<'r> FromRow<'r, PgRow> for StorageApiTransaction {
+    fn from_row(db_row: &'r PgRow) -> Result<Self, Error> {
+        let row_signature: Option<Vec<u8>> = db_row.get("signature");
+        let signature = row_signature
+            .and_then(|signature| PackedEthSignature::deserialize_packed(&signature).ok());
+
+        Ok(StorageApiTransaction {
+            inner_api_transaction: api::Transaction {
+                hash: H256::from_slice(db_row.get("tx_hash")),
+                nonce: U256::from(db_row.try_get::<i64, &str>("nonce").ok().unwrap_or(0)),
+                block_hash: db_row.try_get("block_hash").ok().map(H256::from_slice),
+                block_number: db_row
+                    .try_get::<i64, &str>("block_number")
+                    .ok()
+                    .map(U64::from),
+                transaction_index: db_row
+                    .try_get::<i32, &str>("index_in_block")
+                    .ok()
+                    .map(U64::from),
+                from: Some(H160::from_slice(db_row.get("initiator_address"))),
+                to: Some(
+                    serde_json::from_value::<Address>(db_row.get("execute_contract_address"))
+                        .expect("incorrect address value in the database"),
+                ),
+                value: bigdecimal_to_u256(db_row.get::<BigDecimal, &str>("value")),
+                // `gas_price`, `max_fee_per_gas`, `max_priority_fee_per_gas` will be zero for the priority transactions.
+                // For common L2 transactions `gas_price` is equal to `effective_gas_price` if the transaction is included
+                // in some block, or `max_fee_per_gas` otherwise.
+                gas_price: Some(bigdecimal_to_u256(
+                    db_row
+                        .try_get::<BigDecimal, &str>("effective_gas_price")
+                        .or_else(|_| db_row.try_get::<BigDecimal, &str>("max_fee_per_gas"))
+                        .unwrap_or_else(|_| BigDecimal::zero()),
+                )),
+                max_fee_per_gas: Some(bigdecimal_to_u256(
+                    db_row
+                        .try_get::<BigDecimal, &str>("max_fee_per_gas")
+                        .unwrap_or_else(|_| BigDecimal::zero()),
+                )),
+                max_priority_fee_per_gas: Some(bigdecimal_to_u256(
+                    db_row
+                        .try_get::<BigDecimal, &str>("max_priority_fee_per_gas")
+                        .unwrap_or_else(|_| BigDecimal::zero()),
+                )),
+                gas: bigdecimal_to_u256(db_row.get::<BigDecimal, &str>("gas_limit")),
+                input: serde_json::from_value(db_row.get::<serde_json::Value, &str>("calldata"))
+                    .expect("Incorrect calldata value in the database"),
+                raw: None,
+                v: signature.as_ref().map(|s| U64::from(s.v())),
+                r: signature.as_ref().map(|s| U256::from(s.r())),
+                s: signature.as_ref().map(|s| U256::from(s.s())),
+                transaction_type: db_row
+                    .try_get::<Option<i32>, &str>("tx_format")
+                    .unwrap_or_default()
+                    .map(U64::from),
+                access_list: None,
+                chain_id: U256::zero(),
+                l1_batch_number: db_row
+                    .try_get::<i64, &str>("l1_batch_number_tx")
+                    .ok()
+                    .map(U64::from),
+                l1_batch_tx_index: db_row
+                    .try_get::<i32, &str>("l1_batch_tx_index")
+                    .ok()
+                    .map(U64::from),
+            },
+        })
+    }
+}
+
 pub fn web3_transaction_select_sql() -> &'static str {
     r#"
          transactions.hash as tx_hash,
@@ -187,12 +259,12 @@ pub fn web3_transaction_select_sql() -> &'static str {
 
 pub fn extract_web3_transaction(db_row: PgRow, chain_id: L2ChainId) -> api::Transaction {
     let mut storage_api_tx = StorageApiTransaction::from_row(&db_row).unwrap();
-    storage_api_tx.inner_api_transaction.chain_id = U256::from(chain_id.as_u64());
+    storage_api_tx.inner_api_transaction.chain_id = U256::from(chain_id.0);
     if storage_api_tx.inner_api_transaction.transaction_type == Some(U64::from(0)) {
         storage_api_tx.inner_api_transaction.v = storage_api_tx
             .inner_api_transaction
             .v
-            .map(|v| v + 35 + chain_id.as_u64() * 2);
+            .map(|v| v + 35 + chain_id.0 * 2);
     }
     storage_api_tx.into()
 }

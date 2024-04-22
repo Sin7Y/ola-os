@@ -1,9 +1,10 @@
+use std::collections::HashMap;
 use std::fmt;
 
-use ola_types::{events::VmEvent, tx::IncludedTxLocation, MiniblockNumber, H256};
+use ola_types::{api, events::VmEvent, tx::IncludedTxLocation, MiniblockNumber, H256};
 use sqlx::types::chrono::Utc;
 
-use crate::StorageProcessor;
+use crate::{SqlxError, StorageProcessor};
 
 #[derive(Debug)]
 struct EventTopic<'a>(Option<&'a H256>);
@@ -94,5 +95,56 @@ impl EventsDal<'_, '_> {
         .execute(self.storage.conn())
         .await
         .unwrap();
+    }
+
+    pub(crate) async fn get_l2_to_l1_logs_by_hashes(
+        &mut self,
+        hashes: &[H256],
+    ) -> Result<HashMap<H256, Vec<api::L2ToL1Log>>, SqlxError> {
+        let hashes = &hashes
+            .iter()
+            .map(|hash| hash.as_bytes().to_vec())
+            .collect::<Vec<_>>();
+        let logs: Vec<_> = sqlx::query_as!(
+            StorageL2ToL1Log,
+            r#"
+            SELECT
+                miniblock_number,
+                log_index_in_miniblock,
+                log_index_in_tx,
+                tx_hash,
+                NULL::bytea AS "block_hash",
+                NULL::BIGINT AS "l1_batch_number?",
+                shard_id,
+                is_service,
+                tx_index_in_miniblock,
+                tx_index_in_l1_batch,
+                sender,
+                key,
+                value
+            FROM
+                l2_to_l1_logs
+            WHERE
+                tx_hash = ANY ($1)
+            ORDER BY
+                tx_index_in_l1_batch ASC,
+                log_index_in_tx ASC
+            "#,
+            &hashes[..]
+        )
+        .fetch_all(self.storage.conn())
+        .await?;
+
+        let mut result = HashMap::<H256, Vec<api::L2ToL1Log>>::new();
+
+        for storage_log in logs {
+            let current_log = api::L2ToL1Log::from(storage_log);
+            result
+                .entry(current_log.transaction_hash)
+                .or_default()
+                .push(current_log);
+        }
+
+        Ok(result)
     }
 }
