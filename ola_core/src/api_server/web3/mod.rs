@@ -61,10 +61,17 @@ pub enum Namespace {
     Ola,
     Eth,
     Pubsub,
+    Net,
+    Debug,
 }
 
 impl Namespace {
-    pub const HTTP: &'static [Namespace] = &[Namespace::Ola, Namespace::Eth, Namespace::Pubsub];
+    pub const HTTP: &'static [Namespace] = &[
+        Namespace::Eth,
+        Namespace::Net,
+        Namespace::Ola,
+        Namespace::Pubsub,
+    ];
 }
 
 /// Handles to the initialized API server.
@@ -568,6 +575,7 @@ impl ApiBuilder {
     }
 
     async fn build_rpc_module(&self) -> RpcModule<()> {
+        let l2_chain_id = self.config.l2_chain_id;
         let rpc_app = self.build_rpc_state().await;
         let namespaces = self.namespaces.as_ref().unwrap();
         let mut rpc = RpcModule::new(());
@@ -579,6 +587,10 @@ impl ApiBuilder {
         if namespaces.contains(&Namespace::Eth) {
             rpc.merge(EthNamespace::new(rpc_app.clone()).into_rpc())
                 .expect("Can't merge eth namespace");
+        }
+        if namespaces.contains(&Namespace::Net) {
+            rpc.merge(NetNamespace::new(l2_chain_id).into_rpc())
+                .expect("Can't merge net namespace");
         }
 
         rpc
