@@ -12,10 +12,11 @@ use ola_web3_decl::{
     error::Web3Error,
     namespaces::{
         eth::{EthNamespaceServer, EthPubSubServer},
-        ola::OlaNamespaceServer,
         net::NetNamespaceServer,
+        ola::OlaNamespaceServer,
     },
 };
+
 use olaos_health_check::{HealthStatus, HealthUpdater, ReactiveHealthCheck};
 use serde::Deserialize;
 use tokio::{
@@ -26,7 +27,8 @@ use tower_http::{cors::CorsLayer, metrics::InFlightRequestsLayer};
 
 use crate::{
     api_server::web3::{
-        backend::batch_limiter_middleware::LimitMiddleware, pubsub::EthSubscriptionIdProvider,
+        backend::batch_limiter_middleware::LimitMiddleware, namespaces::net::NetNamespace,
+        pubsub::EthSubscriptionIdProvider,
     },
     utils::wait_for_l1_batch,
 };
