@@ -13,6 +13,7 @@ use ola_web3_decl::{
     namespaces::{
         eth::{EthNamespaceServer, EthPubSubServer},
         ola::OlaNamespaceServer,
+        net::NetNamespaceServer,
     },
 };
 use olaos_health_check::{HealthStatus, HealthUpdater, ReactiveHealthCheck};
