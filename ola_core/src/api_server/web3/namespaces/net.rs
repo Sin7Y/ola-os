@@ -6,8 +6,8 @@ pub struct NetNamespace {
 }
 
 impl NetNamespace {
-    pub fn new(zksync_network_id: L2ChainId) -> Self {
-        Self { zksync_network_id }
+    pub fn new(ola_network_id: L2ChainId) -> Self {
+        Self { ola_network_id }
     }
 
     pub fn version_impl(&self) -> String {
