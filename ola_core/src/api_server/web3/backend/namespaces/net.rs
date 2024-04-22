@@ -1,7 +1,7 @@
 use ola_types::U256;
 use ola_web3_decl::{jsonrpsee::core::RpcResult, namespaces::net::NetNamespaceServer};
 
-use crate::api_server::web3::NetNamespace;
+use crate::api_server::web3::namespaces::net::NetNamespace;
 
 impl NetNamespaceServer for NetNamespace {
     fn version(&self) -> RpcResult<String> {
