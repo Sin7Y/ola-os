@@ -22,6 +22,7 @@ members = [
     "prover/prover_fri_gateway",
     "prover/witness_generator",
     "prover/prover_fri",
-    "prover/prover_fri_utils"
+    "prover/prover_fri_utils",
+    "constants"
 ]
 resolver = "2"

@@ -96,6 +96,54 @@ impl EventsDal<'_, '_> {
         .await
         .unwrap();
     }
+    pub(crate) async fn get_logs_by_tx_hashes(
+        &mut self,
+        hashes: &[H256],
+    ) -> Result<HashMap<H256, Vec<api::Log>>, SqlxError> {
+        let hashes = hashes
+            .iter()
+            .map(|hash| hash.as_bytes().to_vec())
+            .collect::<Vec<_>>();
+        let logs: Vec<_> = sqlx::query_as!(
+            StorageWeb3Log,
+            r#"
+            SELECT
+                address,
+                topic1,
+                topic2,
+                topic3,
+                topic4,
+                value,
+                NULL::bytea AS "block_hash",
+                NULL::BIGINT AS "l1_batch_number?",
+                miniblock_number,
+                tx_hash,
+                tx_index_in_block,
+                event_index_in_block,
+                event_index_in_tx
+            FROM
+                events
+            WHERE
+                tx_hash = ANY ($1)
+            ORDER BY
+                miniblock_number ASC,
+                event_index_in_block ASC
+            "#,
+            &hashes[..],
+        )
+        .fetch_all(self.storage.conn())
+        .await?;
+
+        let mut result = HashMap::<H256, Vec<api::Log>>::new();
+
+        for storage_log in logs {
+            let current_log = api::Log::from(storage_log);
+            let tx_hash = current_log.transaction_hash.unwrap();
+            result.entry(tx_hash).or_default().push(current_log);
+        }
+
+        Ok(result)
+    }
 
     pub(crate) async fn get_l2_to_l1_logs_by_hashes(
         &mut self,

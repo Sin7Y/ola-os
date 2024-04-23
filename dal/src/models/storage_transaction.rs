@@ -15,7 +15,7 @@ use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::types::BigDecimal;
 use sqlx::{FromRow, Row};
-use std::error::Error;
+use thiserror::Error;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageTransaction {
@@ -171,6 +171,7 @@ impl<'r> FromRow<'r, PgRow> for StorageApiTransaction {
         let signature = row_signature
             .and_then(|signature| PackedEthSignature::deserialize_packed(&signature).ok());
 
+        // TODO !!!!!!
         Ok(StorageApiTransaction {
             inner_api_transaction: api::Transaction {
                 hash: H256::from_slice(db_row.get("tx_hash")),

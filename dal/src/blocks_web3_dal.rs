@@ -1,6 +1,6 @@
+use bigdecimal::BigDecimal;
 use ola_types::{api, L1BatchNumber, L2ChainId, MiniblockNumber, H256, U256, U64};
 use ola_utils::bigdecimal_to_u256;
-use sqlx::types::BigDecimal;
 use sqlx::Row;
 
 use crate::models::storage_block::{
