@@ -40,11 +40,8 @@ impl BlocksWeb3Dal<'_, '_> {
                 miniblocks.number,
                 miniblocks.l1_batch_number,
                 miniblocks.timestamp,
-                miniblocks.base_fee_per_gas,
                 prev_miniblock.hash as parent_hash,
                 l1_batches.timestamp as l1_batch_timestamp,
-                transactions.gas_limit as gas_limit,
-                transactions.refunded_gas as refunded_gas,
                 {}
             FROM miniblocks
             LEFT JOIN miniblocks prev_miniblock
@@ -81,7 +78,6 @@ impl BlocksWeb3Dal<'_, '_> {
                 let parent_hash = db_row
                     .try_get("parent_hash")
                     .map_or_else(|_| H256::zero(), H256::from_slice);
-                let base_fee_per_gas = db_row.get::<BigDecimal, &str>("base_fee_per_gas");
 
                 api::Block {
                     hash,
@@ -89,8 +85,6 @@ impl BlocksWeb3Dal<'_, '_> {
                     uncles_hash: EMPTY_UNCLES_HASH,
                     number,
                     l1_batch_number,
-                    gas_limit: BLOCK_GAS_LIMIT.into(),
-                    base_fee_per_gas: bigdecimal_to_u256(base_fee_per_gas),
                     timestamp: db_row.get::<i64, &str>("timestamp").into(),
                     l1_batch_timestamp,
                     // TODO: include logs
@@ -98,10 +92,6 @@ impl BlocksWeb3Dal<'_, '_> {
                 }
             });
             if db_row.try_get::<&[u8], &str>("tx_hash").is_ok() {
-                let tx_gas_limit = bigdecimal_to_u256(db_row.get::<BigDecimal, &str>("gas_limit"));
-                let tx_refunded_gas = U256::from((db_row.get::<i64, &str>("refunded_gas")) as u32);
-
-                block.gas_used += tx_gas_limit - tx_refunded_gas;
                 let tx = if include_full_transactions {
                     let tx = extract_web3_transaction(db_row, chain_id);
                     api::TransactionVariant::Full(tx)

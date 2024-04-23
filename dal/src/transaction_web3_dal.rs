@@ -10,7 +10,9 @@ use ola_utils::h256_to_account_address;
 use crate::{
     models::{
         storage_event::StorageWeb3Log,
-        storage_transaction::{StorageTransaction, StorageTransactionDetails},
+        storage_transaction::{
+            StorageTransaction, StorageTransactionDetails, StorageTransactionReceipt,
+        },
     },
     SqlxError, StorageProcessor,
 };
