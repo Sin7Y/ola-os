@@ -288,7 +288,6 @@ pub fn web3_transaction_select_sql() -> &'static str {
          transactions.signature as signature,
          transactions.initiator_address as initiator_address,
          transactions.tx_format as tx_format,
-         transactions.value as value,
          transactions.l1_batch_number as l1_batch_number_tx,
          transactions.l1_batch_tx_index as l1_batch_tx_index,
          transactions.data->'contractAddress' as "execute_contract_address",
