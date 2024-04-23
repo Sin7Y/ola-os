@@ -284,14 +284,14 @@ pub struct Block<TX> {
     #[serde(rename = "l1BatchNumber")]
     pub l1_batch_number: Option<U64>,
     /// Gas Used
-    #[serde(rename = "gasUsed")]
-    pub gas_used: U256,
-    /// Gas Limit
-    #[serde(rename = "gasLimit")]
-    pub gas_limit: U256,
+    // #[serde(rename = "gasUsed")]
+    // pub gas_used: U256,
+    // /// Gas Limit
+    // #[serde(rename = "gasLimit")]
+    // pub gas_limit: U256,
     /// Base fee per unit of gas
-    #[serde(rename = "baseFeePerGas")]
-    pub base_fee_per_gas: U256,
+    // #[serde(rename = "baseFeePerGas")]
+    // pub base_fee_per_gas: U256,
     /// Extra data
     #[serde(rename = "extraData")]
     pub extra_data: Bytes,

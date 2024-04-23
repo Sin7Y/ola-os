@@ -1,5 +1,6 @@
 use anyhow::Error;
 use bigdecimal::{BigDecimal, Zero};
+use ola_types::api::TransactionReceipt;
 use ola_types::tx::primitives::PackedEthSignature;
 use ola_types::{
     api,
@@ -10,7 +11,7 @@ use ola_types::{
     Address, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
     EIP_712_TX_TYPE, H160, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
 };
-use ola_utils::bigdecimal_to_u256;
+use ola_utils::{bigdecimal_to_u256, h256_to_account_address};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
@@ -149,6 +150,66 @@ impl From<StorageTransactionDetails> for TransactionDetails {
             eth_commit_tx_hash: None,
             eth_prove_tx_hash: None,
             eth_execute_tx_hash: None,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+pub(crate) struct StorageTransactionReceipt {
+    pub error: Option<String>,
+    pub tx_format: Option<i32>,
+    pub index_in_block: Option<i32>,
+    pub block_hash: Vec<u8>,
+    pub tx_hash: Vec<u8>,
+    pub block_number: i64,
+    pub l1_batch_tx_index: Option<i32>,
+    pub l1_batch_number: Option<i64>,
+    pub transfer_to: Option<serde_json::Value>,
+    pub execute_contract_address: Option<serde_json::Value>,
+    pub gas_limit: Option<BigDecimal>,
+    pub effective_gas_price: Option<BigDecimal>,
+    pub contract_address: Option<Vec<u8>>,
+    pub initiator_address: Vec<u8>,
+}
+
+impl From<StorageTransactionReceipt> for TransactionReceipt {
+    fn from(storage_receipt: StorageTransactionReceipt) -> Self {
+        let status = storage_receipt.error.map_or_else(U64::one, |_| U64::zero());
+
+        let tx_type = storage_receipt
+            .tx_format
+            .map_or_else(Default::default, U64::from);
+        let transaction_index = storage_receipt
+            .index_in_block
+            .map_or_else(Default::default, U64::from);
+
+        let block_hash = H256::from_slice(&storage_receipt.block_hash);
+        TransactionReceipt {
+            transaction_hash: H256::from_slice(&storage_receipt.tx_hash),
+            transaction_index,
+            block_hash: Some(block_hash),
+            block_number: storage_receipt.block_number.into(),
+            l1_batch_tx_index: storage_receipt.l1_batch_tx_index.map(U64::from),
+            l1_batch_number: storage_receipt.l1_batch_number.map(U64::from),
+            from: H256::from_slice(&storage_receipt.initiator_address),
+            to: storage_receipt
+                .transfer_to
+                .or(storage_receipt.execute_contract_address)
+                .map(|addr| {
+                    serde_json::from_value::<Address>(addr)
+                        .expect("invalid address value in the database")
+                })
+                // For better compatibility with various clients, we never return null.
+                .or_else(|| Some(Address::default())),
+            contract_address: storage_receipt
+                .contract_address
+                .map(|addr| h256_to_account_address(&H256::from_slice(&addr))),
+            logs: vec![],
+            status: Some(status),
+            root: Some(block_hash),
+            // Even though the Rust SDK recommends us to supply "None" for legacy transactions
+            // we always supply some number anyway to have the same behavior as most popular RPCs
+            transaction_type: Some(tx_type),
         }
     }
 }
