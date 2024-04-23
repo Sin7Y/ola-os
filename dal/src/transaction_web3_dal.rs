@@ -3,10 +3,12 @@ use ola_config::constants::contracts::{
 };
 use ola_types::{
     api::{self, BlockId, BlockNumber, TransactionDetails},
-    Address, MiniblockNumber, H256, U64,
+    Address, L2ChainId, MiniblockNumber, H256, U64,
 };
 use ola_utils::h256_to_account_address;
 
+use crate::models::storage_block::{bind_block_where_sql_params, web3_block_where_sql};
+use crate::models::storage_transaction::{extract_web3_transaction, web3_transaction_select_sql};
 use crate::{
     models::{
         storage_event::StorageWeb3Log,
@@ -82,6 +84,48 @@ impl TransactionsWeb3Dal<'_, '_> {
         }
 
         Ok(pending_nonce)
+    }
+
+    pub async fn get_transaction(
+        &mut self,
+        transaction_id: api::TransactionId,
+        chain_id: L2ChainId,
+    ) -> Result<Option<api::Transaction>, SqlxError> {
+        let where_sql = match transaction_id {
+            api::TransactionId::Hash(_) => "transactions.hash = $1".to_owned(),
+            api::TransactionId::Block(block_id, _) => {
+                format!(
+                    "transactions.index_in_block = $1 AND {}",
+                    web3_block_where_sql(block_id, 2)
+                )
+            }
+        };
+        let query = format!(
+            "SELECT {}
+            FROM transactions
+            LEFT JOIN miniblocks ON miniblocks.number = transactions.miniblock_number
+            WHERE {where_sql}",
+            web3_transaction_select_sql()
+        );
+        let query = sqlx::query(&query);
+
+        let query = match &transaction_id {
+            api::TransactionId::Hash(tx_hash) => query.bind(tx_hash.as_bytes()),
+            api::TransactionId::Block(block_id, tx_index) => {
+                let tx_index = if tx_index.as_u64() > i32::MAX as u64 {
+                    return Ok(None);
+                } else {
+                    tx_index.as_u64() as i32
+                };
+                bind_block_where_sql_params(block_id, query.bind(tx_index))
+            }
+        };
+
+        let tx = query
+            .fetch_optional(self.storage.conn())
+            .await?
+            .map(|row| extract_web3_transaction(row, chain_id));
+        Ok(tx)
     }
 
     pub async fn get_transaction_receipt(
