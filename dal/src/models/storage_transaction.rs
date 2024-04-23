@@ -193,23 +193,10 @@ impl<'r> FromRow<'r, PgRow> for StorageApiTransaction {
                 // `gas_price`, `max_fee_per_gas`, `max_priority_fee_per_gas` will be zero for the priority transactions.
                 // For common L2 transactions `gas_price` is equal to `effective_gas_price` if the transaction is included
                 // in some block, or `max_fee_per_gas` otherwise.
-                gas_price: Some(bigdecimal_to_u256(
-                    db_row
-                        .try_get::<BigDecimal, &str>("effective_gas_price")
-                        .or_else(|_| db_row.try_get::<BigDecimal, &str>("max_fee_per_gas"))
-                        .unwrap_or_else(|_| BigDecimal::zero()),
-                )),
-                max_fee_per_gas: Some(bigdecimal_to_u256(
-                    db_row
-                        .try_get::<BigDecimal, &str>("max_fee_per_gas")
-                        .unwrap_or_else(|_| BigDecimal::zero()),
-                )),
-                max_priority_fee_per_gas: Some(bigdecimal_to_u256(
-                    db_row
-                        .try_get::<BigDecimal, &str>("max_priority_fee_per_gas")
-                        .unwrap_or_else(|_| BigDecimal::zero()),
-                )),
-                gas: bigdecimal_to_u256(db_row.get::<BigDecimal, &str>("gas_limit")),
+                gas_price: None,
+                max_fee_per_gas: None,
+                max_priority_fee_per_gas: None,
+                gas: U256::default(),
                 input: serde_json::from_value(db_row.get::<serde_json::Value, &str>("calldata"))
                     .expect("Incorrect calldata value in the database"),
                 raw: None,
@@ -245,10 +232,6 @@ pub fn web3_transaction_select_sql() -> &'static str {
          transactions.initiator_address as initiator_address,
          transactions.tx_format as tx_format,
          transactions.value as value,
-         transactions.gas_limit as gas_limit,
-         transactions.max_fee_per_gas as max_fee_per_gas,
-         transactions.max_priority_fee_per_gas as max_priority_fee_per_gas,
-         transactions.effective_gas_price as effective_gas_price,
          transactions.l1_batch_number as l1_batch_number_tx,
          transactions.l1_batch_tx_index as l1_batch_tx_index,
          transactions.data->'contractAddress' as "execute_contract_address",
