@@ -1,3 +1,7 @@
+use crate::api_server::web3::{backend::error::internal_error, resolve_block, state::RpcState};
+use crate::api_server::web3::{
+    backend::MethodTracer, metrics::API_METRICS, state::RpcState, TypedFilter,
+};
 use anyhow::Context as _;
 use ola_types::api::{Block, TransactionReceipt, TransactionVariant};
 use ola_types::{
@@ -7,12 +11,12 @@ use ola_types::{
 use ola_web3_decl::error::Web3Error;
 use web3::types::{Bytes, FeeHistory, SyncInfo, SyncState};
 
-use crate::api_server::web3::{backend::error::internal_error, resolve_block, state::RpcState};
-
 #[derive(Debug)]
 pub struct EthNamespace {
     state: RpcState,
 }
+
+pub const PROTOCOL_VERSION: &str = "ola/1";
 
 impl Clone for EthNamespace {
     fn clone(&self) -> Self {
@@ -28,6 +32,12 @@ impl EthNamespace {
     }
 
     #[tracing::instrument(skip(self))]
+    pub fn protocol_version(&self) -> String {
+        // TODO (SMA-838): Versioning of our protocol
+        PROTOCOL_VERSION.to_string()
+    }
+
+    #[tracing::instrument(skip(self))]
     pub fn chain_id_impl(&self) -> U64 {
         self.state.api_config.l2_chain_id.0.into()
     }
@@ -38,14 +48,13 @@ impl EthNamespace {
         block_id: BlockId,
         full_transactions: bool,
     ) -> Result<Option<Block<TransactionVariant>>, Web3Error> {
-        self.current_method().set_block_id(block_id);
         self.state.start_info.ensure_not_pruned(block_id)?;
 
         let block = self
             .state
             .connection_pool
             .access_storage_tagged("api")
-            .await?
+            .await
             .blocks_web3_dal()
             .get_block_by_web3_block_id(
                 block_id,
@@ -56,7 +65,6 @@ impl EthNamespace {
             .context("get_block_by_web3_block_id")?;
         if let Some(block) = &block {
             let block_number = MiniblockNumber(block.number.as_u32());
-            self.set_block_diff(block_number);
         }
         Ok(block)
     }
@@ -65,22 +73,18 @@ impl EthNamespace {
         &self,
         block_id: BlockId,
     ) -> Result<Option<U256>, Web3Error> {
-        self.current_method().set_block_id(block_id);
         self.state.start_info.ensure_not_pruned(block_id)?;
 
         let tx_count = self
             .state
             .connection_pool
             .access_storage_tagged("api")
-            .await?
+            .await
             .blocks_web3_dal()
             .get_block_tx_count(block_id)
             .await
             .context("get_block_tx_count")?;
 
-        if let Some((block_number, _)) = &tx_count {
-            self.set_block_diff(*block_number);
-        }
         Ok(tx_count.map(|(_, count)| count))
     }
 
@@ -89,21 +93,20 @@ impl EthNamespace {
         &self,
         block_id: BlockId,
     ) -> Result<Vec<TransactionReceipt>, Web3Error> {
-        self.current_method().set_block_id(block_id);
         self.state.start_info.ensure_not_pruned(block_id)?;
 
         let block = self
             .state
             .connection_pool
             .access_storage_tagged("api")
-            .await?
+            .await
             .blocks_web3_dal()
             .get_block_by_web3_block_id(block_id, false, self.state.api_config.l2_chain_id)
             .await
             .context("get_block_by_web3_block_id")?;
-        if let Some(block) = &block {
-            self.set_block_diff(block.number.as_u32().into());
-        }
+        // if let Some(block) = &block {
+        //     self.set_block_diff(block.number.as_u32().into());
+        // }
 
         let transactions: &[TransactionVariant] =
             block.as_ref().map_or(&[], |block| &block.transactions);
@@ -119,7 +122,7 @@ impl EthNamespace {
             .state
             .connection_pool
             .access_storage_tagged("api")
-            .await?
+            .await
             .transactions_web3_dal()
             .get_transaction_receipts(&hashes)
             .await

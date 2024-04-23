@@ -52,35 +52,6 @@ impl OlaNamespaceServer for OlaNamespace {
         Ok(self.l1_chain_id_impl())
     }
 
-    async fn get_confirmed_tokens(&self, from: u32, limit: u8) -> RpcResult<Vec<Token>> {
-        todo!()
-    }
-
-    async fn get_all_account_balances(
-        &self,
-        address: Address,
-    ) -> RpcResult<HashMap<Address, U256>> {
-        todo!()
-    }
-
-    async fn get_l2_to_l1_msg_proof(
-        &self,
-        block: MiniblockNumber,
-        sender: Address,
-        msg: H256,
-        l2_log_position: Option<usize>,
-    ) -> RpcResult<Option<L2ToL1LogProof>> {
-        todo!()
-    }
-
-    async fn get_l2_to_l1_log_proof(
-        &self,
-        tx_hash: H256,
-        index: Option<usize>,
-    ) -> RpcResult<Option<L2ToL1LogProof>> {
-        todo!()
-    }
-
     async fn get_l1_batch_number(&self) -> RpcResult<U64> {
         self.get_l1_batch_number_impl()
             .await
