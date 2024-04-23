@@ -1,5 +1,4 @@
-use anyhow::Error;
-use bigdecimal::{BigDecimal, Zero};
+use bigdecimal::Zero;
 use ola_types::api::TransactionReceipt;
 use ola_types::tx::primitives::PackedEthSignature;
 use ola_types::{
@@ -15,7 +14,8 @@ use ola_utils::{bigdecimal_to_u256, h256_to_account_address};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
-use sqlx::{FromRow, Row};
+use sqlx::types::BigDecimal;
+use sqlx::{Error, FromRow, Row};
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageTransaction {
@@ -188,7 +188,7 @@ impl From<StorageTransactionReceipt> for TransactionReceipt {
             transaction_hash: H256::from_slice(&storage_receipt.tx_hash),
             transaction_index,
             block_hash: Some(block_hash),
-            block_number: storage_receipt.block_number.into(),
+            block_number: Some(storage_receipt.block_number.into()),
             l1_batch_tx_index: storage_receipt.l1_batch_tx_index.map(U64::from),
             l1_batch_number: storage_receipt.l1_batch_number.map(U64::from),
             from: H256::from_slice(&storage_receipt.initiator_address),
