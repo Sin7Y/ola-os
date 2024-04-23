@@ -271,7 +271,7 @@ impl TransactionsWeb3Dal<'_, '_> {
                 receipt.logs = logs
                     .into_iter()
                     .map(|mut log| {
-                        log.block_hash = Some(receipt.block_hash);
+                        log.block_hash = receipt.block_hash;
                         log.l1_batch_number = receipt.l1_batch_number;
                         log
                     })
