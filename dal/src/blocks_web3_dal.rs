@@ -12,6 +12,7 @@ use crate::{
     SqlxError, StorageProcessor,
 };
 
+use ola_constants::{blocks::EMPTY_UNCLES_HASH, system_context::system_context};
 #[derive(Debug)]
 pub struct BlocksWeb3Dal<'a, 'c> {
     pub(crate) storage: &'a mut StorageProcessor<'c>,

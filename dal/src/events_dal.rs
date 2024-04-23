@@ -4,8 +4,8 @@ use std::fmt;
 use ola_types::{api, events::VmEvent, tx::IncludedTxLocation, MiniblockNumber, H256};
 use sqlx::types::chrono::Utc;
 
+use crate::models::storage_event::StorageWeb3Log;
 use crate::{SqlxError, StorageProcessor};
-
 #[derive(Debug)]
 struct EventTopic<'a>(Option<&'a H256>);
 

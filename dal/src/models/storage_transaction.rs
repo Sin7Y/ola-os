@@ -1,4 +1,5 @@
-use bigdecimal::Zero;
+use anyhow::Error;
+use bigdecimal::{BigDecimal, Zero};
 use ola_types::tx::primitives::PackedEthSignature;
 use ola_types::{
     api,
@@ -13,9 +14,7 @@ use ola_utils::bigdecimal_to_u256;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
-use sqlx::types::BigDecimal;
 use sqlx::{FromRow, Row};
-use thiserror::Error;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageTransaction {
@@ -185,7 +184,7 @@ impl<'r> FromRow<'r, PgRow> for StorageApiTransaction {
                     .try_get::<i32, &str>("index_in_block")
                     .ok()
                     .map(U64::from),
-                from: Some(H160::from_slice(db_row.get("initiator_address"))),
+                from: Some(H256::from_slice(db_row.get("initiator_address"))),
                 to: Some(
                     serde_json::from_value::<Address>(db_row.get("execute_contract_address"))
                         .expect("incorrect address value in the database"),
