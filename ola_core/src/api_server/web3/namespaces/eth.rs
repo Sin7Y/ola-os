@@ -144,7 +144,7 @@ impl EthNamespace {
             .transactions_web3_dal()
             .get_transaction(id, self.state.api_config.l2_chain_id)
             .await
-            .map_err(|err| internal_error("get_transaction", err));
+            .map_err(|err| internal_error("get_transaction", err))?;
 
         if transaction.is_none() {
             transaction = self.state.tx_sink().lookup_tx(id).await?;
