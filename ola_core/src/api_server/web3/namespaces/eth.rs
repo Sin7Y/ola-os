@@ -1,6 +1,6 @@
 use crate::api_server::web3::{backend::error::internal_error, resolve_block, state::RpcState};
 use anyhow::Context as _;
-use ola_types::api::{Block, TransactionReceipt, TransactionVariant};
+use ola_types::api::{Block, Transaction, TransactionId, TransactionReceipt, TransactionVariant};
 use ola_types::{
     api::{BlockId, BlockNumber},
     Address, MiniblockNumber, H256, U256, U64,
@@ -101,7 +101,7 @@ impl EthNamespace {
             .blocks_web3_dal()
             .get_block_by_web3_block_id(block_id, false, self.state.api_config.l2_chain_id)
             .await
-            .map_err(|err| internal_error("get_block_by_web3_block_id", err));
+            .map_err(|err| internal_error("get_block_by_web3_block_id", err))?;
 
         // if let Some(block) = &block {
         //     self.set_block_diff(block.number.as_u32().into());
@@ -129,6 +129,27 @@ impl EthNamespace {
 
         receipts.sort_unstable_by_key(|receipt| receipt.transaction_index);
         Ok(receipts)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn get_transaction_impl(
+        &self,
+        id: TransactionId,
+    ) -> Result<Option<Transaction>, Web3Error> {
+        let mut transaction = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await
+            .transactions_web3_dal()
+            .get_transaction(id, self.state.api_config.l2_chain_id)
+            .await
+            .map_err(|err| internal_error("get_transaction", err));
+
+        if transaction.is_none() {
+            transaction = self.state.tx_sink().lookup_tx(id).await?;
+        }
+        Ok(transaction)
     }
 
     #[olaos_logs::instrument(skip(self, address, block_id))]
