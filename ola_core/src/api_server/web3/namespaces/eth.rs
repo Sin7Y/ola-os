@@ -152,6 +152,24 @@ impl EthNamespace {
         Ok(transaction)
     }
 
+    #[tracing::instrument(skip(self))]
+    pub async fn get_transaction_receipt_impl(
+        &self,
+        hash: H256,
+    ) -> Result<Option<TransactionReceipt>, Web3Error> {
+        let receipts = self
+            .state
+            .connection_pool
+            .access_storage_tagged("api")
+            .await
+            .transactions_web3_dal()
+            .get_transaction_receipts(&[hash])
+            .await
+            .map_err(|err| internal_error("get_transaction_receipts", err))?;
+
+        Ok(receipts.into_iter().next())
+    }
+
     #[olaos_logs::instrument(skip(self, address, block_id))]
     pub async fn get_transaction_count_impl(
         &self,
