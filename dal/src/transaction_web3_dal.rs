@@ -204,8 +204,8 @@ impl TransactionsWeb3Dal<'_, '_> {
     pub async fn get_transaction_receipts(
         &mut self,
         hashes: &[H256],
-    ) -> Result<Vec<TransactionReceipt>, SqlxError> {
-        let mut receipts: Vec<TransactionReceipt> = sqlx::query_as!(
+    ) -> Result<Vec<api::TransactionReceipt>, SqlxError> {
+        let mut receipts: Vec<api::TransactionReceipt> = sqlx::query_as!(
             StorageTransactionReceipt,
             r#"
             WITH
