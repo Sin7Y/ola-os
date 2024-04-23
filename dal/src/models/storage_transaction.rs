@@ -1,4 +1,3 @@
-use bigdecimal::Zero;
 use ola_types::api::TransactionReceipt;
 use ola_types::tx::primitives::PackedEthSignature;
 use ola_types::{
@@ -14,7 +13,6 @@ use ola_utils::{bigdecimal_to_u256, h256_to_account_address};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
 use sqlx::types::chrono::{DateTime, NaiveDateTime, Utc};
-use sqlx::types::BigDecimal;
 use sqlx::{Error, FromRow, Row};
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -166,8 +164,6 @@ pub(crate) struct StorageTransactionReceipt {
     pub l1_batch_number: Option<i64>,
     pub transfer_to: Option<serde_json::Value>,
     pub execute_contract_address: Option<serde_json::Value>,
-    pub gas_limit: Option<BigDecimal>,
-    pub effective_gas_price: Option<BigDecimal>,
     pub contract_address: Option<Vec<u8>>,
     pub initiator_address: Vec<u8>,
 }
@@ -250,7 +246,7 @@ impl<'r> FromRow<'r, PgRow> for StorageApiTransaction {
                     serde_json::from_value::<Address>(db_row.get("execute_contract_address"))
                         .expect("incorrect address value in the database"),
                 ),
-                value: bigdecimal_to_u256(db_row.get::<BigDecimal, &str>("value")),
+                value: U256::default(),
                 // `gas_price`, `max_fee_per_gas`, `max_priority_fee_per_gas` will be zero for the priority transactions.
                 // For common L2 transactions `gas_price` is equal to `effective_gas_price` if the transaction is included
                 // in some block, or `max_fee_per_gas` otherwise.
