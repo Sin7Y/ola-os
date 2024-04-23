@@ -147,7 +147,8 @@ impl EthNamespace {
             .map_err(|err| internal_error("get_transaction", err))?;
 
         if transaction.is_none() {
-            transaction = self.state.tx_sink().lookup_tx(id).await?;
+            // if none, return a empty one.
+            // transaction = self.state.tx_sink().lookup_tx(id).await?;
         }
         Ok(transaction)
     }
