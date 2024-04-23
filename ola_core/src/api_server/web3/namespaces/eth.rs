@@ -1,7 +1,4 @@
 use crate::api_server::web3::{backend::error::internal_error, resolve_block, state::RpcState};
-use crate::api_server::web3::{
-    backend::MethodTracer, metrics::API_METRICS, state::RpcState, TypedFilter,
-};
 use anyhow::Context as _;
 use ola_types::api::{Block, TransactionReceipt, TransactionVariant};
 use ola_types::{
@@ -62,7 +59,8 @@ impl EthNamespace {
                 self.state.api_config.l2_chain_id,
             )
             .await
-            .context("get_block_by_web3_block_id")?;
+            .map_err(|err| internal_error("get_block_by_web3_block_id", err))?;
+
         if let Some(block) = &block {
             let block_number = MiniblockNumber(block.number.as_u32());
         }
@@ -83,7 +81,7 @@ impl EthNamespace {
             .blocks_web3_dal()
             .get_block_tx_count(block_id)
             .await
-            .context("get_block_tx_count")?;
+            .map_err(|err| internal_error("get_block_tx_count", err))?;
 
         Ok(tx_count.map(|(_, count)| count))
     }
@@ -103,7 +101,8 @@ impl EthNamespace {
             .blocks_web3_dal()
             .get_block_by_web3_block_id(block_id, false, self.state.api_config.l2_chain_id)
             .await
-            .context("get_block_by_web3_block_id")?;
+            .map_err(|err| internal_error("get_block_by_web3_block_id", err));
+
         // if let Some(block) = &block {
         //     self.set_block_diff(block.number.as_u32().into());
         // }
@@ -126,7 +125,7 @@ impl EthNamespace {
             .transactions_web3_dal()
             .get_transaction_receipts(&hashes)
             .await
-            .context("get_transaction_receipts")?;
+            .map_err(|err| internal_error("get_transaction_receipts", err))?;
 
         receipts.sort_unstable_by_key(|receipt| receipt.transaction_index);
         Ok(receipts)
