@@ -7,11 +7,7 @@ use strum::Display;
 use web3::types::{AccessList, H2048, H256, H64, U256, U64};
 
 use crate::protocol_version::ProtocolVersionId;
-use crate::{
-    protocol_version::L1VerifierConfig,
-    vm_trace::{Call, CallType},
-    MiniblockNumber, H160,
-};
+use crate::MiniblockNumber;
 
 pub mod en;
 pub mod proof_offchain_verification;

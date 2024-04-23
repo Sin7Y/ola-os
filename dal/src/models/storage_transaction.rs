@@ -7,7 +7,7 @@ use ola_types::{
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
     Address, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
-    EIP_712_TX_TYPE, H160, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
+    EIP_712_TX_TYPE, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
 };
 use ola_utils::{bigdecimal_to_u256, h256_to_account_address};
 use serde::{Deserialize, Serialize};
