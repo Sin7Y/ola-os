@@ -12,7 +12,10 @@ use crate::{
     SqlxError, StorageProcessor,
 };
 
-use ola_constants::{blocks::EMPTY_UNCLES_HASH, system_context::system_context};
+use ola_constants::blocks::EMPTY_UNCLES_HASH;
+
+const BLOCK_GAS_LIMIT: u32 = u32::MAX;
+
 #[derive(Debug)]
 pub struct BlocksWeb3Dal<'a, 'c> {
     pub(crate) storage: &'a mut StorageProcessor<'c>,
