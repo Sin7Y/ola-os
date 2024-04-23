@@ -35,19 +35,6 @@ pub trait EthNamespace {
     #[method(name = "chainId")]
     async fn chain_id(&self) -> RpcResult<U64>;
 
-    // #[method(name = "call")]
-    // async fn call(&self, req: CallRequest, block: Option<BlockIdVariant>) -> RpcResult<Bytes>;
-    //
-    // #[method(name = "estimateGas")]
-    // async fn estimate_gas(&self, req: CallRequest, _block: Option<BlockNumber>) -> RpcResult<U256>;
-
-    #[method(name = "gasPrice")]
-    async fn gas_price(&self) -> RpcResult<U256>;
-
-    #[method(name = "getBalance")]
-    async fn get_balance(&self, address: Address, block: Option<BlockIdVariant>)
-        -> RpcResult<U256>;
-
     #[method(name = "getBlockByNumber")]
     async fn get_block_by_number(
         &self,
@@ -106,12 +93,6 @@ pub trait EthNamespace {
 
     #[method(name = "protocolVersion")]
     async fn protocol_version(&self) -> RpcResult<String>;
-
-    #[method(name = "accounts")]
-    async fn accounts(&self) -> RpcResult<Vec<Address>>;
-
-    #[method(name = "coinbase")]
-    async fn coinbase(&self) -> RpcResult<Address>;
 }
 
 #[rpc(server, namespace = "ola")]
