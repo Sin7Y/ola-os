@@ -1,3 +1,14 @@
+#remove docker
+# first stop
+docker stop olaos_main &&
+docker stop olaos_replica &&
+
+sleep 1 &&
+
+#then remove
+docker rm olaos_main &&
+docker rm olaos_replica &&
+
 # remove rocks db
 rm -rf ./db &&
 
