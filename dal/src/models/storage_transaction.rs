@@ -7,8 +7,9 @@ use ola_types::{
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
     Address, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
-    EIP_712_TX_TYPE, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
+    EIP_712_TX_TYPE, H2048, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
 };
+
 use ola_utils::{bigdecimal_to_u256, h256_to_account_address};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgRow;
@@ -198,6 +199,10 @@ impl From<StorageTransactionReceipt> for TransactionReceipt {
                 // For better compatibility with various clients, we never return null.
                 .or_else(|| Some(Address::default())),
             gas_used: None,
+            effective_gas_price: None,
+            logs_bloom: H2048::default(),
+            cumulative_gas_used: U256::default(),
+
             contract_address: storage_receipt
                 .contract_address
                 .map(|addr| h256_to_account_address(&H256::from_slice(&addr))),

@@ -1,6 +1,6 @@
 use num_enum::TryFromPrimitive;
 use ola_basic_types::Address;
-pub use ola_basic_types::{H256, U256};
+pub use ola_basic_types::{H160, H2048, H256, U256, U64};
 use ola_contracts::BaseSystemContractsHashes;
 use serde::{Deserialize, Serialize};
 
