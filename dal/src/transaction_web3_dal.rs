@@ -198,6 +198,7 @@ impl TransactionsWeb3Dal<'_, '_> {
                         })
                         // For better compatibility with various clients, we never return null.
                         .or_else(|| Some(Address::default())),
+                    gas_used: None,
                     contract_address: db_row
                         .contract_address
                         .map(|addr| h256_to_account_address(&H256::from_slice(&addr))),
