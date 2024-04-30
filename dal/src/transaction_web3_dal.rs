@@ -3,7 +3,7 @@ use ola_config::constants::contracts::{
 };
 use ola_types::{
     api::{self, BlockId, BlockNumber, TransactionDetails},
-    Address, L2ChainId, MiniblockNumber, H256, U64,
+    Address, L2ChainId, MiniblockNumber, H2048, H256, U256, U64,
 };
 use ola_utils::h256_to_account_address;
 
@@ -199,6 +199,9 @@ impl TransactionsWeb3Dal<'_, '_> {
                         // For better compatibility with various clients, we never return null.
                         .or_else(|| Some(Address::default())),
                     gas_used: None,
+                    effective_gas_price: None,
+                    logs_bloom: H2048::default(),
+                    cumulative_gas_used: U256::default(),
                     contract_address: db_row
                         .contract_address
                         .map(|addr| h256_to_account_address(&H256::from_slice(&addr))),
