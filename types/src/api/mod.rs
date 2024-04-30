@@ -220,8 +220,8 @@ pub struct TransactionReceipt {
     #[serde(default)]
     pub to: Option<Address>,
     /// Cumulative gas used within the block after this was executed.
-    // #[serde(rename = "cumulativeGasUsed")]
-    // pub cumulative_gas_used: U256,
+    #[serde(rename = "cumulativeGasUsed")]
+    pub cumulative_gas_used: U256,
     /// Gas used by this transaction alone.
     ///
     /// Gas used is `None` if the the client is running in light client mode.
@@ -240,14 +240,14 @@ pub struct TransactionReceipt {
     /// State root.
     pub root: Option<H256>,
     /// Logs bloom
-    // #[serde(rename = "logsBloom")]
-    // pub logs_bloom: H2048,
+    #[serde(rename = "logsBloom")]
+    pub logs_bloom: H2048,
     /// Transaction type
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     pub transaction_type: Option<U64>,
     // Effective gas price
-    // #[serde(rename = "effectiveGasPrice")]
-    // pub effective_gas_price: Option<U256>,
+    #[serde(rename = "effectiveGasPrice")]
+    pub effective_gas_price: Option<U256>,
 }
 
 /// The block type returned from RPC calls.

@@ -5,7 +5,7 @@ use std::num::ParseIntError;
 use std::ops::{Add, Deref, DerefMut, Sub};
 use std::str::FromStr;
 
-pub use web3::types::{Bytes, Index, H160, H256, U256, U64};
+pub use web3::types::{Bytes, Index, H160, H2048, H256, U256, U64};
 
 pub type Address = H256;
 
