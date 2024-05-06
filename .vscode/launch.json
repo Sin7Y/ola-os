@@ -30,6 +30,22 @@
             }
         },
         {
+            "name": "Debug olaos_witness_generator",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/target/debug/olaos_witness_generator",
+            "args": ["--round=basic_circuits"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug olaos_prover_fri_gateway",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/target/debug/olaos_prover_fri_gateway",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "name": "Debug Olatte",
             "type": "lldb",
             "request": "launch",
