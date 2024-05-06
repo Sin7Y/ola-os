@@ -30,6 +30,7 @@ async fn main() -> anyhow::Result<()> {
         Component::PubsubApi,
         Component::Sequencer,
         Component::Tree,
+        Component::ProofDataHandler,
     ];
     let (core_task_handles, stop_sender, health_check_handle) = initialize_components(components)
         .await
