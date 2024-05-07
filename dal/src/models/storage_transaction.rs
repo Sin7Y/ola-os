@@ -6,7 +6,7 @@ use ola_types::{
     l2::{L2TxCommonData, TransactionType},
     protocol_version::ProtocolUpgradeTxCommonData,
     tx::execute::Execute,
-    Address, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
+    Address, Bytes, ExecuteTransactionCommon, L2ChainId, Nonce, Transaction, EIP_1559_TX_TYPE,
     EIP_712_TX_TYPE, H2048, H256, OLA_RAW_TX_TYPE, PROTOCOL_UPGRADE_TX_TYPE, U256, U64,
 };
 
@@ -260,8 +260,7 @@ impl<'r> FromRow<'r, PgRow> for StorageApiTransaction {
                 max_fee_per_gas: None,
                 max_priority_fee_per_gas: None,
                 gas: U256::default(),
-                input: serde_json::from_value(db_row.get::<serde_json::Value, &str>("calldata"))
-                    .expect("Incorrect calldata value in the database"),
+                input: Bytes::default(),
                 raw: None,
                 v: signature.as_ref().map(|s| U64::from(s.v())),
                 r: signature.as_ref().map(|s| U256::from(s.r())),
