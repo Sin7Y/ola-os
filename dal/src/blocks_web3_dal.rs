@@ -230,6 +230,7 @@ impl BlocksWeb3Dal<'_, '_> {
             r#"
             SELECT 
                 number,
+                l1_batch_number,
                 timestamp,
                 hash,
                 l1_tx_count,
