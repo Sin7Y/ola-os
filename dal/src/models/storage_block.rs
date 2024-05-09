@@ -347,10 +347,11 @@ impl From<StorageL1BatchDetails> for api::L1BatchDetails {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StorageBlockDetails {
     pub number: i64,
-    pub timestamp: i64,
+    pub l1_batch_number: i64,
     pub hash: Vec<u8>,
     pub l1_tx_count: i32,
     pub l2_tx_count: i32,
+    pub timestamp: i64,
     pub bootloader_code_hash: Option<Vec<u8>>,
     pub default_aa_code_hash: Option<Vec<u8>>,
 }
@@ -390,7 +391,7 @@ impl From<StorageBlockDetails> for api::BlockDetails {
         api::BlockDetails {
             base,
             number: MiniblockNumber(details.number as u32),
-            l1_batch_number: L1BatchNumber(0),
+            l1_batch_number: L1BatchNumber(details.l1_batch_number as u32),
             operator_address: Address::default(),
             protocol_version: None,
         }
