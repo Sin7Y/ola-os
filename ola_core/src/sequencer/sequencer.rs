@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use std::{convert::Infallible, time::Duration};
 
 use ola_types::{
-    block::MiniblockReexecuteData, protocol_version::ProtocolUpgradeTx,
-    storage_writes_deduplicator::StorageWritesDeduplicator,
+    block::MiniblockReexecuteData, proofs::PrepareBasicCircuitsJob,
+    protocol_version::ProtocolUpgradeTx, storage_writes_deduplicator::StorageWritesDeduplicator,
     tx::tx_execution_info::TxExecutionStatus, Transaction,
 };
 
@@ -14,6 +14,8 @@ use crate::sequencer::{
     batch_executor::TxExecutionResult, extractors, io::PendingBatchData,
     types::ExecutionMetricsForCriteria, updates::UpdatesManager, SealData,
 };
+use olaos_object_store::ObjectStore;
+use std::sync::Arc;
 
 use super::{
     batch_executor::{BatchExecutorHandle, L1BatchExecutorBuilder},
@@ -47,6 +49,7 @@ pub struct OlaSequencer {
     io: Box<dyn SequencerIO>,
     batch_executor_base: Box<dyn L1BatchExecutorBuilder>,
     sealer: SealManager,
+    object_store: Arc<dyn ObjectStore>,
 }
 
 impl OlaSequencer {
@@ -55,12 +58,14 @@ impl OlaSequencer {
         io: Box<dyn SequencerIO>,
         batch_executor_base: Box<dyn L1BatchExecutorBuilder>,
         sealer: SealManager,
+        object_store: Arc<dyn ObjectStore>,
     ) -> Self {
         OlaSequencer {
             stop_receiver,
             io,
             batch_executor_base,
             sealer,
+            object_store,
         }
     }
 
@@ -162,9 +167,29 @@ impl OlaSequencer {
 
             olaos_logs::info!("finish batch {:?}", l1_batch_params.block_number());
 
-            let block_result = batch_executor
+            let (block_result, tx_traces) = batch_executor
                 .finish_batch(updates_manager.pending_executed_transactions_len() as u32)
                 .await;
+
+            // Save transaction traces into object store indexed by batch number.
+            let l1_batch_number = self.io.current_l1_batch_number();
+            let witness = PrepareBasicCircuitsJob {
+                tx_trace: Some(tx_traces),
+                storage: None,
+                pre_root_hash: None,
+                root_hash: None,
+            };
+            let object_key = self
+                .object_store
+                .put(l1_batch_number, &witness)
+                .await
+                .expect(&format!(
+                    "Failed to put partial prepare_witness into object store in batch {}",
+                    l1_batch_number
+                ));
+            olaos_logs::info!(
+                "Saved witnesses for L1 batch #{l1_batch_number} to object storage at `{object_key}`"
+            );
 
             let sealed_batch_protocol_version = updates_manager.protocol_version();
             self.io

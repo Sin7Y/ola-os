@@ -8,6 +8,11 @@ ola_basic_types = { path = "../basic_types" }
 ola_utils = { path = "../utils" }
 ola_config = { path = "../config" }
 ola_contracts = { path = "../contracts" }
+olavm_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+# olavm_core = { path = "../../olavm/core", package = "core" }
+olavm_plonky2 = {package = "plonky2", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
+# olavm_plonky2 = { path = "../../olavm/plonky2/plonky2", package = "plonky2" }
+
 ethereum_types_old = { package = "ethereum-types", version = "0.12.0" }
 web3 = { version= "0.19.0", default-features = false, features = ["http-rustls-tls", "test", "signing"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -21,10 +26,8 @@ once_cell = "1.7"
 ethabi = "18.0.0"
 rlp = "0.5"
 parity-crypto = { version = "0.9", features = ["publickey"] }
-olavm_core = {package = "core", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
-# olavm_core = { path = "../../olavm/core", package = "core" }
-olavm_plonky2 = {package = "plonky2", git = "https://github.com/Sin7Y/olavm.git", branch = "testnet-alpha"}
-# olavm_plonky2 = { path = "../../olavm/plonky2/plonky2", package = "plonky2" }
 derivative = "2.2.0"
 chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
 hex = "0.4"
+bincode = "1.3.3"
+itertools = "0.10.5"
