@@ -1,2 +1,2 @@
-api_url: "http://private-dns-for-server"
+api_url: "http://localhost:13320"
 api_poll_duration_secs: 100

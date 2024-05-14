@@ -105,11 +105,11 @@ pub fn sort_storage_access_queries<'a, L: LogQueryLike, I: IntoIterator<Item = &
             Ordering::Equal => match a.raw_query.address().cmp(&b.raw_query.address()) {
                 Ordering::Equal => match a.raw_query.key().cmp(&b.raw_query.key()) {
                     Ordering::Equal => a.extended_timestamp.cmp(&b.extended_timestamp),
-                    r => r,
+                    r @ _ => r,
                 },
-                r => r,
+                r @ _ => r,
             },
-            r => r,
+            r @ _ => r,
         }
     });
 

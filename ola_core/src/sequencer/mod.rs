@@ -9,6 +9,8 @@ use tokio::sync::watch;
 use crate::sequencer::{
     batch_executor::MainBatchExecutorBuilder, io::mempool::MempoolIO, seal_criteria::SealManager,
 };
+use olaos_object_store::ObjectStore;
+use std::sync::Arc;
 
 use self::{io::MiniblockSealerHandle, sequencer::OlaSequencer, types::MempoolGuard};
 
@@ -37,6 +39,7 @@ pub(crate) async fn create_sequencer(
     pool: ConnectionPool,
     mempool: MempoolGuard,
     miniblock_sealer_handle: MiniblockSealerHandle,
+    object_store: Arc<dyn ObjectStore>,
     stop_receiver: watch::Receiver<bool>,
 ) -> OlaSequencer {
     assert!(
@@ -68,5 +71,6 @@ pub(crate) async fn create_sequencer(
         Box::new(io),
         Box::new(batch_executor_base),
         sealer,
+        object_store,
     )
 }

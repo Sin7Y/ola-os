@@ -3,6 +3,7 @@ pub use ola_basic_types::{
     AccountTreeId, L1BatchNumber, L1ChainId, MiniblockNumber, PriorityOpId, H256, U256,
 };
 use ola_contracts::BaseSystemContractsHashes;
+use olavm_core::trace::exe_trace::TxExeTrace;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -104,3 +105,6 @@ pub struct WitnessBlockWithLogs {
     pub header: L1BatchHeader,
     pub storage_logs: Vec<WitnessStorageLog>,
 }
+
+/// Transaction traces
+pub type TxExeTraces = Vec<TxExeTrace>;
