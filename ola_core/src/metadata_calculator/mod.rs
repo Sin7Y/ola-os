@@ -1,32 +1,31 @@
-use std::{
-    future::{self, Future},
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
+use anyhow::Ok;
 use ola_config::{
     chain::OperationsManagerConfig,
     database::{MerkleTreeConfig, MerkleTreeMode},
 };
-use ola_dal::{connection::ConnectionPool, StorageProcessor};
+use ola_dal::connection::ConnectionPool;
+use ola_types::merkle_tree::{tree_key_to_h256, TreeMetadata};
 use ola_types::{
-    block::L1BatchHeader,
+    block::{L1BatchHeader, WitnessBlockWithLogs},
     commitment::{L1BatchCommitment, L1BatchMetadata},
     H256,
 };
 use olaos_health_check::{HealthUpdater, ReactiveHealthCheck};
-use olaos_merkle_tree::domain::TreeMetadata;
+use olaos_merkle_tree::tree::AccountTree;
 use olaos_object_store::ObjectStore;
 use tokio::sync::watch;
 
-pub(crate) use self::helpers::{AsyncTreeReader, L1BatchWithLogs, MerkleTreeInfo};
+use tempfile::TempDir;
+
+pub(crate) use self::helpers::get_logs_for_l1_batch;
 use self::{
-    helpers::{create_db, Delayer, GenericAsyncTree},
+    helpers::{create_db, AsyncTree, Delayer},
     updater::TreeUpdater,
 };
 
 mod helpers;
-mod recovery;
 mod updater;
 
 /// Configuration of [`MetadataCalculator`].
@@ -72,8 +71,7 @@ impl MetadataCalculatorConfig {
 
 #[derive(Debug)]
 pub struct MetadataCalculator {
-    tree: GenericAsyncTree,
-    tree_reader: watch::Sender<Option<AsyncTreeReader>>,
+    tree: AsyncTree,
     object_store: Option<Arc<dyn ObjectStore>>,
     delayer: Delayer,
     health_updater: HealthUpdater,
@@ -99,12 +97,11 @@ impl MetadataCalculator {
             config.multi_get_chunk_size,
         )
         .await;
-        let tree = GenericAsyncTree::new(db, config.mode).await;
+        let tree = AsyncTree::new(db);
 
         let (_, health_updater) = ReactiveHealthCheck::new("tree");
         Self {
             tree,
-            tree_reader: watch::channel(None).0,
             object_store,
             delayer: Delayer::new(config.delay_interval),
             health_updater,
@@ -117,42 +114,16 @@ impl MetadataCalculator {
         self.health_updater.subscribe()
     }
 
-    /// Returns a reference to the tree reader.
-    pub(crate) fn tree_reader(&self) -> impl Future<Output = AsyncTreeReader> {
-        let mut receiver = self.tree_reader.subscribe();
-        async move {
-            loop {
-                if let Some(reader) = receiver.borrow().clone() {
-                    break reader;
-                }
-                if receiver.changed().await.is_err() {
-                    olaos_logs::info!(
-                        "Tree dropped without getting ready; not resolving tree reader"
-                    );
-                    future::pending::<()>().await;
-                }
-            }
-        }
-    }
-
     pub async fn run(
         self,
         pool: ConnectionPool,
         stop_receiver: watch::Receiver<bool>,
     ) -> anyhow::Result<()> {
-        let tree = self
-            .tree
-            .ensure_ready(&pool, &stop_receiver, &self.health_updater)
-            .await?;
-        let Some(tree) = tree else {
-            return Ok(()); // recovery was aborted because a stop signal was received
-        };
-        self.tree_reader.send_replace(Some(tree.reader()));
-
-        let updater = TreeUpdater::new(tree, self.max_l1_batches_per_iter, self.object_store);
+        let updater = TreeUpdater::new(self.tree, self.max_l1_batches_per_iter, self.object_store);
         updater
             .loop_updating_tree(self.delayer, &pool, stop_receiver, self.health_updater)
-            .await
+            .await;
+        Ok(())
     }
 
     // TODO: gas
@@ -182,7 +153,7 @@ impl MetadataCalculator {
         tree_metadata: TreeMetadata,
         header: &L1BatchHeader,
     ) -> L1BatchMetadata {
-        let merkle_root_hash = tree_metadata.root_hash;
+        let merkle_root_hash = tree_key_to_h256(&tree_metadata.root_hash);
         let commitment = L1BatchCommitment::new(
             tree_metadata.rollup_last_leaf_index,
             merkle_root_hash,
@@ -217,5 +188,11 @@ impl MetadataCalculator {
 
         olaos_logs::trace!("L1 batch metadata: {metadata:?}");
         metadata
+    }
+
+    pub fn process_genesis_batch(l1_batch: WitnessBlockWithLogs) -> TreeMetadata {
+        let temp_dir = TempDir::new().expect("failed get temporary directory for RocksDB");
+        let mut tree = AccountTree::new(temp_dir.as_ref());
+        tree.process_block(&l1_batch.storage_logs)
     }
 }
