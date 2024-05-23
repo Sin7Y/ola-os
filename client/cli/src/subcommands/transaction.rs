@@ -1,13 +1,12 @@
 use anyhow::{bail, Ok, Result};
 use clap::Parser;
-use ola_types::api::TransactionDetails;
 use ola_wallet_sdk::provider::{ExtendProvider, ProviderParams};
 
 use crate::utils::from_hex_be;
 
 #[derive(Debug, Parser)]
 pub struct Transaction {
-    #[clap(long, help = "network name, can be local or pre-alpha")]
+    #[clap(long, help = "network name, can be local or alpha")]
     network: Option<String>,
     #[clap(help = "Transaction hash")]
     hash: String,
@@ -18,13 +17,13 @@ impl Transaction {
         let network = if let Some(network) = self.network {
             match network.as_str() {
                 "local" => ProviderParams::local(),
-                "pre-alpha" => ProviderParams::pre_alpha(),
+                "alpha" => ProviderParams::alpha(),
                 _ => {
                     bail!("invalid network name")
                 }
             }
         } else {
-            ProviderParams::pre_alpha()
+            ProviderParams::alpha()
         };
         let hash = from_hex_be(self.hash.as_str()).expect("invalid transaction hash");
         let provider = ExtendProvider::with_http_client(network.http_endpoint.as_str()).unwrap();
