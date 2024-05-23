@@ -39,7 +39,7 @@ OLA_BIN_DIR="$OLA_DIR/bin"
 # Create the base directory if it doesn't exist
 mkdir -p $OLA_BIN_DIR
 
-OLATTE_BIN_URL="https://github.com/Sin7Y/ola-os/releases/download/pre-alpha/"
+OLATTE_BIN_URL="https://github.com/Sin7Y/ola-os/releases/download/testnet-alpha/"
 OLAC_BIN_URL="https://github.com/Sin7Y/ola-lang/releases/download/v0.1.1/"
 MINIOLA_BIN_URL="https://github.com/Sin7Y/olavm/releases/download/testnet-alpha/"
 

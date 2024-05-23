@@ -30,10 +30,10 @@ impl ProviderParams {
         }
     }
 
-    pub fn pre_alpha() -> Self {
+    pub fn alpha() -> Self {
         Self {
             chain_id: 1027,
-            http_endpoint: "https://pre-alpha-api.olavm.com:443".to_string(),
+            http_endpoint: "https://alpha-api.olavm.com:443".to_string(),
         }
     }
 }
