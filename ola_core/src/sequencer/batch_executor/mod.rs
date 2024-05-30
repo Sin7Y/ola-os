@@ -247,7 +247,7 @@ impl BatchExecutor {
             .context_mode
             .operator_address()
             .to_fixed_bytes();
-
+        olaos_logs::info!("BlockExeManager::new with db path{}", secondary_storage_path.clone());
         let mut block_exe_manager = BlockExeManager::new(
             secondary_storage_path,
             network_config.ola_network_id as u64,
