@@ -140,6 +140,7 @@ impl OlaSequencer {
             .batch_executor_base
             .init_batch(l1_batch_params.clone())
             .await;
+        olaos_logs::info!("first time batch_executor_base.init_batch finished!");
         self.restore_state(&batch_executor, &mut updates_manager, pending_miniblocks)
             .await?;
 
@@ -214,7 +215,7 @@ impl OlaSequencer {
                 .batch_executor_base
                 .init_batch(l1_batch_params.clone())
                 .await;
-
+            olaos_logs::info!("looping batch_executor_base.init_batch finished!");
             let version_changed = l1_batch_params.protocol_version != sealed_batch_protocol_version;
             protocol_upgrade_tx = if version_changed {
                 self.io
