@@ -107,14 +107,29 @@ pub fn extract_bytecodes_marked_as_known(all_generated_events: &[VmEvent]) -> Ve
 }
 
 pub static DEPLOY_EVENT_SIGNATURE: Lazy<H256> = Lazy::new(|| {
-    ethabi::long_signature(
-        "ContractDeployed",
-        &[
-            ethabi::ParamType::Address,
-            ethabi::ParamType::FixedBytes(32),
-            ethabi::ParamType::Address,
+    // ContractDeployed(address,hash,address)
+    let contract_deployed_function = ola_lang_abi::Function {
+        name: "ContractDeployed".to_string(),
+        inputs: vec![
+            ola_lang_abi::Param {
+                name: "".to_string(),
+                type_: ola_lang_abi::Type::Address,
+                indexed: None,
+            },
+            ola_lang_abi::Param {
+                name: "".to_string(),
+                type_: ola_lang_abi::Type::Hash,
+                indexed: None,
+            },
+            ola_lang_abi::Param {
+                name: "".to_string(),
+                type_: ola_lang_abi::Type::Address,
+                indexed: None,
+            },
         ],
-    )
+        outputs: vec![],
+    };
+    hash_bytes(contract_deployed_function.signature().as_bytes())
 });
 
 static BRIDGE_INITIALIZATION_SIGNATURE_OLD: Lazy<H256> = Lazy::new(|| {
