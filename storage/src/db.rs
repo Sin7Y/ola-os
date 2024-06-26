@@ -368,7 +368,6 @@ impl<CF: NamedColumnFamily> RocksDB<CF> {
         let raw_batch_bytes = raw_batch.data().to_vec();
         let mut retries = self.stalled_writes_retries.intervals();
         let mut stalled_write_reported = false;
-        let started_at = Instant::now();
         loop {
             match self.write_inner(raw_batch) {
                 Ok(()) => {
