@@ -47,6 +47,9 @@ async fn main() -> anyhow::Result<()> {
         },
     }
     stop_sender.send(true).ok();
+    tokio::task::spawn_blocking(olaos_storage::db::RocksDB::await_rocksdb_termination)
+        .await
+        .unwrap();
     tokio::time::sleep(Duration::from_secs(5)).await;
     health_check_handle.stop().await;
     olaos_logs::info!("Stopped");
