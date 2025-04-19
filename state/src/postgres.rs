@@ -125,7 +125,7 @@ impl PostgresStorageCaches {
     pub fn configure_storage_values_cache(
         &mut self,
         capacity: u64,
-        conection_pool: ConnectionPool,
+        connection_pool: ConnectionPool,
         rt_handle: Handle,
     ) -> impl FnOnce() -> anyhow::Result<()> + Send {
         assert!(capacity > 0, "Storage calues cache mut be positive");
@@ -143,7 +143,7 @@ impl PostgresStorageCaches {
                     continue;
                 }
                 let mut connection =
-                    rt_handle.block_on(conection_pool.access_storage_tagged("value_cache_updater"));
+                    rt_handle.block_on(connection_pool.access_storage_tagged("value_cache_updater"));
                 values_cache.update(current_miniblock, to_miniblock, &rt_handle, &mut connection);
                 current_miniblock = to_miniblock;
             }
